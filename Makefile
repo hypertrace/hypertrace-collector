@@ -2,6 +2,13 @@ VERSION ?= dev
 GIT_HASH ?=$(shell git rev-parse HEAD)
 IMAGE_NAME := "hypertrace/collector"
 
+.PHONY: unit-test
+unit-test:
+	go test -count=1 -v -race -cover ./...
+
+.PHONY: test
+test: unit-test
+
 .PHONY: build
 build:
 	go build -ldflags "-w -X main.GitHash=${GIT_HASH} -X main.Version=${VERSION}" ./cmd/collector
