@@ -27,11 +27,10 @@ func grabURLValue(v url.Values, key string) string {
 	return v.Get(key)
 }
 
-// isEmptyURLValue returns true if the URL values are empty. This is
+// hasRemainingValues returns true if the URL values are empty. This is
 // useful to make sure the test covers all the URL values.
-func isEmptyURLValue(v url.Values) bool {
-	mv := (map[string][]string)(v)
-	return len(mv) == 0
+func hasRemainingValues(v url.Values) bool {
+	return len(v) > 0
 }
 
 func TestURLEncodedFilterSuccessOnNoSensitiveValue(t *testing.T) {
@@ -48,7 +47,7 @@ func TestURLEncodedFilterSuccessOnNoSensitiveValue(t *testing.T) {
 	filteredParams, err := url.ParseQuery(attrValue.StringVal())
 	assert.NoError(t, err)
 	assert.Equal(t, grabURLValue(filteredParams, "user"), "dave")
-	assert.True(t, isEmptyURLValue(filteredParams))
+	assert.False(t, hasRemainingValues(filteredParams))
 }
 
 func TestURLEncodedFilterSuccessForSensitiveKey(t *testing.T) {
@@ -67,7 +66,7 @@ func TestURLEncodedFilterSuccessForSensitiveKey(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, grabURLValue(filteredParams, "user"), "dave")
 	assert.Equal(t, grabURLValue(filteredParams, "password"), "***")
-	assert.True(t, isEmptyURLValue(filteredParams))
+	assert.False(t, hasRemainingValues(filteredParams))
 }
 
 func TestURLEncodedFilterSuccessForSensitiveKeyMultiple(t *testing.T) {
@@ -87,7 +86,7 @@ func TestURLEncodedFilterSuccessForSensitiveKeyMultiple(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, grabURLValue(filteredParams, "user"), "dave")
 	assert.Equal(t, grabURLValue(filteredParams, "password"), "***")
-	assert.True(t, isEmptyURLValue(filteredParams))
+	assert.False(t, hasRemainingValues(filteredParams))
 }
 
 func TestURLEncodedFilterSuccessForURL(t *testing.T) {
@@ -107,7 +106,7 @@ func TestURLEncodedFilterSuccessForURL(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "george", grabURLValue(filteredParams, "username"))
 	assert.Equal(t, "***", grabURLValue(filteredParams, "password"))
-	assert.True(t, isEmptyURLValue(filteredParams))
+	assert.False(t, hasRemainingValues(filteredParams))
 }
 
 func TestURLEncodedFilterFailsParsingURL(t *testing.T) {
@@ -138,5 +137,5 @@ func TestURLEncodedFilterSuccessForSensitiveValue(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, grabURLValue(filteredParams, "key1"), "***")
 	assert.Equal(t, grabURLValue(filteredParams, "key2"), "value2")
-	assert.True(t, isEmptyURLValue(filteredParams))
+	assert.False(t, hasRemainingValues(filteredParams))
 }
