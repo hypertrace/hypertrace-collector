@@ -147,7 +147,7 @@ func (pfp *regexMatcher) redactAndFilterData(redact filters.RedactionStrategy, v
 		redactedValue = filters.RedactedText
 	}
 
-	return isModified, redacted
+	return isModified, redactedValue
 }
 
 func (pfp *regexMatcher) FilterMatchedKey(redactionStrategy filters.RedactionStrategy, actualKey string, value string, path string) (bool, string) {
