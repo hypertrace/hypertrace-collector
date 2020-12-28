@@ -93,8 +93,8 @@ const (
 	responseCookieTag = "http.response.cookie"
 	sessionIDTag      = "session.id"
 	// In case of empty json path, platform uses strings defined here as path
-	requestBodyEmptyJsonPath  = "REQUEST_BODY"
-	responseBodyEmptyJsonPath = "RESPONSE_BODY"
+	requestBodyEmptyJSONPath  = "REQUEST_BODY"
+	responseBodyEmptyJSONPath = "RESPONSE_BODY"
 )
 
 func mapRawToEnriched(rawTag string, path string) (string, string) {
@@ -111,11 +111,11 @@ func mapRawToEnriched(rawTag string, path string) (string, string) {
 		enrichedTag = responseCookieTag
 	case "http.request.body":
 		if len(path) == 0 {
-			enrichedPath = requestBodyEmptyJsonPath
+			enrichedPath = requestBodyEmptyJSONPath
 		}
 	case "http.response.body":
 		if len(path) == 0 {
-			enrichedPath = responseBodyEmptyJsonPath
+			enrichedPath = responseBodyEmptyJSONPath
 		}
 	}
 
@@ -133,17 +133,18 @@ func getFullyQualifiedInspectorKey(actualKey string, path string) string {
 }
 
 func (pfp *regexMatcher) redactAndFilterData(redact filters.RedactionStrategy, value string, inspectorKey string) (bool, string) {
-	var redacted string
+	var redactedValue string
 	var isModified = true
 	switch redact {
 	case filters.Redact:
-		redacted = filters.RedactedText
+		redactedValue = filters.RedactedText
 	case filters.Hash:
-		redacted = pfp.hash(value)
+		redactedValue = pfp.hash(value)
 	case filters.Raw:
-		redacted = value
+		redactedValue = value
+		// should we return turn isModified = false here?
 	default:
-		redacted = filters.RedactedText
+		redactedValue = filters.RedactedText
 	}
 
 	return isModified, redacted
