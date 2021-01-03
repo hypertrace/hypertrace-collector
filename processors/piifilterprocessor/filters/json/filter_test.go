@@ -59,7 +59,16 @@ func TestFilterFailsOnInvalidJSON(t *testing.T) {
 	assert.Equal(t, filters.ErrUnprocessableValue, errors.Unwrap(err))
 }
 
-func TestJSONFieldRedaction(t *testing.T) {
+func TestSimpleArrayRemainsTheSameOnNotMatchingRegex(t *testing.T) {
+	filter := createJSONFilter(t, []matcher.Regex{{Pattern: "^password$"}})
+	attrValue := pdata.NewAttributeValueString("[\"12\",\"34\",\"56\"]")
+	isRedacted, err := filter.RedactAttribute("attrib_key", attrValue)
+	assert.False(t, isRedacted)
+	assert.NoError(t, err)
+	assertJSONEqual(t, "[\"12\",\"34\",\"56\"]", attrValue.StringVal())
+}
+
+func TestRedactionOnMatchingValuesByKey(t *testing.T) {
 	tCases := map[string]struct {
 		unredactedValue           string
 		expectedRedactedAttrValue string
@@ -99,21 +108,22 @@ func TestJSONFieldRedaction(t *testing.T) {
 	}
 }
 
-func Test_piifilterprocessor_json_SimpleArrayFilter(t *testing.T) {
-	filter := createJSONFilter(t, []matcher.Regex{{Pattern: "^password$"}})
-	attrValue := pdata.NewAttributeValueString("[\"12\",\"34\",\"56\"]")
-	isRedacted, err := filter.RedactAttribute("attrib_key", attrValue)
-	assert.False(t, isRedacted)
-	assert.NoError(t, err)
-	assertJSONEqual(t, "[\"12\",\"34\",\"56\"]", attrValue.StringVal())
-}
-
-func Test_piifilterprocessor_json_ObjectInKeyFilter_fqn(t *testing.T) {
+func TestRedactionOnMatchingValuesByFQN(t *testing.T) {
 	tCases := map[string]struct {
 		pattern                   string
 		unredactedValue           string
 		expectedRedactedAttrValue string
 	}{
+		"one element in a simple array is redacted": {
+			pattern:                   "^\\$\\[1\\]$",
+			unredactedValue:           "[\"12\",\"34\",\"56\"]",
+			expectedRedactedAttrValue: "[\"12\",\"***\",\"56\"]",
+		},
+		"one element in a simple object is redacted": {
+			pattern:                   "^\\$\\.password$",
+			unredactedValue:           "{\"a\": \"1\",\"password\": \"abc\"}",
+			expectedRedactedAttrValue: "{\"a\": \"1\",\"password\": \"***\"}",
+		},
 		"all elements in a password array": {
 			pattern:                   "^\\$\\.a\\[1\\]\\.password$",
 			unredactedValue:           "{\"a\": [{\"b\": \"1\"}, {\"password\": [\"12\",\"34\",\"56\"]}]}",
@@ -146,35 +156,4 @@ func Test_piifilterprocessor_json_ObjectInKeyFilter_fqn(t *testing.T) {
 			assertJSONEqual(t, tCase.expectedRedactedAttrValue, attrValue.StringVal())
 		})
 	}
-}
-
-func TestFQNSuccess(t *testing.T) {
-	tCases := map[string]struct {
-		pattern                   string
-		unredactedValue           string
-		expectedRedactedAttrValue string
-	}{
-		"simple array is redacted": {
-			pattern:                   "^\\$\\[1\\]$",
-			unredactedValue:           "[\"12\",\"34\",\"56\"]",
-			expectedRedactedAttrValue: "[\"12\",\"***\",\"56\"]",
-		},
-		"simple object is redacted": {
-			pattern:                   "^\\$\\.password$",
-			unredactedValue:           "{\"a\": \"1\",\"password\": \"abc\"}",
-			expectedRedactedAttrValue: "{\"a\": \"1\",\"password\": \"***\"}",
-		},
-	}
-
-	for name, tCase := range tCases {
-		t.Run(name, func(t *testing.T) {
-			filter := createJSONFilter(t, []matcher.Regex{{Pattern: tCase.pattern, FQN: true}})
-			attrValue := pdata.NewAttributeValueString(tCase.unredactedValue)
-			isRedacted, err := filter.RedactAttribute("attrib_key", attrValue)
-			assert.True(t, isRedacted)
-			assert.NoError(t, err)
-			assertJSONEqual(t, tCase.expectedRedactedAttrValue, attrValue.StringVal())
-		})
-	}
-
 }
