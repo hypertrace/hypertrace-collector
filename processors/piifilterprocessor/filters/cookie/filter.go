@@ -11,9 +11,13 @@ import (
 
 var _ filters.Filter = (*cookieFilter)(nil)
 
+const (
+	headerCookie    = "http.request.header.cookie"
+	headerSetCookie = "http.response.header.set-cookie"
+)
+
 type cookieFilter struct {
-	m  matcher.Matcher
-	rs filters.RedactionStrategy
+	m matcher.Matcher
 }
 
 func (f *cookieFilter) RedactAttribute(key string, value pdata.AttributeValue) (bool, error) {
@@ -23,7 +27,7 @@ func (f *cookieFilter) RedactAttribute(key string, value pdata.AttributeValue) (
 
 	cookies := parseCookies(key, value.StringVal())
 	if cookies == nil {
-		return false, nil
+		return false, filters.WrapError(filters.ErrUnprocessableValue, "no cookie values")
 	}
 
 	isRedacted := false
@@ -47,12 +51,12 @@ func (f *cookieFilter) RedactAttribute(key string, value pdata.AttributeValue) (
 func parseCookies(key string, value string) []*http.Cookie {
 	unindexedKey := strings.Split(key, "[")[0]
 	switch unindexedKey {
-	case "http.request.header.cookie":
+	case headerCookie:
 		header := http.Header{"Cookie": {value}}
 		request := http.Request{Header: header}
 		return request.Cookies()
 
-	case "http.response.header.set-cookie":
+	case headerSetCookie:
 		header := http.Header{"Set-Cookie": {value}}
 		response := http.Response{Header: header}
 		return response.Cookies()

@@ -11,6 +11,7 @@ import (
 type Regex struct {
 	Pattern        string
 	RedactStrategy filters.RedactionStrategy
+	Fqn            bool
 }
 
 type CompiledRegex struct {
@@ -91,7 +92,6 @@ const (
 	queryParamTag     = "http.request.query.param"
 	requestCookieTag  = "http.request.cookie"
 	responseCookieTag = "http.response.cookie"
-	sessionIDTag      = "session.id"
 	// In case of empty json path, platform uses strings defined here as path
 	requestBodyEmptyJSONPath  = "REQUEST_BODY"
 	responseBodyEmptyJSONPath = "RESPONSE_BODY"
@@ -132,7 +132,7 @@ func getFullyQualifiedInspectorKey(actualKey string, path string) string {
 	return inspectorKey
 }
 
-func (pfp *regexMatcher) redactAndFilterData(redact filters.RedactionStrategy, value string, inspectorKey string) (bool, string) {
+func (pfp *regexMatcher) redactAndFilterData(redact filters.RedactionStrategy, value string, _ string) (bool, string) {
 	var redactedValue string
 	var isModified = true
 	switch redact {
@@ -153,8 +153,23 @@ func (pfp *regexMatcher) redactAndFilterData(redact filters.RedactionStrategy, v
 func (pfp *regexMatcher) FilterMatchedKey(redactionStrategy filters.RedactionStrategy, actualKey string, value string, path string) (bool, string) {
 	inspectorKey := getFullyQualifiedInspectorKey(actualKey, path)
 
-	isModified, redacted := pfp.redactAndFilterData(redactionStrategy, value, inspectorKey)
-	return isModified, redacted
+	return pfp.redactAndFilterData(redactionStrategy, value, inspectorKey)
+}
+
+func (pfp *regexMatcher) MatchKeyRegexs(keyToMatch string, path string) (bool, *CompiledRegex) {
+	for _, r := range pfp.keyRegexs {
+		if r.Fqn {
+			if r.Regexp.MatchString(path) {
+				return true, &r
+			}
+		} else {
+			if r.Regexp.MatchString(keyToMatch) {
+				return true, &r
+			}
+		}
+
+	}
+	return false, nil
 }
 
 func compileRegexs(regexs []Regex, defaultStrategy filters.RedactionStrategy) ([]CompiledRegex, error) {

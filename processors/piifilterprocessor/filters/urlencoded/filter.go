@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/internal/matcher"
 	"go.opentelemetry.io/collector/consumer/pdata"
 )
+
+var _ filters.Filter = (*urlEncodedFilter)(nil)
 
 type urlEncodedFilter struct {
 	m matcher.Matcher
@@ -27,14 +30,14 @@ func (f *urlEncodedFilter) RedactAttribute(key string, value pdata.AttributeValu
 	if isURLAttr {
 		u, err = url.Parse(value.StringVal())
 		if err != nil {
-			return false, err
+			return false, filters.WrapError(filters.ErrUnprocessableValue, err.Error())
 		}
 		rawString = u.RawQuery
 	}
 
 	params, err := url.ParseQuery(rawString)
 	if err != nil {
-		return false, err
+		return false, filters.WrapError(filters.ErrUnprocessableValue, err.Error())
 	}
 
 	v := url.Values{}
