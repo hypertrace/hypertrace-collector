@@ -12,5 +12,8 @@ type Matcher interface {
 
 	FilterMatchedKey(redactionStrategy filters.RedactionStrategy, actualKey string, value string, path string) (bool, string)
 
+	// MatchKeyRegexs matches a key or a path form the matcher and returns the matching
+	// regex. IT SHOULD BE AVOIDED as it leaks internal details from matcher.
+	// It will be removed soon.
 	MatchKeyRegexs(keyToMatch string, path string) (bool, *CompiledRegex)
 }

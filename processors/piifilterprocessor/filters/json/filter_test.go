@@ -138,7 +138,7 @@ func Test_piifilterprocessor_json_ObjectInKeyFilter_fqn(t *testing.T) {
 
 	for name, tCase := range tCases {
 		t.Run(name, func(t *testing.T) {
-			filter := createJSONFilter(t, []matcher.Regex{{Pattern: tCase.pattern, Fqn: true}})
+			filter := createJSONFilter(t, []matcher.Regex{{Pattern: tCase.pattern, FQN: true}})
 			attrValue := pdata.NewAttributeValueString(tCase.unredactedValue)
 			isRedacted, err := filter.RedactAttribute("attrib_key", attrValue)
 			assert.True(t, isRedacted)
@@ -168,7 +168,7 @@ func TestFQNSuccess(t *testing.T) {
 
 	for name, tCase := range tCases {
 		t.Run(name, func(t *testing.T) {
-			filter := createJSONFilter(t, []matcher.Regex{{Pattern: tCase.pattern, Fqn: true}})
+			filter := createJSONFilter(t, []matcher.Regex{{Pattern: tCase.pattern, FQN: true}})
 			attrValue := pdata.NewAttributeValueString(tCase.unredactedValue)
 			isRedacted, err := filter.RedactAttribute("attrib_key", attrValue)
 			assert.True(t, isRedacted)
