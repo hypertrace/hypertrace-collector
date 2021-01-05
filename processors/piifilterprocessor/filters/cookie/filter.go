@@ -24,6 +24,10 @@ func NewFilter(m *regexmatcher.Matcher) filters.Filter {
 	return &cookieFilter{m}
 }
 
+func (f *cookieFilter) Name() string {
+	return "cookie"
+}
+
 func (f *cookieFilter) RedactAttribute(key string, value pdata.AttributeValue) (bool, error) {
 	if len(value.StringVal()) == 0 {
 		return false, nil

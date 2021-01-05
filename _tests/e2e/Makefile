@@ -1,5 +1,5 @@
 run-collector:
-	rm $(PWD)/trace-log.json
+	rm $(PWD)/trace-log.json || true
 	touch $(PWD)/trace-log.json
 	docker run -p 9411:9411 \
 	-v $(PWD)/test-config.yml:/etc/opt/hypertrace/config.yml \

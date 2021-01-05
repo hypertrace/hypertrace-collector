@@ -3,6 +3,7 @@ package piifilterprocessor
 import (
 	"context"
 	"fmt"
+
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/cookie"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/json"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
@@ -28,9 +29,9 @@ func toRegex(es []PiiElement) []regexmatcher.Regex {
 
 	for _, e := range es {
 		rs = append(rs, regexmatcher.Regex{
-			Pattern: e.Regex,
+			Pattern:        e.Regex,
 			RedactStrategy: e.RedactStrategy,
-			FQN: e.FQN,
+			FQN:            e.FQN,
 		})
 	}
 
@@ -58,8 +59,8 @@ func newPIIFilterProcessor(
 	}
 
 	return &piiFilterProcessor{
-		next:   next,
-		logger: logger,
+		next:    next,
+		logger:  logger,
 		filters: fs,
 	}, nil
 }
@@ -89,7 +90,7 @@ func (p *piiFilterProcessor) ProcessTraces(_ context.Context, td pdata.Traces) (
 				span.Attributes().ForEach(func(key string, value pdata.AttributeValue) {
 					for _, filter := range p.filters {
 						if _, err := filter.RedactAttribute(key, value); err != nil {
-							p.logger.Sugar().Errorf("failed to filter attributes: %v", err)
+							p.logger.Sugar().Errorf("failed to apply filter %q to attribute with key %q: %v", filter.Name(), key, err)
 						}
 					}
 				})

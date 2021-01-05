@@ -2,6 +2,7 @@ package json
 
 import (
 	"fmt"
+
 	jsoniter "github.com/json-iterator/go"
 
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
@@ -13,7 +14,7 @@ import (
 var _ filters.Filter = (*jsonFilter)(nil)
 
 type jsonFilter struct {
-	m *regexmatcher.Matcher
+	m  *regexmatcher.Matcher
 	mu json.MarshalUnmarshaler
 }
 
@@ -22,6 +23,10 @@ func NewFilter(m *regexmatcher.Matcher) filters.Filter {
 }
 
 const jsonPathPrefix = "$"
+
+func (f *jsonFilter) Name() string {
+	return "JSON"
+}
 
 func (f *jsonFilter) RedactAttribute(key string, value pdata.AttributeValue) (bool, error) {
 	if len(value.StringVal()) == 0 {

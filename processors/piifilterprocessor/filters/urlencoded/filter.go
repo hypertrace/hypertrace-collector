@@ -21,6 +21,10 @@ func NewFilter(m *regexmatcher.Matcher) filters.Filter {
 
 const urlAttributeStr = "http.url"
 
+func (f *urlEncodedFilter) Name() string {
+	return "urlencoded"
+}
+
 func (f *urlEncodedFilter) RedactAttribute(key string, value pdata.AttributeValue) (bool, error) {
 	if len(value.StringVal()) == 0 {
 		return false, nil
