@@ -48,7 +48,7 @@ jobs:
           image: hypertrace/collector:latest
           options: |
             -p 9411:9411 
-            -v $(pwd)/test-config.yml:/etc/opt/hypertrace/config.yml
-            -v $(pwd)/traces-log.json:/var/log/hypertrace-collector.json
+            -v ${GITHUB_WORKSPACE}/_tests/e2e/test-config.yml:/etc/opt/hypertrace/config.yml
+            -v ${GITHUB_WORKSPACE}/_tests/e2e/traces-log.json:/var/log/hypertrace-collector.json
       - name: Run e2e test
-        run: cd ./_tests/e2e; ./test.sh
+        run: cd ${GITHUB_WORKSPACE}/_tests/e2e; ./test.sh
