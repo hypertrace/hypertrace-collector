@@ -12,8 +12,6 @@ RUN GOOS=linux make build
 
 FROM gcr.io/distroless/base
 # Following folder conventions described in https://unix.stackexchange.com/a/11552
-#RUN apk --update add ca-certificates
-#RUN ["mkdir", "-p", "/usr/local/bin/hypertrace"]
 WORKDIR /usr/local/bin/hypertrace
 
 COPY --from=build-stage /go/src/github.com/hypertrace/collector/collector .
