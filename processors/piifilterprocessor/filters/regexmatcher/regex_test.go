@@ -1,4 +1,4 @@
-package matcher
+package regexmatcher
 
 import (
 	"testing"
@@ -35,7 +35,7 @@ func TestCompileRegexs(t *testing.T) {
 }
 
 func TestFilterMatchedKey(t *testing.T) {
-	m, _ := NewRegexMatcher([]Regex{{Pattern: "^password$"}}, nil, filters.Redact)
+	m, _ := NewMatcher([]Regex{{Pattern: "^password$"}}, nil, filters.Redact)
 	isModified, redacted := m.FilterMatchedKey(filters.Redact, "http.request.header.password", "abc123", "")
 	assert.True(t, isModified)
 	assert.Equal(t, "***", redacted)

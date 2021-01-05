@@ -1,6 +1,7 @@
 VERSION ?= dev
 GIT_HASH ?=$(shell git rev-parse HEAD)
 IMAGE_NAME := "hypertrace/collector"
+CONFIG_FILE ?= ./default-config.yml
 
 .PHONY: unit-test
 unit-test:
@@ -15,7 +16,7 @@ build:
 
 .PHONY: run
 run:
-	go run cmd/collector/main.go --config ./config.yml
+	go run -ldflags "-w -X main.GitHash=${GIT_HASH} -X main.Version=${VERSION}" cmd/collector/* --config ${CONFIG_FILE}
 
 .PHONY: package
 package:

@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
-	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/internal/matcher"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
 	"go.opentelemetry.io/collector/consumer/pdata"
 )
 
@@ -17,7 +17,11 @@ const (
 )
 
 type cookieFilter struct {
-	m matcher.Matcher
+	m *regexmatcher.Matcher
+}
+
+func NewFilter(m *regexmatcher.Matcher) filters.Filter {
+	return &cookieFilter{m}
 }
 
 func (f *cookieFilter) RedactAttribute(key string, value pdata.AttributeValue) (bool, error) {

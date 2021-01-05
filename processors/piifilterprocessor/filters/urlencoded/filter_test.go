@@ -5,13 +5,13 @@ import (
 	"testing"
 
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
-	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/internal/matcher"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/consumer/pdata"
 )
 
-func createURLEncodedFilter(t *testing.T, keyRegexs, valueRegexs []matcher.Regex) *urlEncodedFilter {
-	m, err := matcher.NewRegexMatcher(keyRegexs, valueRegexs, filters.Redact)
+func createURLEncodedFilter(t *testing.T, keyRegexs, valueRegexs []regexmatcher.Regex) *urlEncodedFilter {
+	m, err := regexmatcher.NewMatcher(keyRegexs, valueRegexs, filters.Redact)
 
 	assert.NoError(t, err)
 
@@ -34,7 +34,7 @@ func hasRemainingValues(v url.Values) bool {
 }
 
 func TestURLEncodedFilterSuccessOnNoSensitiveValue(t *testing.T) {
-	filter := createURLEncodedFilter(t, []matcher.Regex{{Pattern: "^password$"}}, []matcher.Regex{})
+	filter := createURLEncodedFilter(t, []regexmatcher.Regex{{Pattern: "^password$"}}, []regexmatcher.Regex{})
 
 	v := url.Values{}
 	v.Add("user", "dave")
@@ -51,7 +51,7 @@ func TestURLEncodedFilterSuccessOnNoSensitiveValue(t *testing.T) {
 }
 
 func TestURLEncodedFilterSuccessForSensitiveKey(t *testing.T) {
-	filter := createURLEncodedFilter(t, []matcher.Regex{{Pattern: "^password$"}}, []matcher.Regex{})
+	filter := createURLEncodedFilter(t, []regexmatcher.Regex{{Pattern: "^password$"}}, []regexmatcher.Regex{})
 
 	v := url.Values{}
 	v.Add("user", "dave")
@@ -70,7 +70,7 @@ func TestURLEncodedFilterSuccessForSensitiveKey(t *testing.T) {
 }
 
 func TestURLEncodedFilterSuccessForSensitiveKeyMultiple(t *testing.T) {
-	filter := createURLEncodedFilter(t, []matcher.Regex{{Pattern: "^password$"}}, []matcher.Regex{})
+	filter := createURLEncodedFilter(t, []regexmatcher.Regex{{Pattern: "^password$"}}, []regexmatcher.Regex{})
 
 	v := url.Values{}
 	v.Add("user", "dave")
@@ -90,7 +90,7 @@ func TestURLEncodedFilterSuccessForSensitiveKeyMultiple(t *testing.T) {
 }
 
 func TestURLEncodedFilterSuccessForURL(t *testing.T) {
-	filter := createURLEncodedFilter(t, []matcher.Regex{{Pattern: "^password$"}}, []matcher.Regex{})
+	filter := createURLEncodedFilter(t, []regexmatcher.Regex{{Pattern: "^password$"}}, []regexmatcher.Regex{})
 
 	testURL := "http://traceshop.dev/login?username=george&password=washington"
 
@@ -110,7 +110,7 @@ func TestURLEncodedFilterSuccessForURL(t *testing.T) {
 }
 
 func TestURLEncodedFilterFailsParsingURL(t *testing.T) {
-	filter := createURLEncodedFilter(t, []matcher.Regex{{Pattern: "^password$"}}, []matcher.Regex{})
+	filter := createURLEncodedFilter(t, []regexmatcher.Regex{{Pattern: "^password$"}}, []regexmatcher.Regex{})
 
 	testURL := "http://x: namedport"
 
@@ -122,7 +122,7 @@ func TestURLEncodedFilterFailsParsingURL(t *testing.T) {
 }
 
 func TestURLEncodedFilterSuccessForSensitiveValue(t *testing.T) {
-	filter := createURLEncodedFilter(t, []matcher.Regex{}, []matcher.Regex{{Pattern: "^filter_value$"}})
+	filter := createURLEncodedFilter(t, []regexmatcher.Regex{}, []regexmatcher.Regex{{Pattern: "^filter_value$"}})
 
 	v := url.Values{}
 	v.Add("key1", "filter_value")

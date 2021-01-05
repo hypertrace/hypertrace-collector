@@ -2,6 +2,7 @@ package piifilterprocessor
 
 import (
 	"context"
+	"fmt"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configmodels"
@@ -39,9 +40,17 @@ func createTraceProcessor(
 	cfg configmodels.Processor,
 	nextConsumer consumer.TracesConsumer,
 ) (component.TracesProcessor, error) {
+	piiCfg := cfg.(*Config)
+
+	proc, err := newPIIFilterProcessor(params.Logger, nextConsumer, piiCfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create the PII trace processor: %v", err)
+	}
+
 	return processorhelper.NewTraceProcessor(
 		cfg,
 		nextConsumer,
-		newPIIFilterProcessor(params.Logger, nextConsumer),
-		processorhelper.WithCapabilities(processorCapabilities))
+		proc,
+		processorhelper.WithCapabilities(processorCapabilities),
+	)
 }

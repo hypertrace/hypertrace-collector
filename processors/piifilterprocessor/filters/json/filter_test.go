@@ -9,7 +9,7 @@ import (
 
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/internal/json"
-	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/internal/matcher"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/consumer/pdata"
 )
@@ -32,8 +32,8 @@ func assertJSONEqual(t *testing.T, expected, actual string) {
 	assert.True(t, true)
 }
 
-func createJSONFilter(t *testing.T, keyRegExs []matcher.Regex) *jsonFilter {
-	m, err := matcher.NewRegexMatcher(keyRegExs, []matcher.Regex{}, filters.Redact)
+func createJSONFilter(t *testing.T, keyRegExs []regexmatcher.Regex) *jsonFilter {
+	m, err := regexmatcher.NewMatcher(keyRegExs, []regexmatcher.Regex{}, filters.Redact)
 
 	assert.NoError(t, err)
 
@@ -41,7 +41,7 @@ func createJSONFilter(t *testing.T, keyRegExs []matcher.Regex) *jsonFilter {
 }
 
 func TestFilterSuccessOnEmptyString(t *testing.T) {
-	filter := createJSONFilter(t, []matcher.Regex{})
+	filter := createJSONFilter(t, []regexmatcher.Regex{})
 
 	attrValue := pdata.NewAttributeValueString("")
 	isRedacted, err := filter.RedactAttribute("attrib_key", attrValue)
@@ -50,7 +50,7 @@ func TestFilterSuccessOnEmptyString(t *testing.T) {
 }
 
 func TestFilterFailsOnInvalidJSON(t *testing.T) {
-	filter := createJSONFilter(t, []matcher.Regex{})
+	filter := createJSONFilter(t, []regexmatcher.Regex{})
 
 	attrValue := pdata.NewAttributeValueString("bob")
 	isRedacted, err := filter.RedactAttribute("attrib_key", attrValue)
@@ -60,7 +60,7 @@ func TestFilterFailsOnInvalidJSON(t *testing.T) {
 }
 
 func TestSimpleArrayRemainsTheSameOnNotMatchingRegex(t *testing.T) {
-	filter := createJSONFilter(t, []matcher.Regex{{Pattern: "^password$"}})
+	filter := createJSONFilter(t, []regexmatcher.Regex{{Pattern: "^password$"}})
 	attrValue := pdata.NewAttributeValueString("[\"12\",\"34\",\"56\"]")
 	isRedacted, err := filter.RedactAttribute("attrib_key", attrValue)
 	assert.False(t, isRedacted)
@@ -97,7 +97,7 @@ func TestRedactionOnMatchingValuesByKey(t *testing.T) {
 
 	for name, tCase := range tCases {
 		t.Run(name, func(t *testing.T) {
-			filter := createJSONFilter(t, []matcher.Regex{{Pattern: "^password$"}})
+			filter := createJSONFilter(t, []regexmatcher.Regex{{Pattern: "^password$"}})
 
 			attrValue := pdata.NewAttributeValueString(tCase.unredactedValue)
 			isRedacted, err := filter.RedactAttribute("attrib_key", attrValue)
@@ -148,7 +148,7 @@ func TestRedactionOnMatchingValuesByFQN(t *testing.T) {
 
 	for name, tCase := range tCases {
 		t.Run(name, func(t *testing.T) {
-			filter := createJSONFilter(t, []matcher.Regex{{Pattern: tCase.pattern, FQN: true}})
+			filter := createJSONFilter(t, []regexmatcher.Regex{{Pattern: tCase.pattern, FQN: true}})
 			attrValue := pdata.NewAttributeValueString(tCase.unredactedValue)
 			isRedacted, err := filter.RedactAttribute("attrib_key", attrValue)
 			assert.True(t, isRedacted)
