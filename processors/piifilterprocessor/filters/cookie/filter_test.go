@@ -10,7 +10,7 @@ import (
 )
 
 func Test_piifilterprocessor_cookie_FilterKey(t *testing.T) {
-	key := "http.request.header.cookie"
+	key := headerCookie
 	cookieValue := "cookie1=value1"
 	expectedCookieFilteredValue := "cookie1=value1"
 
@@ -24,7 +24,7 @@ func Test_piifilterprocessor_cookie_FilterKey(t *testing.T) {
 }
 
 func TestCookieFilterFiltersCookieKey(t *testing.T) {
-	key := "http.request.header.cookie"
+	key := headerCookie
 	cookieValue := "cookie1=value1; password=value2"
 	expectedCookieFilteredValue := "cookie1=value1; password=***"
 	filter := newCookieFilter(t)

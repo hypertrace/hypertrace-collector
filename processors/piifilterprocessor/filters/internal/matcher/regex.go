@@ -8,11 +8,14 @@ import (
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 )
 
+// Regex is a regex representation. It should be private
 type Regex struct {
 	Pattern        string
 	RedactStrategy filters.RedactionStrategy
+	FQN            bool
 }
 
+// CompiledRegex is a compiled regex representation. It should be private
 type CompiledRegex struct {
 	*regexp.Regexp
 	Regex
@@ -47,33 +50,33 @@ func NewRegexMatcher(
 	}, nil
 }
 
-func (pfp *regexMatcher) FilterKeyRegexs(keyToMatch string, actualKey string, value string, path string) (bool, string) {
-	for _, r := range pfp.keyRegexs {
+func (rm *regexMatcher) FilterKeyRegexs(keyToMatch string, actualKey string, value string, path string) (bool, string) {
+	for _, r := range rm.keyRegexs {
 		if r.Regexp.MatchString(keyToMatch) {
-			return pfp.FilterMatchedKey(r.RedactStrategy, actualKey, value, path)
+			return rm.FilterMatchedKey(r.RedactStrategy, actualKey, value, path)
 		}
 	}
 
 	return false, ""
 }
 
-func (pfp *regexMatcher) FilterStringValueRegexs(value string, key string, path string) (bool, string) {
+func (rm *regexMatcher) FilterStringValueRegexs(value string, key string, path string) (bool, string) {
 	inspectorKey := getFullyQualifiedInspectorKey(key, path)
 
 	filtered := false
-	for _, r := range pfp.valueRegexs {
-		filtered, value = pfp.replacingRegex(value, inspectorKey, r.Regexp, r.RedactStrategy)
+	for _, r := range rm.valueRegexs {
+		filtered, value = rm.replacingRegex(value, inspectorKey, r.Regexp, r.RedactStrategy)
 	}
 
 	return filtered, value
 }
 
-func (pfp *regexMatcher) replacingRegex(value string, key string, regex *regexp.Regexp, rs filters.RedactionStrategy) (bool, string) {
+func (rm *regexMatcher) replacingRegex(value string, key string, regex *regexp.Regexp, rs filters.RedactionStrategy) (bool, string) {
 	matchCount := 0
 
 	filtered := regex.ReplaceAllStringFunc(value, func(src string) string {
 		matchCount++
-		_, str := pfp.redactAndFilterData(rs, src, key)
+		_, str := rm.redactAndFilterData(rs, src, key)
 		return str
 	})
 
@@ -91,7 +94,6 @@ const (
 	queryParamTag     = "http.request.query.param"
 	requestCookieTag  = "http.request.cookie"
 	responseCookieTag = "http.response.cookie"
-	sessionIDTag      = "session.id"
 	// In case of empty json path, platform uses strings defined here as path
 	requestBodyEmptyJSONPath  = "REQUEST_BODY"
 	responseBodyEmptyJSONPath = "RESPONSE_BODY"
@@ -132,14 +134,14 @@ func getFullyQualifiedInspectorKey(actualKey string, path string) string {
 	return inspectorKey
 }
 
-func (pfp *regexMatcher) redactAndFilterData(redact filters.RedactionStrategy, value string, inspectorKey string) (bool, string) {
+func (rm *regexMatcher) redactAndFilterData(redact filters.RedactionStrategy, value string, _ string) (bool, string) {
 	var redactedValue string
 	var isModified = true
 	switch redact {
 	case filters.Redact:
 		redactedValue = filters.RedactedText
 	case filters.Hash:
-		redactedValue = pfp.hash(value)
+		redactedValue = rm.hash(value)
 	case filters.Raw:
 		redactedValue = value
 		// should we return turn isModified = false here?
@@ -150,11 +152,26 @@ func (pfp *regexMatcher) redactAndFilterData(redact filters.RedactionStrategy, v
 	return isModified, redactedValue
 }
 
-func (pfp *regexMatcher) FilterMatchedKey(redactionStrategy filters.RedactionStrategy, actualKey string, value string, path string) (bool, string) {
+func (rm *regexMatcher) FilterMatchedKey(redactionStrategy filters.RedactionStrategy, actualKey string, value string, path string) (bool, string) {
 	inspectorKey := getFullyQualifiedInspectorKey(actualKey, path)
 
-	isModified, redacted := pfp.redactAndFilterData(redactionStrategy, value, inspectorKey)
-	return isModified, redacted
+	return rm.redactAndFilterData(redactionStrategy, value, inspectorKey)
+}
+
+func (rm *regexMatcher) MatchKeyRegexs(keyToMatch string, path string) (bool, *CompiledRegex) {
+	for _, r := range rm.keyRegexs {
+		if r.FQN {
+			if r.Regexp.MatchString(path) {
+				return true, &r
+			}
+		} else {
+			if r.Regexp.MatchString(keyToMatch) {
+				return true, &r
+			}
+		}
+
+	}
+	return false, nil
 }
 
 func compileRegexs(regexs []Regex, defaultStrategy filters.RedactionStrategy) ([]CompiledRegex, error) {
