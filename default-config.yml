@@ -1,3 +1,6 @@
+# This is the default config that is being provided along with the collector
+# image.
+
 extensions:
   health_check:
   pprof:
