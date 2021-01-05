@@ -11,7 +11,7 @@ test: unit-test
 
 .PHONY: build
 build:
-	go build -ldflags "-w -X main.GitHash=${GIT_HASH} -X main.Version=${VERSION}" ./cmd/collector
+	$(if $(GOOS),GOOS=${GOOS},) go build -ldflags "-w -X main.GitHash=${GIT_HASH} -X main.Version=${VERSION}" ./cmd/collector
 
 .PHONY: run
 run:
@@ -19,7 +19,7 @@ run:
 
 .PHONY: package
 package:
-	docker build --build-arg VERSION=${VERSION} --build-arg GIT_COMMIT=$(GIT_COMMIT) -t $(IMAGE_NAME):${VERSION} -t $(IMAGE_NAME):latest .
+	@docker build --build-arg VERSION=${VERSION} --build-arg GIT_COMMIT=$(GIT_COMMIT) -t $(IMAGE_NAME):${VERSION} .
 
 .PHONY: lint
 lint:
