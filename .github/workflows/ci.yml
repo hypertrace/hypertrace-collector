@@ -43,7 +43,7 @@ jobs:
       - name: Create traces log
         run: touch traces-log.json
       - name: Run collector image
-        uses: hypertrace/collector:latest
+        uses: addnab/docker-run-action@v1
         with:
           image: hypertrace/collector:latest
           options: |
