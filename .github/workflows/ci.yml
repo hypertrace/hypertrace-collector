@@ -24,6 +24,7 @@ jobs:
       - name: Run unit tests
         run: make test
       - name: Build and push
+        if: matrix.os == 'ubuntu-latest'
         uses: docker/build-push-action@v2
         with:
           context: .
