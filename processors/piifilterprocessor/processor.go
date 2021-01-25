@@ -29,23 +29,13 @@ func (p *piiFilterProcessor) ProcessTraces(ctx context.Context, td pdata.Traces)
 	rss := td.ResourceSpans()
 	for i := 0; i < rss.Len(); i++ {
 		rs := rss.At(i)
-		if rs.IsNil() {
-			continue
-		}
 
 		ilss := rs.InstrumentationLibrarySpans()
 		for j := 0; j < ilss.Len(); j++ {
 			ils := ilss.At(j)
-			if ils.IsNil() {
-				continue
-			}
 			spans := ils.Spans()
 			for k := 0; k < spans.Len(); k++ {
 				span := spans.At(k)
-				if span.IsNil() {
-					// Do not create empty spans just to add attributes
-					continue
-				}
 
 				span.Attributes().ForEach(func(key string, value pdata.AttributeValue) {
 					for _, filter := range p.filters {
