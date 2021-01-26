@@ -20,6 +20,8 @@ const (
 // The processor adds tenant ID to every received span.
 // The processor returns an error when the tenant ID is missing.
 // The tenant ID header is obtained from the context object.
+// The batch processor cleans context, therefore this processor
+// has to be added before, ideally right after the receiver.
 func NewFactory() component.ProcessorFactory {
 	return processorhelper.NewFactory(
 		typeStr,
