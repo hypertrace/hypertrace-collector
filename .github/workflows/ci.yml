@@ -52,4 +52,4 @@ jobs:
             -v /home/runner/work/hypertrace-collector/hypertrace-collector/_tests/e2e/test-config.yml:/etc/opt/hypertrace/config.yml
             -v /home/runner/work/hypertrace-collector/hypertrace-collector/_tests/e2e/exported-trace.json:/usr/local/bin/hypertrace/exported-trace.json
       - name: Run e2e test
-        run: cd ${GITHUB_WORKSPACE}/_tests/e2e; ./test.sh
+        run: EXPORTED_TRACE=/home/runner/work/hypertrace-collector/hypertrace-collector/_tests/e2e/exported-trace.json ./${GITHUB_WORKSPACE}/_tests/e2e/test.sh
