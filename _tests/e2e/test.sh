@@ -2,11 +2,9 @@
 
 set -e 
 
-SCRIPT_PATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+EXPORTED_TRACE=${1:-./exported-trace.json}
 
-if [ -z "${EXPORTED_TRACE}" ]; then 
-    EXPORTED_TRACE="${SCRIPT_PATH}/exported-trace.json"
-fi
+SCRIPT_PATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 curl -X POST http://localhost:9411/api/v2/spans \
   -H "Content-Type: application/json" \

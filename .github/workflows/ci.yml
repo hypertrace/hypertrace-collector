@@ -25,8 +25,14 @@ jobs:
         run: make test
       - name: Build collector
         run: make build
+      - if: ${{ matrix.os}} != "windows-latest"
+        name: Launch collector for E2E tests
+        run: ./collector --config ./_tests/e2e/test-config.yml
+      - if: ${{ matrix.os}} != "windows-latest"
+        name: Run E2E tests
+        run: ./_tests/e2e/test.sh ./exported-trace.json
 
-  build-and-e2e-image:
+  package:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -40,16 +46,3 @@ jobs:
           build-args: |
             VERSION=latest
             GIT_COMMIT=${GITHUB_SHA}
-      - name: Create traces log
-        run: touch exported-trace.json
-      - run: echo "${GITHUB_WORKSPACE}"
-      - name: Run collector image
-        uses: addnab/docker-run-action@v1
-        with:
-          image: hypertrace/hypertrace-collector:latest
-          options: |
-            -p 9411:9411 
-            -v /home/runner/work/hypertrace-collector/hypertrace-collector/_tests/e2e/test-config.yml:/etc/opt/hypertrace/config.yml
-            -v /home/runner/work/hypertrace-collector/hypertrace-collector/_tests/e2e/exported-trace.json:/usr/local/bin/hypertrace/exported-trace.json
-      - name: Run e2e test
-        run: EXPORTED_TRACE=/home/runner/work/hypertrace-collector/hypertrace-collector/_tests/e2e/exported-trace.json ./${GITHUB_WORKSPACE}/_tests/e2e/test.sh
