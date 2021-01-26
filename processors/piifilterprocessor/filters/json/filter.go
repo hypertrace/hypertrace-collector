@@ -3,20 +3,30 @@ package json
 import (
 	"fmt"
 
+	jsoniter "github.com/json-iterator/go"
+
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/internal/json"
-	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/internal/matcher"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
 	"go.opentelemetry.io/collector/consumer/pdata"
 )
 
 var _ filters.Filter = (*jsonFilter)(nil)
 
 type jsonFilter struct {
-	m  matcher.Matcher
+	m  *regexmatcher.Matcher
 	mu json.MarshalUnmarshaler
 }
 
+func NewFilter(m *regexmatcher.Matcher) filters.Filter {
+	return &jsonFilter{m, jsoniter.ConfigDefault}
+}
+
 const jsonPathPrefix = "$"
+
+func (f *jsonFilter) Name() string {
+	return "JSON"
+}
 
 func (f *jsonFilter) RedactAttribute(key string, value pdata.AttributeValue) (bool, error) {
 	if len(value.StringVal()) == 0 {
@@ -45,7 +55,7 @@ func (f *jsonFilter) RedactAttribute(key string, value pdata.AttributeValue) (bo
 	return true, nil
 }
 
-func (f *jsonFilter) filterJSON(value interface{}, matchedRegex *matcher.CompiledRegex, key string, actualKey string, jsonPath string, checked bool) (bool, interface{}) {
+func (f *jsonFilter) filterJSON(value interface{}, matchedRegex *regexmatcher.CompiledRegex, key string, actualKey string, jsonPath string, checked bool) (bool, interface{}) {
 	switch tValue := value.(type) {
 	case []interface{}:
 		return f.filterJSONArray(tValue, matchedRegex, key, actualKey, jsonPath, checked)
@@ -58,7 +68,7 @@ func (f *jsonFilter) filterJSON(value interface{}, matchedRegex *matcher.Compile
 
 func (f *jsonFilter) filterJSONArray(
 	arrValue []interface{},
-	matchedRegex *matcher.CompiledRegex,
+	matchedRegex *regexmatcher.CompiledRegex,
 	key string,
 	actualKey string,
 	jsonPath string,
@@ -85,7 +95,7 @@ func (f *jsonFilter) filterJSONArray(
 
 func (f *jsonFilter) filterJSONMap(
 	mValue map[string]interface{},
-	matchedRegex *matcher.CompiledRegex,
+	matchedRegex *regexmatcher.CompiledRegex,
 	_ string,
 	actualKey string,
 	jsonPath string,
@@ -111,7 +121,7 @@ func (f *jsonFilter) filterJSONMap(
 
 func (f *jsonFilter) filterJSONScalar(
 	value interface{},
-	matchedRegex *matcher.CompiledRegex,
+	matchedRegex *regexmatcher.CompiledRegex,
 	key string,
 	actualKey string,
 	jsonPath string,

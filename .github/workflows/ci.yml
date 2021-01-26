@@ -8,7 +8,7 @@ on:
       - "LICENSE"
   pull_request:
 jobs:
-  test:
+  test-and-build:
     strategy:
       matrix:
         go-version: [1.15.x]
@@ -25,13 +25,24 @@ jobs:
         run: make test
       - name: Build collector
         run: make build
+      - if: ${{ matrix.os}} != "windows-latest"
+        name: Launch collector for E2E tests
+        run: ./collector --config ./_tests/e2e/test-config.yml &
+      - if: ${{ matrix.os}} != "windows-latest"
+        name: Run E2E tests
+        run: ./_tests/e2e/test.sh ./exported-trace.json
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
       - name: Build and push image
-        if: matrix.os == 'ubuntu-latest'
         uses: docker/build-push-action@v2
         with:
           context: .
           file: ./Dockerfile
-          tags: hypertrace/collector:latest
+          tags: hypertrace/hypertrace-collector:latest
           build-args: |
             VERSION=latest
             GIT_COMMIT=${GITHUB_SHA}

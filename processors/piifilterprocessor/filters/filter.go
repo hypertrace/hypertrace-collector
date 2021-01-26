@@ -30,6 +30,8 @@ var (
 
 // Filter redacts attributes from a span
 type Filter interface {
+	Name() string
+
 	// RedactAttribute decided to redact and attribute and returns true if the value has
 	// been redacted or false otherwise. It also returns and error when something went
 	// went wrong by redacting the value.

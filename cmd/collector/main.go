@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/hypertrace/collector/processors/piifilterprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenterror"
 	"go.opentelemetry.io/collector/service"
@@ -33,6 +34,17 @@ func components() (component.Factories, error) {
 	factories, err := defaultcomponents.Components()
 	if err != nil {
 		return component.Factories{}, err
+	}
+
+	processors := []component.ProcessorFactory{
+		piifilterprocessor.NewFactory(),
+	}
+	for _, pr := range factories.Processors {
+		processors = append(processors, pr)
+	}
+	factories.Processors, err = component.MakeProcessorFactoryMap(processors...)
+	if err != nil {
+		errs = append(errs, err)
 	}
 
 	return factories, componenterror.CombineErrors(errs)

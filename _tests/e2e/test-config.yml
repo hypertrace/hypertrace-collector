@@ -1,0 +1,19 @@
+receivers:
+  zipkin:
+
+processors:
+  hypertrace_piifilter:
+
+exporters:
+  file:
+    path: ./exported-trace.json
+
+service:
+  pipelines:
+    traces:
+      receivers:
+        - zipkin
+      processors:
+        - hypertrace_piifilter
+      exporters:
+        - file

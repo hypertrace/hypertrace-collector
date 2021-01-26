@@ -2,8 +2,14 @@ package piifilterprocessor
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/cookie"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/json"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/urlencoded"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/consumer/pdata"
 	"go.opentelemetry.io/collector/processor/processorhelper"
@@ -18,14 +24,48 @@ type piiFilterProcessor struct {
 	filters []filters.Filter
 }
 
-func newPIIFilterProcessor(logger *zap.Logger, next consumer.TracesConsumer) *piiFilterProcessor {
-	return &piiFilterProcessor{
-		next:   next,
-		logger: logger,
+func toRegex(es []PiiElement) []regexmatcher.Regex {
+	var rs []regexmatcher.Regex
+
+	for _, e := range es {
+		rs = append(rs, regexmatcher.Regex{
+			Pattern:        e.Regex,
+			RedactStrategy: e.RedactStrategy,
+			FQN:            e.FQN,
+		})
 	}
+
+	return rs
 }
 
-func (p *piiFilterProcessor) ProcessTraces(ctx context.Context, td pdata.Traces) (pdata.Traces, error) {
+func newPIIFilterProcessor(
+	logger *zap.Logger,
+	next consumer.TracesConsumer,
+	cfg *Config,
+) (*piiFilterProcessor, error) {
+	matcher, err := regexmatcher.NewMatcher(
+		toRegex(cfg.KeyRegExs),
+		toRegex(cfg.ValueRegExs),
+		cfg.RedactStrategy,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create regex matcher: %v", err)
+	}
+
+	var fs = []filters.Filter{
+		cookie.NewFilter(matcher),
+		urlencoded.NewFilter(matcher),
+		json.NewFilter(matcher),
+	}
+
+	return &piiFilterProcessor{
+		next:    next,
+		logger:  logger,
+		filters: fs,
+	}, nil
+}
+
+func (p *piiFilterProcessor) ProcessTraces(_ context.Context, td pdata.Traces) (pdata.Traces, error) {
 	rss := td.ResourceSpans()
 	for i := 0; i < rss.Len(); i++ {
 		rs := rss.At(i)
@@ -39,8 +79,18 @@ func (p *piiFilterProcessor) ProcessTraces(ctx context.Context, td pdata.Traces)
 
 				span.Attributes().ForEach(func(key string, value pdata.AttributeValue) {
 					for _, filter := range p.filters {
-						if _, err := filter.RedactAttribute(key, value); err != nil {
-							p.logger.Sugar().Errorf("failed to filter attributes: %v", err)
+						if isRedacted, err := filter.RedactAttribute(key, value); err != nil {
+							if errors.Is(err, filters.ErrUnprocessableValue) {
+								// this should be debug when we figure out how to configure the log level
+								p.logger.Sugar().Debugf("failed to apply filter %q to attribute with key %q. Unsuitable value.", filter.Name(), key)
+							} else {
+								p.logger.Sugar().Errorf("failed to apply filter %q to attribute with key %q: %v", filter.Name(), key, err)
+							}
+						} else if isRedacted {
+							// if an attribute is redacted by one filter we don't want to process
+							// it again.
+							p.logger.Sugar().Debugf("attribute with key %q redacted by filter %q", key, filter.Name())
+							break
 						}
 					}
 				})

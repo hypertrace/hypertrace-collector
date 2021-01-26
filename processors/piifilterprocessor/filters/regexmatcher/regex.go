@@ -1,4 +1,4 @@
-package matcher
+package regexmatcher
 
 import (
 	"fmt"
@@ -21,37 +21,36 @@ type CompiledRegex struct {
 	Regex
 }
 
-var _ Matcher = (*regexMatcher)(nil)
-
-type regexMatcher struct {
+type Matcher struct {
 	hash        func(string) string
-	keyRegexs   []CompiledRegex
-	valueRegexs []CompiledRegex
+	keyRegExs   []CompiledRegex
+	valueRegExs []CompiledRegex
 }
 
-func NewRegexMatcher(
-	keyRegexs,
-	valueRegexs []Regex,
+func NewMatcher(
+	keyRegExs,
+	valueRegExs []Regex,
 	globalStrategy filters.RedactionStrategy,
-) (*regexMatcher, error) {
-	compiledKeyRegexs, err := compileRegexs(keyRegexs, globalStrategy)
+) (*Matcher, error) {
+	compiledKeyRegExs, err := compileRegexs(keyRegExs, globalStrategy)
 	if err != nil {
 		return nil, err
 	}
 
-	compiledValueRegexs, err := compileRegexs(valueRegexs, globalStrategy)
+	compiledValueRegExs, err := compileRegexs(valueRegExs, globalStrategy)
 	if err != nil {
 		return nil, err
 	}
 
-	return &regexMatcher{
-		keyRegexs:   compiledKeyRegexs,
-		valueRegexs: compiledValueRegexs,
+	return &Matcher{
+		keyRegExs:   compiledKeyRegExs,
+		valueRegExs: compiledValueRegExs,
 	}, nil
 }
 
-func (rm *regexMatcher) FilterKeyRegexs(keyToMatch string, actualKey string, value string, path string) (bool, string) {
-	for _, r := range rm.keyRegexs {
+// Looks into the key to decide whether filter the value or not
+func (rm *Matcher) FilterKeyRegexs(keyToMatch string, actualKey string, value string, path string) (bool, string) {
+	for _, r := range rm.keyRegExs {
 		if r.Regexp.MatchString(keyToMatch) {
 			return rm.FilterMatchedKey(r.RedactStrategy, actualKey, value, path)
 		}
@@ -60,18 +59,19 @@ func (rm *regexMatcher) FilterKeyRegexs(keyToMatch string, actualKey string, val
 	return false, ""
 }
 
-func (rm *regexMatcher) FilterStringValueRegexs(value string, key string, path string) (bool, string) {
+// Looks into the string value to decide whether filter the value or not
+func (rm *Matcher) FilterStringValueRegexs(value string, key string, path string) (bool, string) {
 	inspectorKey := getFullyQualifiedInspectorKey(key, path)
 
 	filtered := false
-	for _, r := range rm.valueRegexs {
+	for _, r := range rm.valueRegExs {
 		filtered, value = rm.replacingRegex(value, inspectorKey, r.Regexp, r.RedactStrategy)
 	}
 
 	return filtered, value
 }
 
-func (rm *regexMatcher) replacingRegex(value string, key string, regex *regexp.Regexp, rs filters.RedactionStrategy) (bool, string) {
+func (rm *Matcher) replacingRegex(value string, key string, regex *regexp.Regexp, rs filters.RedactionStrategy) (bool, string) {
 	matchCount := 0
 
 	filtered := regex.ReplaceAllStringFunc(value, func(src string) string {
@@ -134,9 +134,8 @@ func getFullyQualifiedInspectorKey(actualKey string, path string) string {
 	return inspectorKey
 }
 
-func (rm *regexMatcher) redactAndFilterData(redact filters.RedactionStrategy, value string, _ string) (bool, string) {
+func (rm *Matcher) redactAndFilterData(redact filters.RedactionStrategy, value string, _ string) (bool, string) {
 	var redactedValue string
-	var isModified = true
 	switch redact {
 	case filters.Redact:
 		redactedValue = filters.RedactedText
@@ -149,17 +148,20 @@ func (rm *regexMatcher) redactAndFilterData(redact filters.RedactionStrategy, va
 		redactedValue = filters.RedactedText
 	}
 
-	return isModified, redactedValue
+	return true, redactedValue
 }
 
-func (rm *regexMatcher) FilterMatchedKey(redactionStrategy filters.RedactionStrategy, actualKey string, value string, path string) (bool, string) {
+func (rm *Matcher) FilterMatchedKey(redactionStrategy filters.RedactionStrategy, actualKey string, value string, path string) (bool, string) {
 	inspectorKey := getFullyQualifiedInspectorKey(actualKey, path)
 
 	return rm.redactAndFilterData(redactionStrategy, value, inspectorKey)
 }
 
-func (rm *regexMatcher) MatchKeyRegexs(keyToMatch string, path string) (bool, *CompiledRegex) {
-	for _, r := range rm.keyRegexs {
+// MatchKeyRegexs matches a key or a path form the regexmatcher and returns the matching
+// regex. IT SHOULD BE AVOIDED as it leaks internal details from regexmatcher.
+// It will be removed soon.
+func (rm *Matcher) MatchKeyRegexs(keyToMatch string, path string) (bool, *CompiledRegex) {
+	for _, r := range rm.keyRegExs {
 		if r.FQN {
 			if r.Regexp.MatchString(path) {
 				return true, &r

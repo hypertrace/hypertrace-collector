@@ -5,17 +5,25 @@ import (
 	"net/url"
 
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
-	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/internal/matcher"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
 	"go.opentelemetry.io/collector/consumer/pdata"
 )
 
 var _ filters.Filter = (*urlEncodedFilter)(nil)
 
 type urlEncodedFilter struct {
-	m matcher.Matcher
+	m *regexmatcher.Matcher
+}
+
+func NewFilter(m *regexmatcher.Matcher) filters.Filter {
+	return &urlEncodedFilter{m}
 }
 
 const urlAttributeStr = "http.url"
+
+func (f *urlEncodedFilter) Name() string {
+	return "urlencoded"
+}
 
 func (f *urlEncodedFilter) RedactAttribute(key string, value pdata.AttributeValue) (bool, error) {
 	if len(value.StringVal()) == 0 {
