@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"go.opencensus.io/stats"
+	"go.opencensus.io/tag"
 	"strings"
 
 	"go.opencensus.io/stats/view"
@@ -33,7 +34,7 @@ func (p *processor) ProcessTraces(ctx context.Context, traces pdata.Traces) (pda
 	tenantIDHeaders := md.Get(p.tenantIDHeaderName)
 	if len(tenantIDHeaders) == 0 {
 		return traces, nil
-	} else if len(tenantIDHeaders) > 0 {
+	} else if len(tenantIDHeaders) > 1 {
 		p.logger.Warn("Multiple tenant IDs provided, only the first one will be used",
 			zap.String("header-name", p.tenantIDHeaderName), zap.String("header-value", strings.Join(tenantIDHeaders, ",")))
 	}
@@ -41,11 +42,9 @@ func (p *processor) ProcessTraces(ctx context.Context, traces pdata.Traces) (pda
 	tenantID := tenantIDHeaders[0]
 	p.addTenantIdToSpans(traces, tenantID)
 
-	if stat, err := p.getTenantStat(tenantID); err != nil {
-		p.logger.Warn("Could not get tenant stats: %s", zap.Error(err))
-	} else {
-		stats.Record(context.Background(), stat.M(int64(traces.SpanCount())))
-	}
+	ctx, _ = tag.New(ctx,
+		tag.Insert(tagTenantID, tenantID))
+	stats.Record(ctx, statSpanPerTenant.M(int64(traces.SpanCount())))
 
 	return traces, nil
 }
@@ -66,26 +65,4 @@ func (p *processor) addTenantIdToSpans(traces pdata.Traces, tenantIDHeaderValue 
 			}
 		}
 	}
-}
-
-func (p *processor) getTenantStat(tenandID string) (*stats.Int64Measure, error) {
-	viewTenantIDCount, ok := p.tenantIDViews[tenandID]
-	if !ok {
-		stat := stats.Int64("tenand_id_span_count_"+tenandID, "Number of spans recieved from tenant "+tenandID, stats.UnitDimensionless)
-
-		viewTenantIDCount = &view.View{
-			Name:        stat.Name(),
-			Description: stat.Description(),
-			Measure:     stat,
-			Aggregation: view.Count(),
-			TagKeys:     nil,
-		}
-
-		if err := view.Register([]*view.View{viewTenantIDCount}...); err != nil {
-			return nil, err
-		}
-		p.tenantIDViews[tenandID] = viewTenantIDCount
-	}
-
-	return viewTenantIDCount.Measure.(*stats.Int64Measure), nil
 }
