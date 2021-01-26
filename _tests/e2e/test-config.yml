@@ -6,7 +6,7 @@ processors:
 
 exporters:
   file:
-    path: /var/log/hypertrace-collector.json
+    path: ./exported-trace.json
 
 service:
   pipelines:

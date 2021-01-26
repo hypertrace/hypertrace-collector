@@ -2,14 +2,14 @@ package piifilterprocessor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/cookie"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/json"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/urlencoded"
-
-	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/consumer/pdata"
 	"go.opentelemetry.io/collector/processor/processorhelper"
@@ -89,8 +89,18 @@ func (p *piiFilterProcessor) ProcessTraces(_ context.Context, td pdata.Traces) (
 
 				span.Attributes().ForEach(func(key string, value pdata.AttributeValue) {
 					for _, filter := range p.filters {
-						if _, err := filter.RedactAttribute(key, value); err != nil {
-							p.logger.Sugar().Errorf("failed to apply filter %q to attribute with key %q: %v", filter.Name(), key, err)
+						if isRedacted, err := filter.RedactAttribute(key, value); err != nil {
+							if errors.Is(err, filters.ErrUnprocessableValue) {
+								// this should be debug when we figure out how to configure the log level
+								p.logger.Sugar().Debugf("failed to apply filter %q to attribute with key %q. Unsuitable value.", filter.Name(), key)
+							} else {
+								p.logger.Sugar().Errorf("failed to apply filter %q to attribute with key %q: %v", filter.Name(), key, err)
+							}
+						} else if isRedacted {
+							// if an attribute is redacted by one filter we don't want to process
+							// it again.
+							p.logger.Sugar().Debugf("attribute with key %q redacted by filter %q", key, filter.Name())
+							break
 						}
 					}
 				})

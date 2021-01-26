@@ -41,14 +41,14 @@ jobs:
             VERSION=latest
             GIT_COMMIT=${GITHUB_SHA}
       - name: Create traces log
-        run: touch traces-log.json
+        run: touch exported-trace.json
       - name: Run collector image
         uses: addnab/docker-run-action@v1
         with:
           image: hypertrace/collector:latest
           options: |
             -p 9411:9411 
-            -v ${GITHUB_WORKSPACE}/_tests/e2e/test-config.yml:/etc/opt/hypertrace/config.yml
-            -v ${GITHUB_WORKSPACE}/_tests/e2e/traces-log.json:/var/log/hypertrace-collector.json
+            -v $GITHUB_WORKSPACE/_tests/e2e/test-config.yml:/etc/opt/hypertrace/config.yml
+            -v $GITHUB_WORKSPACE/_tests/e2e/exported-trace.json:/usr/local/bin/hypertrace/exported-trace.json
       - name: Run e2e test
         run: cd ${GITHUB_WORKSPACE}/_tests/e2e; ./test.sh

@@ -1,16 +1,16 @@
 # Instructions
 
-- Run collector
+## Run collector with test config
+
+In terminal 1:
 
 ```bash
-docker run -p 9411:9411 \
--v $(pwd)/test-config.yml:/etc/opt/hypertrace/config.yml \
--v $(pwd)/exported-trace-data.json:/var/log/hypertrace-collector.json \
-hypertrace/collector:dev
+make run-collector
+// or make run-docker-collector
 ```
 
-- Run test:
+In terminal 2
 
 ```bash
-./test.sh
+make test
 ```
