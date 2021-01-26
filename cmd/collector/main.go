@@ -27,8 +27,8 @@ func main() {
 	info := component.ApplicationStartInfo{
 		ExeName:  "collector",
 		LongName: "Hypertrace Collector",
-		//Version:  Version,
-		//GitHash:  GitHash,
+		Version:  Version,
+		GitHash:  GitHash,
 	}
 
 	if err := run(service.Parameters{ApplicationStartInfo: info, Factories: factories}); err != nil {
