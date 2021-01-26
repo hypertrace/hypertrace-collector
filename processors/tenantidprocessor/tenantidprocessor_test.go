@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"go.opencensus.io/stats/view"
+	"go.opentelemetry.io/collector/testutil"
 	"testing"
 	"time"
 
@@ -58,12 +59,12 @@ func TestEmptyTraces(t *testing.T) {
 
 func TestEndToEndJaegerGRPC(t *testing.T) {
 	// prepare
+	addr := testutil.GetAvailableLocalAddress(t)
 	config := &jaegerreceiver.Config{
 		Protocols: jaegerreceiver.Protocols{
 			GRPC: &configgrpc.GRPCServerSettings{
 				NetAddr: confignet.NetAddr{
-					// do not collide with the standard port
-					Endpoint: "localhost:14255",
+					Endpoint: addr,
 				},
 			},
 		},
