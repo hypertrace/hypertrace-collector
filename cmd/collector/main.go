@@ -9,6 +9,8 @@ import (
 	"go.opentelemetry.io/collector/component/componenterror"
 	"go.opentelemetry.io/collector/service"
 	"go.opentelemetry.io/collector/service/defaultcomponents"
+
+	"github.com/hypertrace/collector/processors/tenantidprocessor"
 )
 
 func main() {
@@ -20,8 +22,8 @@ func main() {
 	info := component.ApplicationStartInfo{
 		ExeName:  "collector",
 		LongName: "Hypertrace Collector",
-		Version:  Version,
-		GitHash:  GitHash,
+		//Version:  Version,
+		//GitHash:  GitHash,
 	}
 
 	if err := run(service.Parameters{ApplicationStartInfo: info, Factories: factories}); err != nil {
@@ -35,6 +37,8 @@ func components() (component.Factories, error) {
 	if err != nil {
 		return component.Factories{}, err
 	}
+	tIDprocessor := tenantidprocessor.NewFactory()
+	factories.Processors[tIDprocessor.Type()] = tIDprocessor
 
 	processors := []component.ProcessorFactory{
 		piifilterprocessor.NewFactory(),

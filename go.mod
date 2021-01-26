@@ -7,6 +7,7 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0 // indirect
 	github.com/golangci/golangci-lint v1.31.0 // indirect
 	github.com/google/addlicense v0.0.0-20200622132530-df58acafd6d5 // indirect
+	github.com/jaegertracing/jaeger v1.21.0
 	github.com/joshdk/go-junit v0.0.0-20200702055522-6efcf4050909 // indirect
 	github.com/json-iterator/go v1.1.10
 	github.com/ory/go-acc v0.2.6 // indirect
@@ -17,5 +18,6 @@ require (
 	github.com/tcnksm/ghr v0.13.0 // indirect
 	go.opentelemetry.io/collector v0.18.0
 	go.uber.org/zap v1.16.0
+	google.golang.org/grpc v1.34.1
 	sigs.k8s.io/structured-merge-diff/v3 v3.0.0 // indirect
 )

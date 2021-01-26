@@ -35,6 +35,7 @@ receivers:
   zipkin:
 
 processors:
+  hypertrace_tenantid:
   batch:
 
 exporters:
@@ -45,12 +46,12 @@ service:
   pipelines:
     traces:
       receivers: [otlp, opencensus, jaeger, zipkin]
-      processors: [batch]
+      processors: [hypertrace_tenantid, batch]
       exporters: [logging]
 
-    metrics:
-      receivers: [otlp, opencensus, prometheus]
-      processors: [batch]
-      exporters: [logging]
+#    metrics:
+#      receivers: [otlp, opencensus, prometheus]
+#      processors: [batch]
+#      exporters: [logging]
 
   extensions: [health_check, pprof, zpages]
