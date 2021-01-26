@@ -36,19 +36,20 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          tags: hypertrace/collector:latest
+          tags: hypertrace/hypertrace-collector:latest
           build-args: |
             VERSION=latest
             GIT_COMMIT=${GITHUB_SHA}
       - name: Create traces log
         run: touch exported-trace.json
+      - run: echo "${GITHUB_WORKSPACE}"
       - name: Run collector image
         uses: addnab/docker-run-action@v1
         with:
-          image: hypertrace/collector:latest
+          image: hypertrace/hypertrace-collector:latest
           options: |
             -p 9411:9411 
-            -v $GITHUB_WORKSPACE/_tests/e2e/test-config.yml:/etc/opt/hypertrace/config.yml
-            -v $GITHUB_WORKSPACE/_tests/e2e/exported-trace.json:/usr/local/bin/hypertrace/exported-trace.json
+            -v /home/runner/work/hypertrace-collector/hypertrace-collector/_tests/e2e/test-config.yml:/etc/opt/hypertrace/config.yml
+            -v /home/runner/work/hypertrace-collector/hypertrace-collector/_tests/e2e/exported-trace.json:/usr/local/bin/hypertrace/exported-trace.json
       - name: Run e2e test
         run: cd ${GITHUB_WORKSPACE}/_tests/e2e; ./test.sh
