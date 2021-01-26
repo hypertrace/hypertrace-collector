@@ -3,6 +3,7 @@ package tenantidprocessor
 import (
 	"context"
 	"encoding/binary"
+	"go.opencensus.io/stats/view"
 	"testing"
 	"time"
 
@@ -21,8 +22,10 @@ import (
 	tracetranslator "go.opentelemetry.io/collector/translator/trace"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
-	metadata "google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/metadata"
 )
+
+const testTenantID = "jdoe"
 
 func TestMissingTenantHeader(t *testing.T) {
 	p := &processor{
@@ -38,11 +41,12 @@ func TestMissingTenantHeader(t *testing.T) {
 func TestEmptyTraces(t *testing.T) {
 	p := &processor{
 		logger:               zap.NewNop(),
+		tenantIDViews: make(map[string]*view.View),
 		tenantIDHeaderName:   defaultTenantIdHeaderName,
 		tenantIDAttributeKey: defaultTenantIdHeaderName,
 	}
 	traces := pdata.NewTraces()
-	md := metadata.New(map[string]string{p.tenantIDHeaderName: "jdoe"})
+	md := metadata.New(map[string]string{p.tenantIDHeaderName: testTenantID})
 	ctx := metadata.NewIncomingContext(
 		context.Background(),
 		md,
@@ -68,6 +72,7 @@ func TestEndToEndJaegerGRPC(t *testing.T) {
 
 	tenantProcessor := &processor{
 		logger:               zap.NewNop(),
+		tenantIDViews: make(map[string]*view.View),
 		tenantIDHeaderName:   defaultTenantIdHeaderName,
 		tenantIDAttributeKey: defaultTenantIdAttributeKey,
 	}
@@ -90,8 +95,7 @@ func TestEndToEndJaegerGRPC(t *testing.T) {
 	cl := api_v2.NewCollectorServiceClient(conn)
 	req := grpcFixture(time.Now(), time.Hour, time.Hour*2)
 
-	tenant := "jdoe"
-	md := metadata.New(map[string]string{tenantProcessor.tenantIDHeaderName : tenant})
+	md := metadata.New(map[string]string{tenantProcessor.tenantIDHeaderName : testTenantID})
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
 
 	resp, err := cl.PostSpans(ctx, req, grpc.WaitForReady(true))
@@ -114,7 +118,7 @@ func TestEndToEndJaegerGRPC(t *testing.T) {
 				tenantAttr, ok := span.Attributes().Get(tenantProcessor.tenantIDAttributeKey)
 				require.True(t, ok)
 				assert.Equal(t, pdata.AttributeValueSTRING, tenantAttr.Type())
-				assert.Equal(t, tenant, tenantAttr.StringVal())
+				assert.Equal(t, testTenantID, tenantAttr.StringVal())
 			}
 		}
 	}

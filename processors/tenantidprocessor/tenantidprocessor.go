@@ -3,8 +3,10 @@ package tenantidprocessor
 import (
 	"context"
 	"fmt"
+	"go.opencensus.io/stats"
 	"strings"
 
+	"go.opencensus.io/stats/view"
 	"go.opentelemetry.io/collector/consumer/pdata"
 	"go.opentelemetry.io/collector/processor/processorhelper"
 	"go.uber.org/zap"
@@ -12,15 +14,16 @@ import (
 )
 
 type processor struct {
-	logger *zap.Logger
 	tenantIDHeaderName string
 	tenantIDAttributeKey string
+	logger *zap.Logger
+	tenantIDViews map[string]*view.View
 }
 
 var _ processorhelper.TProcessor = (*processor)(nil)
 
 // ProcessTraces implements processorhelper.TProcessor
-func (p processor) ProcessTraces(ctx context.Context, traces pdata.Traces) (pdata.Traces, error) {
+func (p *processor) ProcessTraces(ctx context.Context, traces pdata.Traces) (pdata.Traces, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		p.logger.Error("Could not extract headers from context", zap.Int("num-spans", traces.SpanCount()))
@@ -35,12 +38,19 @@ func (p processor) ProcessTraces(ctx context.Context, traces pdata.Traces) (pdat
 			zap.String("header-name", p.tenantIDHeaderName), zap.String("header-value", strings.Join(tenantIDHeaders,",")))
 	}
 
-	tenantIdHeaderValue := tenantIDHeaders[0]
-	p.addTenantIdToSpans(traces, tenantIdHeaderValue)
+	tenantID := tenantIDHeaders[0]
+	p.addTenantIdToSpans(traces, tenantID)
+
+	if stat, err := p.getTenantStat(tenantID); err != nil {
+		p.logger.Warn("Could not get tenant stats: %s", zap.Error(err))
+	} else {
+		stats.Record(context.Background(), stat.M(int64(traces.SpanCount())))
+	}
+
 	return traces, nil
 }
 
-func (p processor) addTenantIdToSpans(traces pdata.Traces, tenantIDHeaderValue string) {
+func (p *processor) addTenantIdToSpans(traces pdata.Traces, tenantIDHeaderValue string) {
 	rss := traces.ResourceSpans()
 	for i := 0; i < rss.Len(); i++ {
 		rs := rss.At(i)
@@ -56,4 +66,26 @@ func (p processor) addTenantIdToSpans(traces pdata.Traces, tenantIDHeaderValue s
 			}
 		}
 	}
+}
+
+func (p *processor) getTenantStat(tenandID string) (*stats.Int64Measure, error) {
+	viewTenantIDCount, ok := p.tenantIDViews[tenandID]
+	if !ok {
+		stat := stats.Int64("tenand_id_span_count_"+tenandID, "Number of spans recieved from tenant "+tenandID, stats.UnitDimensionless)
+
+		viewTenantIDCount = &view.View{
+			Name:        stat.Name(),
+			Description: stat.Description(),
+			Measure:     stat,
+			Aggregation: view.Count(),
+			TagKeys:     nil,
+		}
+
+		if err := view.Register([]*view.View{viewTenantIDCount}...); err != nil {
+			return nil, err
+		}
+		p.tenantIDViews[tenandID] = viewTenantIDCount
+	}
+
+	return viewTenantIDCount.Measure.(*stats.Int64Measure), nil
 }
