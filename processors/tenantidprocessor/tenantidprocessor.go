@@ -14,10 +14,10 @@ import (
 )
 
 type processor struct {
-	tenantIDHeaderName string
+	tenantIDHeaderName   string
 	tenantIDAttributeKey string
-	logger *zap.Logger
-	tenantIDViews map[string]*view.View
+	logger               *zap.Logger
+	tenantIDViews        map[string]*view.View
 }
 
 var _ processorhelper.TProcessor = (*processor)(nil)
@@ -33,9 +33,9 @@ func (p *processor) ProcessTraces(ctx context.Context, traces pdata.Traces) (pda
 	tenantIDHeaders := md.Get(p.tenantIDHeaderName)
 	if len(tenantIDHeaders) == 0 {
 		return traces, nil
-	} else if len(tenantIDHeaders) > 0{
+	} else if len(tenantIDHeaders) > 0 {
 		p.logger.Warn("Multiple tenant IDs provided, only the first one will be used",
-			zap.String("header-name", p.tenantIDHeaderName), zap.String("header-value", strings.Join(tenantIDHeaders,",")))
+			zap.String("header-name", p.tenantIDHeaderName), zap.String("header-value", strings.Join(tenantIDHeaders, ",")))
 	}
 
 	tenantID := tenantIDHeaders[0]

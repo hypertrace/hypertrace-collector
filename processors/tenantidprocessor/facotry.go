@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	typeStr = "hypertrace_tenantid"
-	defaultTenantIdHeaderName = "x-tenant-id"
+	typeStr                     = "hypertrace_tenantid"
+	defaultTenantIdHeaderName   = "x-tenant-id"
 	defaultTenantIdAttributeKey = "tenant-id"
 )
 
@@ -51,9 +51,8 @@ func createTraceProcessor(
 		nextConsumer,
 		&processor{
 			tenantIDAttributeKey: pCfg.TenantIDAttributeKey,
-			tenantIDHeaderName: pCfg.TenantIDHeaderName,
-			logger: params.Logger,
-			tenantIDViews: make(map[string]*view.View),
+			tenantIDHeaderName:   pCfg.TenantIDHeaderName,
+			logger:               params.Logger,
+			tenantIDViews:        make(map[string]*view.View),
 		})
 }
-
