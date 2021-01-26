@@ -21,8 +21,36 @@ import (
 	tracetranslator "go.opentelemetry.io/collector/translator/trace"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
+	metadata "google.golang.org/grpc/metadata"
 )
+
+func TestMissingTenantHeader(t *testing.T) {
+	p := &processor{
+		logger:               zap.NewNop(),
+		tenantIDHeaderName:   defaultTenantIdHeaderName,
+		tenantIDAttributeKey: defaultTenantIdHeaderName,
+	}
+	_, err := p.ProcessTraces(context.Background(), pdata.NewTraces())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "missing header")
+}
+
+func TestEmptyTraces(t *testing.T) {
+	p := &processor{
+		logger:               zap.NewNop(),
+		tenantIDHeaderName:   defaultTenantIdHeaderName,
+		tenantIDAttributeKey: defaultTenantIdHeaderName,
+	}
+	traces := pdata.NewTraces()
+	md := metadata.New(map[string]string{p.tenantIDHeaderName: "jdoe"})
+	ctx := metadata.NewIncomingContext(
+		context.Background(),
+		md,
+	)
+	gotTraces, err := p.ProcessTraces(ctx, traces)
+	require.NoError(t, err)
+	assert.Equal(t, traces, gotTraces)
+}
 
 func TestEndToEndJaegerGRPC(t *testing.T) {
 	// prepare
@@ -91,7 +119,6 @@ func TestEndToEndJaegerGRPC(t *testing.T) {
 		}
 	}
 }
-
 
 type multiConsumer struct {
 	sink              *consumertest.TracesSink

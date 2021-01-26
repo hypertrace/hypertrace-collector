@@ -3,11 +3,11 @@ package tenantidprocessor
 import (
 	"context"
 	"fmt"
-	"go.uber.org/zap"
 	"strings"
 
 	"go.opentelemetry.io/collector/consumer/pdata"
 	"go.opentelemetry.io/collector/processor/processorhelper"
+	"go.uber.org/zap"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -21,12 +21,10 @@ var _ processorhelper.TProcessor = (*processor)(nil)
 
 // ProcessTraces implements processorhelper.TProcessor
 func (p processor) ProcessTraces(ctx context.Context, traces pdata.Traces) (pdata.Traces, error) {
-	fmt.Println("received")
-	fmt.Println(traces.SpanCount())
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		p.logger.Warn("Could not extract headers from context, tenantid will not be added to spans")
-		return traces, nil
+		p.logger.Error("Could not extract headers from context", zap.Int("num-spans", traces.SpanCount()))
+		return traces, fmt.Errorf("missing header %s", p.tenantIDHeaderName)
 	}
 
 	tenantIDHeaders := md.Get(p.tenantIDHeaderName)

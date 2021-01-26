@@ -16,6 +16,9 @@ const (
 )
 
 // NewFactory creates a factory for the tenantid processor.
+// The processor adds tenant ID to every received span.
+// The processor returns an error when the tenant ID is missing.
+// The tenant ID header is obtained from the context object.
 func NewFactory() component.ProcessorFactory {
 	return processorhelper.NewFactory(
 		typeStr,
