@@ -42,11 +42,10 @@ func components() (component.Factories, error) {
 	if err != nil {
 		return component.Factories{}, err
 	}
-	tIDprocessor := tenantidprocessor.NewFactory()
-	factories.Processors[tIDprocessor.Type()] = tIDprocessor
 
 	processors := []component.ProcessorFactory{
 		piifilterprocessor.NewFactory(),
+		tenantidprocessor.NewFactory(),
 	}
 	for _, pr := range factories.Processors {
 		processors = append(processors, pr)
