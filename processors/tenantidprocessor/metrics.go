@@ -12,7 +12,7 @@ var (
 	statSpanPerTenant = stats.Int64("tenant_id_span_count", "Number of spans received from a tenant", stats.UnitDimensionless)
 )
 
-// MetricViews returns the metrics views related to storage.
+// MetricViews returns the metrics views for tenant id processor.
 func MetricViews() []*view.View {
 	tags := []tag.Key{tagTenantID}
 
