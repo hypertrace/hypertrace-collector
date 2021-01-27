@@ -26,12 +26,12 @@ func (p *processor) ProcessTraces(ctx context.Context, traces pdata.Traces) (pda
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		p.logger.Error("Could not extract headers from context", zap.Int("num-spans", traces.SpanCount()))
-		return traces, fmt.Errorf("missing header %s", p.tenantIDHeaderName)
+		return traces, fmt.Errorf("could not extract headers from context")
 	}
 
 	tenantIDHeaders := md.Get(p.tenantIDHeaderName)
 	if len(tenantIDHeaders) == 0 {
-		return traces, nil
+		return traces, fmt.Errorf("missing header: %s", p.tenantIDHeaderName)
 	} else if len(tenantIDHeaders) > 1 {
 		return traces, fmt.Errorf("multiple tenant ID headers were provided, %s: %s", p.tenantIDHeaderName, strings.Join(tenantIDHeaders, ", "))
 	}

@@ -24,13 +24,30 @@ import (
 
 const testTenantID = "jdoe"
 
-func TestMissingTenantHeader(t *testing.T) {
+func TestMissingMetadataInContext(t *testing.T) {
 	p := &processor{
 		logger:               zap.NewNop(),
 		tenantIDHeaderName:   defaultTenantIdHeaderName,
 		tenantIDAttributeKey: defaultTenantIdHeaderName,
 	}
 	_, err := p.ProcessTraces(context.Background(), pdata.NewTraces())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "could not extract headers")
+}
+
+func TestMissingTenantHeader(t *testing.T) {
+	p := &processor{
+		logger:               zap.NewNop(),
+		tenantIDHeaderName:   defaultTenantIdHeaderName,
+		tenantIDAttributeKey: defaultTenantIdHeaderName,
+	}
+
+	md := metadata.New(map[string]string{})
+	ctx := metadata.NewIncomingContext(
+		context.Background(),
+		md,
+	)
+	_, err := p.ProcessTraces(ctx, pdata.NewTraces())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "missing header")
 }
@@ -48,7 +65,6 @@ func TestMultipleTenantHeaders(t *testing.T) {
 		context.Background(),
 		md,
 	)
-
 	_, err := p.ProcessTraces(ctx, pdata.NewTraces())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "multiple tenant ID headers")
