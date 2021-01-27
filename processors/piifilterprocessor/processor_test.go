@@ -82,14 +82,13 @@ func TestConsumeTraceData(t *testing.T) {
 	for name, testValues := range testCases {
 		t.Run(name, func(t *testing.T) {
 			sinkExporter := &consumertest.TracesSink{}
-			config := testValues.config
 
 			tp, err := piifilterprocessor.NewFactory().CreateTracesProcessor(
 				context.Background(),
 				component.ProcessorCreateParams{
 					Logger: logger,
 				},
-				&config,
+				&testValues.config,
 				sinkExporter,
 			)
 			assert.NoError(t, err)
