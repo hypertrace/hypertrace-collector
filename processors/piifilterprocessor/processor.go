@@ -8,9 +8,9 @@ import (
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/cookie"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/json"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/keyvalue"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/urlencoded"
-	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/consumer/pdata"
 	"go.opentelemetry.io/collector/processor/processorhelper"
 	"go.uber.org/zap"
@@ -19,7 +19,6 @@ import (
 var _ processorhelper.TProcessor = (*piiFilterProcessor)(nil)
 
 type piiFilterProcessor struct {
-	next    consumer.TracesConsumer
 	logger  *zap.Logger
 	filters []filters.Filter
 }
@@ -40,7 +39,6 @@ func toRegex(es []PiiElement) []regexmatcher.Regex {
 
 func newPIIFilterProcessor(
 	logger *zap.Logger,
-	next consumer.TracesConsumer,
 	cfg *Config,
 ) (*piiFilterProcessor, error) {
 	matcher, err := regexmatcher.NewMatcher(
@@ -53,13 +51,13 @@ func newPIIFilterProcessor(
 	}
 
 	var fs = []filters.Filter{
+		keyvalue.NewFilter(matcher),
 		cookie.NewFilter(matcher),
 		urlencoded.NewFilter(matcher),
 		json.NewFilter(matcher),
 	}
 
 	return &piiFilterProcessor{
-		next:    next,
 		logger:  logger,
 		filters: fs,
 	}, nil

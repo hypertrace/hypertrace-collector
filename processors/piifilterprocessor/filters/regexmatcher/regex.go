@@ -1,6 +1,7 @@
 package regexmatcher
 
 import (
+	"crypto/sha1"
 	"fmt"
 	"regexp"
 	"strings"
@@ -23,8 +24,15 @@ type CompiledRegex struct {
 
 type Matcher struct {
 	hash        func(string) string
+	prefixes    []string
 	keyRegExs   []CompiledRegex
 	valueRegExs []CompiledRegex
+}
+
+func sha1Hash(val string) string {
+	h := sha1.New()
+	h.Write([]byte(val))
+	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
 func NewMatcher(
@@ -43,12 +51,13 @@ func NewMatcher(
 	}
 
 	return &Matcher{
+		hash:        sha1Hash,
 		keyRegExs:   compiledKeyRegExs,
 		valueRegExs: compiledValueRegExs,
 	}, nil
 }
 
-// Looks into the key to decide whether filter the value or not
+// FilterKeyRegexs looks into the key to decide whether filter the value or not
 func (rm *Matcher) FilterKeyRegexs(keyToMatch string, actualKey string, value string, path string) (bool, string) {
 	for _, r := range rm.keyRegExs {
 		if r.Regexp.MatchString(keyToMatch) {
@@ -59,7 +68,7 @@ func (rm *Matcher) FilterKeyRegexs(keyToMatch string, actualKey string, value st
 	return false, ""
 }
 
-// Looks into the string value to decide whether filter the value or not
+// FilterStringValueRegexs looks into the string value to decide whether filter the value or not
 func (rm *Matcher) FilterStringValueRegexs(value string, key string, path string) (bool, string) {
 	inspectorKey := getFullyQualifiedInspectorKey(key, path)
 
@@ -143,7 +152,6 @@ func (rm *Matcher) redactAndFilterData(redact filters.RedactionStrategy, value s
 		redactedValue = rm.hash(value)
 	case filters.Raw:
 		redactedValue = value
-		// should we return turn isModified = false here?
 	default:
 		redactedValue = filters.RedactedText
 	}
@@ -174,6 +182,16 @@ func (rm *Matcher) MatchKeyRegexs(keyToMatch string, path string) (bool, *Compil
 
 	}
 	return false, nil
+}
+
+func (rm *Matcher) GetTruncatedKey(key string) string {
+	for _, prefix := range rm.prefixes {
+		if strings.HasPrefix(key, prefix) {
+			return strings.TrimPrefix(key, prefix)
+		}
+	}
+
+	return key
 }
 
 func compileRegexs(regexs []Regex, defaultStrategy filters.RedactionStrategy) ([]CompiledRegex, error) {

@@ -22,11 +22,11 @@ func NewFilter(m *regexmatcher.Matcher) filters.Filter {
 	return &jsonFilter{m, jsoniter.ConfigDefault}
 }
 
-const jsonPathPrefix = "$"
-
 func (f *jsonFilter) Name() string {
 	return "JSON"
 }
+
+const jsonPathPrefix = "$"
 
 func (f *jsonFilter) RedactAttribute(key string, value pdata.AttributeValue) (bool, error) {
 	if len(value.StringVal()) == 0 {

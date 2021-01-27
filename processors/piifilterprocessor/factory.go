@@ -42,7 +42,7 @@ func createTraceProcessor(
 ) (component.TracesProcessor, error) {
 	piiCfg := cfg.(*Config)
 
-	proc, err := newPIIFilterProcessor(params.Logger, nextConsumer, piiCfg)
+	proc, err := newPIIFilterProcessor(params.Logger, piiCfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the PII trace processor: %v", err)
 	}
