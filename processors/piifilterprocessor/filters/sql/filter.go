@@ -7,6 +7,7 @@ import (
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/sql/internal"
 	"go.opentelemetry.io/collector/consumer/pdata"
 )
 
@@ -46,12 +47,12 @@ func (f *sqlFilter) RedactAttribute(key string, value pdata.AttributeValue) (boo
 	}
 
 	is := newCaseChangingStream(antlr.NewInputStream(value.StringVal()), true)
-	lexer := NewMySqlLexer(is)
+	lexer := internal.NewMySqlLexer(is)
 
 	isRedacted := false
 	var str strings.Builder
 	for token := lexer.NextToken(); token.GetTokenType() != antlr.TokenEOF; {
-		if token.GetTokenType() == MySqlLexerSTRING_LITERAL {
+		if token.GetTokenType() == internal.MySqlLexerSTRING_LITERAL {
 			text := token.GetText()
 			openQuote := ""
 			closeQuote := ""
@@ -80,16 +81,16 @@ func (f *sqlFilter) RedactAttribute(key string, value pdata.AttributeValue) (boo
 	return isRedacted, nil
 }
 
-type CaseChangingStream struct {
+type caseChangingStream struct {
 	antlr.CharStream
 	upper bool
 }
 
-// NewCaseChangingStream returns a new CaseChangingStream that forces
+// newCaseChangingStream returns a new CaseChangingStream that forces
 // all tokens read from the underlying stream to be either upper case
 // or lower case based on the upper argument.
-func newCaseChangingStream(in antlr.CharStream, upper bool) *CaseChangingStream {
-	return &CaseChangingStream{
+func newCaseChangingStream(in antlr.CharStream, upper bool) *caseChangingStream {
+	return &caseChangingStream{
 		in, upper,
 	}
 }
@@ -97,7 +98,7 @@ func newCaseChangingStream(in antlr.CharStream, upper bool) *CaseChangingStream 
 // LA gets the value of the symbol at offset from the current position
 // from the underlying CharStream and converts it to either upper case
 // or lower case.
-func (is *CaseChangingStream) LA(offset int) int {
+func (is *caseChangingStream) LA(offset int) int {
 	in := is.CharStream.LA(offset)
 	if in < 0 {
 		// Such as antlr.TokenEOF which is -1

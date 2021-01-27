@@ -1,6 +1,6 @@
 // Code generated from MySqlLexer.g4 by ANTLR 4.7.2. DO NOT EDIT.
 
-package sql
+package internal
 
 import (
 	"fmt"
