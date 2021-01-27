@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/hypertrace/collector/processors/piifilterprocessor"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
+	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/consumer/pdata"
@@ -67,24 +67,35 @@ func TestConsumeTraceData(t *testing.T) {
 						Regex: "^password$",
 					},
 				},
+				RedactStrategy: filters.Redact,
 			},
 			inputTraces:    newTraces(newTestSpan("tag1", "abc123")),
 			expectedTraces: newTraces(newTestSpan("tag1", "abc123")),
+		},
+		"auth_bearer_hash": {
+			config: piifilterprocessor.Config{
+				KeyRegExs: []piifilterprocessor.PiiElement{
+					{Regex: "http.request.header.authorization$"},
+				},
+				RedactStrategy: filters.Hash,
+			},
+			inputTraces: newTraces(newTestSpan("http.request.header.authorization", "Bearer abc123")),
+			expectedTraces: newTraces(newTestSpan(
+				"http.request.header.authorization", "1232de241a44c348f44bfba95206afe9c6e90718",
+			)),
 		},
 	}
 
 	for name, testValues := range testCases {
 		t.Run(name, func(t *testing.T) {
 			sinkExporter := &consumertest.TracesSink{}
-			config := testValues.config
-			config.RedactStrategy = filters.Redact
 
 			tp, err := piifilterprocessor.NewFactory().CreateTracesProcessor(
 				context.Background(),
 				component.ProcessorCreateParams{
 					Logger: logger,
 				},
-				&config,
+				&testValues.config,
 				sinkExporter,
 			)
 			assert.NoError(t, err)

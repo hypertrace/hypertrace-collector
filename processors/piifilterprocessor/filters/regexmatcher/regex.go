@@ -1,6 +1,7 @@
 package regexmatcher
 
 import (
+	"crypto/sha1"
 	"fmt"
 	"regexp"
 	"strings"
@@ -28,6 +29,12 @@ type Matcher struct {
 	valueRegExs []CompiledRegex
 }
 
+func sha1Hash(val string) string {
+	h := sha1.New()
+	h.Write([]byte(val))
+	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
 func NewMatcher(
 	keyRegExs,
 	valueRegExs []Regex,
@@ -44,6 +51,7 @@ func NewMatcher(
 	}
 
 	return &Matcher{
+		hash:        sha1Hash,
 		keyRegExs:   compiledKeyRegExs,
 		valueRegExs: compiledValueRegExs,
 	}, nil

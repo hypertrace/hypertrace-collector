@@ -9,7 +9,7 @@ import (
 	"go.opentelemetry.io/collector/consumer/pdata"
 )
 
-func TestKeyValueRedactsByKeyWithNoMatchings(t *testing.T) {
+func TestRedactsByKeyWithNoMatchings(t *testing.T) {
 	filter := newFilter(t, []regexmatcher.Regex{{
 		Pattern: "password",
 	}}, nil)
@@ -21,7 +21,7 @@ func TestKeyValueRedactsByKeyWithNoMatchings(t *testing.T) {
 	assert.Equal(t, "abc123", attrValue.StringVal())
 }
 
-func TestKeyValueRedactsByKeySuccess(t *testing.T) {
+func TestRedactsByKeySuccess(t *testing.T) {
 	filter := newFilter(t, []regexmatcher.Regex{{
 		Pattern: "^http.request.header.*",
 	}}, nil)
@@ -31,6 +31,19 @@ func TestKeyValueRedactsByKeySuccess(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, isRedacted)
 	assert.Equal(t, "***", attrValue.StringVal())
+}
+
+func TestRedactsByChainOfRegexByValueSuccess(t *testing.T) {
+	filter := newFilter(t, nil, []regexmatcher.Regex{
+		{Pattern: "aaa"},
+		{Pattern: "bbb"},
+	})
+
+	attrValue := pdata.NewAttributeValueString("aaa bbb ccc aaa bbb ccc")
+	isRedacted, err := filter.RedactAttribute("cc", attrValue)
+	assert.NoError(t, err)
+	assert.True(t, isRedacted)
+	assert.Equal(t, "*** *** ccc *** *** ccc", attrValue.StringVal())
 }
 
 func TestKeyValueRedactsByValueSuccess(t *testing.T) {
