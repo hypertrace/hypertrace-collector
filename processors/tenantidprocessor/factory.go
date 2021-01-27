@@ -2,8 +2,6 @@ package tenantidprocessor
 
 import (
 	"context"
-	"go.opencensus.io/stats/view"
-
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configmodels"
 	"go.opentelemetry.io/collector/consumer"
@@ -55,6 +53,5 @@ func createTraceProcessor(
 			tenantIDAttributeKey: pCfg.TenantIDAttributeKey,
 			tenantIDHeaderName:   pCfg.TenantIDHeaderName,
 			logger:               params.Logger,
-			tenantIDViews:        make(map[string]*view.View),
 		})
 }

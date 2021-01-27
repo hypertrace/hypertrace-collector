@@ -3,11 +3,10 @@ package tenantidprocessor
 import (
 	"context"
 	"fmt"
-	"go.opencensus.io/stats"
-	"go.opencensus.io/tag"
 	"strings"
 
-	"go.opencensus.io/stats/view"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/tag"
 	"go.opentelemetry.io/collector/consumer/pdata"
 	"go.opentelemetry.io/collector/processor/processorhelper"
 	"go.uber.org/zap"
@@ -18,7 +17,6 @@ type processor struct {
 	tenantIDHeaderName   string
 	tenantIDAttributeKey string
 	logger               *zap.Logger
-	tenantIDViews        map[string]*view.View
 }
 
 var _ processorhelper.TProcessor = (*processor)(nil)
@@ -35,8 +33,7 @@ func (p *processor) ProcessTraces(ctx context.Context, traces pdata.Traces) (pda
 	if len(tenantIDHeaders) == 0 {
 		return traces, nil
 	} else if len(tenantIDHeaders) > 1 {
-		p.logger.Warn("Multiple tenant IDs provided, only the first one will be used",
-			zap.String("header-name", p.tenantIDHeaderName), zap.String("header-value", strings.Join(tenantIDHeaders, ",")))
+		return traces, fmt.Errorf("multiple tenant ID headers were provided, %s: %s", p.tenantIDHeaderName, strings.Join(tenantIDHeaders, ", "))
 	}
 
 	tenantID := tenantIDHeaders[0]

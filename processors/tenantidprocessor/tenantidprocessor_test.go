@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opencensus.io/stats/view"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/config/configgrpc"
@@ -36,10 +35,28 @@ func TestMissingTenantHeader(t *testing.T) {
 	assert.Contains(t, err.Error(), "missing header")
 }
 
+func TestMultipleTenantHeaders(t *testing.T) {
+	p := &processor{
+		logger:               zap.NewNop(),
+		tenantIDHeaderName:   defaultTenantIdHeaderName,
+		tenantIDAttributeKey: defaultTenantIdHeaderName,
+	}
+
+	md := metadata.New(map[string]string{p.tenantIDHeaderName: testTenantID})
+	md.Append(p.tenantIDHeaderName, "jdoe2")
+	ctx := metadata.NewIncomingContext(
+		context.Background(),
+		md,
+	)
+
+	_, err := p.ProcessTraces(ctx, pdata.NewTraces())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "multiple tenant ID headers")
+}
+
 func TestEmptyTraces(t *testing.T) {
 	p := &processor{
 		logger:               zap.NewNop(),
-		tenantIDViews:        make(map[string]*view.View),
 		tenantIDHeaderName:   defaultTenantIdHeaderName,
 		tenantIDAttributeKey: defaultTenantIdHeaderName,
 	}
@@ -58,7 +75,6 @@ func TestReceiveOTLPGRPC(t *testing.T) {
 	sink := new(consumertest.TracesSink)
 	tenantProcessor := &processor{
 		logger:               zap.NewNop(),
-		tenantIDViews:        make(map[string]*view.View),
 		tenantIDHeaderName:   defaultTenantIdHeaderName,
 		tenantIDAttributeKey: defaultTenantIdAttributeKey,
 	}
