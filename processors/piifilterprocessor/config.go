@@ -18,6 +18,10 @@ type Config struct {
 	// Regexs are the attribute value which will be filtered when
 	// the regex matches
 	ValueRegExs []PiiElement `mapstructure:"value_regexs"`
+
+	// ComplexData contains all complex data types to filter, such
+	// as json, sql etc
+	ComplexData []PiiComplexData `mapstructure:"complex_data"`
 }
 
 // PiiElement identifies configuration for PII filtering
@@ -26,4 +30,13 @@ type PiiElement struct {
 	Category       string                    `mapstructure:"category"`
 	RedactStrategy filters.RedactionStrategy `mapstructure:"redaction_strategy"`
 	FQN            bool                      `mapstructure:"fqn,omitempty"`
+}
+
+// PiiComplexData identifes the attribute names which define
+// where the content is and where the content type or
+// the type itself
+type PiiComplexData struct {
+	Key     string `mapstructure:"key"`
+	Type    string `mapstructure:"type"`
+	TypeKey string `mapstructure:"type_key"`
 }
