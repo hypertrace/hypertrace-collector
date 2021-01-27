@@ -2,8 +2,9 @@ package piifilterprocessor_test
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/hypertrace/collector/processors/piifilterprocessor"
 	"go.opentelemetry.io/collector/component"
@@ -17,7 +18,6 @@ import (
 // of wrapping values continuously inside tests.
 func newTestSpan(attrKVs ...interface{}) pdata.Span {
 	s := pdata.NewSpan()
-	s.InitEmpty()
 	s.SetName("test")
 
 	for i := 0; i < len(attrKVs); i = i + 2 {
@@ -39,10 +39,8 @@ func newTraces(spans ...pdata.Span) pdata.Traces {
 	traces := pdata.NewTraces()
 
 	rss := pdata.NewResourceSpans()
-	rss.InitEmpty()
 
 	ilss := pdata.NewInstrumentationLibrarySpans()
-	ilss.InitEmpty()
 
 	for _, s := range spans {
 		ilss.Spans().Append(s)

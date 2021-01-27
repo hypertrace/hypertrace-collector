@@ -22,8 +22,6 @@ func NewFilter(m *regexmatcher.Matcher) filters.Filter {
 	return &jsonFilter{m, jsoniter.ConfigDefault}
 }
 
-const jsonPathPrefix = "$"
-
 func (f *jsonFilter) Name() string {
 	return "JSON"
 }
