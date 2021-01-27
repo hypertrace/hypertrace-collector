@@ -4,14 +4,21 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/hypertrace/collector/processors/piifilterprocessor"
+	"go.opencensus.io/stats/view"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenterror"
 	"go.opentelemetry.io/collector/service"
 	"go.opentelemetry.io/collector/service/defaultcomponents"
+
+	"github.com/hypertrace/collector/processors/piifilterprocessor"
+	"github.com/hypertrace/collector/processors/tenantidprocessor"
 )
 
 func main() {
+	if err := registerMetricViews(); err != nil {
+		log.Fatal(err)
+	}
+
 	factories, err := components()
 	if err != nil {
 		log.Fatalf("failed to build default components: %v", err)
@@ -38,6 +45,7 @@ func components() (component.Factories, error) {
 
 	processors := []component.ProcessorFactory{
 		piifilterprocessor.NewFactory(),
+		tenantidprocessor.NewFactory(),
 	}
 	for _, pr := range factories.Processors {
 		processors = append(processors, pr)
@@ -62,4 +70,9 @@ func run(params service.Parameters) error {
 	}
 
 	return nil
+}
+
+func registerMetricViews() error {
+	views := tenantidprocessor.MetricViews()
+	return view.Register(views...)
 }
