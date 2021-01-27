@@ -8,6 +8,7 @@ import (
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/cookie"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/json"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/keyvalue"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/urlencoded"
 	"go.opentelemetry.io/collector/consumer/pdata"
@@ -50,6 +51,7 @@ func newPIIFilterProcessor(
 	}
 
 	var fs = []filters.Filter{
+		keyvalue.NewFilter(matcher),
 		cookie.NewFilter(matcher),
 		urlencoded.NewFilter(matcher),
 		json.NewFilter(matcher),

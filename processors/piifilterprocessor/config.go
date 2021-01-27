@@ -11,9 +11,6 @@ type Config struct {
 	// Global redaction strategy. Defaults to Redact
 	RedactStrategy filters.RedactionStrategy `mapstructure:"redaction_strategy"`
 
-	// Prefixes attribute name prefix to match the keyword against
-	Prefixes []string `mapstructure:"prefixes"`
-
 	// Regexs are the attribute name of which the value will be filtered
 	// when the regex matches the name
 	KeyRegExs []PiiElement `mapstructure:"key_regexs"`

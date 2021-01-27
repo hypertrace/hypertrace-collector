@@ -68,7 +68,7 @@ func TestSimpleArrayRemainsTheSameOnNotMatchingRegex(t *testing.T) {
 	assertJSONEqual(t, "[\"12\",\"34\",\"56\"]", attrValue.StringVal())
 }
 
-func TestRedactionOnMatchingValuesByKey(t *testing.T) {
+func TestJSONFieldRedaction(t *testing.T) {
 	tCases := map[string]struct {
 		unredactedValue           string
 		expectedRedactedAttrValue string
