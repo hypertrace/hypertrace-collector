@@ -23,10 +23,11 @@ type CompiledRegex struct {
 }
 
 type Matcher struct {
-	hash        func(string) string
-	prefixes    []string
-	keyRegExs   []CompiledRegex
-	valueRegExs []CompiledRegex
+	hash           func(string) string
+	prefixes       []string
+	keyRegExs      []CompiledRegex
+	valueRegExs    []CompiledRegex
+	globalStrategy filters.RedactionStrategy
 }
 
 func sha1Hash(val string) string {
@@ -51,9 +52,10 @@ func NewMatcher(
 	}
 
 	return &Matcher{
-		hash:        sha1Hash,
-		keyRegExs:   compiledKeyRegExs,
-		valueRegExs: compiledValueRegExs,
+		hash:           sha1Hash,
+		keyRegExs:      compiledKeyRegExs,
+		valueRegExs:    compiledValueRegExs,
+		globalStrategy: globalStrategy,
 	}, nil
 }
 
@@ -141,6 +143,10 @@ func getFullyQualifiedInspectorKey(actualKey string, path string) string {
 	}
 
 	return inspectorKey
+}
+
+func (rm *Matcher) RedactString(value string) (bool, string) {
+	return rm.redactAndFilterData(rm.globalStrategy, value, "")
 }
 
 func (rm *Matcher) redactAndFilterData(redact filters.RedactionStrategy, value string, _ string) (bool, string) {
