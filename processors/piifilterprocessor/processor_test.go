@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/hypertrace/collector/processors/piifilterprocessor"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/consumer/pdata"
@@ -75,13 +76,15 @@ func TestConsumeTraceData(t *testing.T) {
 	for name, testValues := range testCases {
 		t.Run(name, func(t *testing.T) {
 			sinkExporter := &consumertest.TracesSink{}
+			config := testValues.config
+			config.RedactStrategy = filters.Redact
 
 			tp, err := piifilterprocessor.NewFactory().CreateTracesProcessor(
 				context.Background(),
 				component.ProcessorCreateParams{
 					Logger: logger,
 				},
-				&testValues.config,
+				&config,
 				sinkExporter,
 			)
 			assert.NoError(t, err)
