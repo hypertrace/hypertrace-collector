@@ -8,6 +8,8 @@ import (
 
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/hypertrace/collector/processors/piifilterprocessor"
 	"github.com/stretchr/testify/assert"
 
