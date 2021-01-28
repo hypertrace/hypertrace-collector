@@ -4,13 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"mime"
+	"strings"
 
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/cookie"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/json"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/keyvalue"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/sql"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/urlencoded"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 	"go.opentelemetry.io/collector/consumer/pdata"
 	"go.opentelemetry.io/collector/processor/processorhelper"
 	"go.uber.org/zap"
@@ -19,18 +23,29 @@ import (
 var _ processorhelper.TProcessor = (*piiFilterProcessor)(nil)
 
 type piiFilterProcessor struct {
-	logger  *zap.Logger
-	filters []filters.Filter
+	logger                *zap.Logger
+	scalarFilters         []filters.Filter
+	structuredDataFilters map[string]filters.Filter
+	structuredData        map[string]PiiComplexData
 }
 
-func toRegex(es []PiiElement) []regexmatcher.Regex {
+func toRegex(es []PiiElement, globalStrategy redaction.Strategy) []regexmatcher.Regex {
 	var rs []regexmatcher.Regex
 
 	for _, e := range es {
+		rd := redaction.DefaultRedacter
+		if globalStrategy != redaction.Unknown {
+			rd = redaction.Redacters[globalStrategy]
+		}
+
+		if e.RedactStrategy != redaction.Unknown {
+			rd = redaction.Redacters[e.RedactStrategy]
+		}
+
 		rs = append(rs, regexmatcher.Regex{
-			Pattern:        e.Regex,
-			RedactStrategy: e.RedactStrategy,
-			FQN:            e.FQN,
+			Pattern:  e.Regex,
+			Redacter: rd,
+			FQN:      e.FQN,
 		})
 	}
 
@@ -42,24 +57,34 @@ func newPIIFilterProcessor(
 	cfg *Config,
 ) (*piiFilterProcessor, error) {
 	matcher, err := regexmatcher.NewMatcher(
-		toRegex(cfg.KeyRegExs),
-		toRegex(cfg.ValueRegExs),
-		cfg.RedactStrategy,
+		toRegex(cfg.KeyRegExs, cfg.RedactStrategy),
+		toRegex(cfg.ValueRegExs, cfg.RedactStrategy),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create regex matcher: %v", err)
 	}
 
-	var fs = []filters.Filter{
+	var scalarFilters = []filters.Filter{
 		keyvalue.NewFilter(matcher),
-		cookie.NewFilter(matcher),
-		urlencoded.NewFilter(matcher),
-		json.NewFilter(matcher),
+	}
+
+	var structuredDataFilters = map[string]filters.Filter{
+		"cookie":     cookie.NewFilter(matcher),
+		"urlencoded": urlencoded.NewFilter(matcher),
+		"json":       json.NewFilter(matcher),
+		"sql":        sql.NewFilter(redaction.Redacters[cfg.RedactStrategy]),
+	}
+
+	var complexData = map[string]PiiComplexData{}
+	for _, e := range cfg.ComplexData {
+		complexData[e.Key] = e
 	}
 
 	return &piiFilterProcessor{
-		logger:  logger,
-		filters: fs,
+		logger:                logger,
+		scalarFilters:         scalarFilters,
+		structuredDataFilters: structuredDataFilters,
+		structuredData:        complexData,
 	}, nil
 }
 
@@ -76,25 +101,117 @@ func (p *piiFilterProcessor) ProcessTraces(_ context.Context, td pdata.Traces) (
 				span := spans.At(k)
 
 				span.Attributes().ForEach(func(key string, value pdata.AttributeValue) {
-					for _, filter := range p.filters {
-						if isRedacted, err := filter.RedactAttribute(key, value); err != nil {
-							if errors.Is(err, filters.ErrUnprocessableValue) {
-								// this should be debug when we figure out how to configure the log level
-								p.logger.Sugar().Debugf("failed to apply filter %q to attribute with key %q. Unsuitable value.", filter.Name(), key)
-							} else {
-								p.logger.Sugar().Errorf("failed to apply filter %q to attribute with key %q: %v", filter.Name(), key, err)
-							}
-						} else if isRedacted {
-							// if an attribute is redacted by one filter we don't want to process
-							// it again.
-							p.logger.Sugar().Debugf("attribute with key %q redacted by filter %q", key, filter.Name())
-							break
-						}
+					if p.attributeKeyContainsComplexData(key) {
+						// if attribute contains complex data skip the processing
+						return
 					}
+
+					p.processMatchingAttributes(key, value)
 				})
+
+				p.processComplexData(span)
 			}
 		}
 	}
 
 	return td, nil
+}
+
+func getDataTypeFromContentType(dataType string) (string, error) {
+	mt, _, err := mime.ParseMediaType(dataType)
+	if err != nil {
+		return "", err
+	}
+
+	lcDataType := mt
+	switch lcDataType {
+	case "json", "text/json", "text/x-json", "application/json":
+		lcDataType = "json"
+	case "application/x-www-form-urlencoded":
+		lcDataType = "urlencoded"
+	case "sql":
+		lcDataType = "sql"
+	default:
+	}
+
+	return lcDataType, nil
+}
+
+func (p *piiFilterProcessor) processMatchingAttributes(key string, value pdata.AttributeValue) {
+	for _, filter := range p.scalarFilters {
+		if isRedacted, err := filter.RedactAttribute(key, value); err != nil {
+			if errors.Is(err, filters.ErrUnprocessableValue) {
+				p.logger.Sugar().Debugf(
+					"failed to apply filter %q to attribute with key %q. Unsuitable value.",
+					filter.Name(),
+					key,
+				)
+			} else {
+				p.logger.Sugar().Errorf(
+					"failed to apply filter %q to attribute with key %q", filter.Name(), key, err,
+				)
+			}
+		} else if isRedacted {
+			// if an attribute is redacted by one filter we don't want to process
+			// it again.
+			p.logger.Sugar().Debugf("attribute with key %q redacted by filter %q", key, filter.Name())
+			break
+		}
+	}
+}
+
+func (p *piiFilterProcessor) processComplexData(attrs pdata.Span) {
+	for attrKey, elem := range p.structuredData {
+		attr, found := attrs.Attributes().Get(attrKey)
+		if !found {
+			continue
+		}
+
+		if attr.StringVal() == "" {
+			p.logger.Sugar().Debug("empty string attribute with key %q", attrKey)
+			continue
+		}
+
+		var dataType = elem.Type
+		if len(dataType) == 0 {
+			if typeValue, ok := attrs.Attributes().Get(elem.TypeKey); ok {
+				var err error
+				dataType, err = getDataTypeFromContentType(typeValue.StringVal())
+				if err != nil {
+					p.logger.Sugar().Debugf("could not parse media type %q: %v", typeValue.StringVal(), err)
+					continue
+				}
+			}
+		}
+
+		filter, ok := p.structuredDataFilters[dataType]
+		if !ok {
+			p.logger.Sugar().Debugf("unknown data type %s", dataType)
+			continue
+		}
+
+		if isRedacted, err := filter.RedactAttribute(elem.Key, attr); isRedacted {
+			p.logger.Sugar().Debugf("attribute with key %q redacted by filter %q", attrKey, filter.Name())
+		} else if err != nil {
+			p.logger.Sugar().Errorf(
+				"failed to apply filter %q to attribute with key %q: %v",
+				filter.Name(),
+				attrKey,
+				err,
+			)
+		}
+	}
+}
+
+func (p *piiFilterProcessor) attributeKeyContainsComplexData(key string) bool {
+	_, ok := p.structuredData[unindexedKey(key)]
+	return ok
+}
+
+func unindexedKey(key string) string {
+	if len(key) == 0 {
+		return key
+	}
+
+	return strings.Split(key, "[")[0]
 }

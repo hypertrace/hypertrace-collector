@@ -3,8 +3,7 @@ package sql
 import (
 	"testing"
 
-	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
-	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/consumer/pdata"
 )
@@ -30,10 +29,5 @@ func TestRedactsWithSQL(t *testing.T) {
 }
 
 func newFilter(t *testing.T) *sqlFilter {
-	m, err := regexmatcher.NewMatcher(nil, nil, filters.Redact)
-	if err != nil {
-		t.Fatalf("failed to create cookie filter: %v\n", err)
-	}
-
-	return &sqlFilter{rm: m, targetKeys: map[string]struct{}{"sql.query": struct{}{}}}
+	return &sqlFilter{redaction.DefaultRedacter}
 }

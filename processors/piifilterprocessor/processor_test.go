@@ -2,11 +2,15 @@ package piifilterprocessor_test
 
 import (
 	"context"
+	"encoding/json"
+	"reflect"
 	"testing"
 
 	"github.com/hypertrace/collector/processors/piifilterprocessor"
-	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 	"github.com/stretchr/testify/assert"
+
+	stdjson "encoding/json"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer/consumertest"
@@ -52,6 +56,14 @@ func newTraces(spans ...pdata.Span) pdata.Traces {
 	return traces
 }
 
+var (
+	jsonInput = `{"a":"aaa","password":"root_pw","b":{"b_1":"bbb","password":"nested_pw"},` +
+		`"c":[{"c_1":"ccc"},{"password":"array_pw"}]}`
+
+	jsonExpected = `{"a":"aaa","password":"***","b":{"b_1":"bbb","password":"***"},` +
+		`"c":[{"c_1":"ccc"},{"password":"***"}]}`
+)
+
 func TestConsumeTraceData(t *testing.T) {
 	logger := zap.New(zapcore.NewNopCore())
 
@@ -67,21 +79,43 @@ func TestConsumeTraceData(t *testing.T) {
 						Regex: "^password$",
 					},
 				},
-				RedactStrategy: filters.Redact,
+				RedactStrategy: redaction.Redact,
 			},
 			inputTraces:    newTraces(newTestSpan("tag1", "abc123")),
 			expectedTraces: newTraces(newTestSpan("tag1", "abc123")),
 		},
-		"auth_bearer_hash": {
+		"auth bearer hash": {
 			config: piifilterprocessor.Config{
 				KeyRegExs: []piifilterprocessor.PiiElement{
 					{Regex: "http.request.header.authorization$"},
 				},
-				RedactStrategy: filters.Hash,
+				RedactStrategy: redaction.Hash,
 			},
 			inputTraces: newTraces(newTestSpan("http.request.header.authorization", "Bearer abc123")),
 			expectedTraces: newTraces(newTestSpan(
 				"http.request.header.authorization", "1232de241a44c348f44bfba95206afe9c6e90718",
+			)),
+		},
+		"json filter": {
+			config: piifilterprocessor.Config{
+				KeyRegExs: []piifilterprocessor.PiiElement{
+					{Regex: "^password$"},
+				},
+				RedactStrategy: redaction.Redact,
+				ComplexData: []piifilterprocessor.PiiComplexData{
+					{
+						Key:     "http.request.body",
+						TypeKey: "http.request.headers.content-type",
+					},
+				},
+			},
+			inputTraces: newTraces(newTestSpan(
+				"http.request.body", jsonInput,
+				"http.request.headers.content-type", "application/json;charset=utf-8",
+			)),
+			expectedTraces: newTraces(newTestSpan(
+				"http.request.body", jsonExpected,
+				"http.request.headers.content-type", "application/json;charset=utf-8",
 			)),
 		},
 	}
@@ -128,11 +162,42 @@ func TestConsumeTraceData(t *testing.T) {
 							actualValue, ok := actualSpan.Attributes().Get(k)
 
 							assert.True(t, ok)
-							assert.Equal(t, expectedValue, actualValue)
+
+							// JSON serialization doesn't produce the same order for fields all
+							// the time, hence comparing strings will be flaky. This check attempts
+							// detect JSON payloads to do a proper comparison.
+							if isJSONPayload(expectedValue.StringVal()) {
+								assertJSONEqual(t, expectedValue.StringVal(), actualValue.StringVal())
+							} else {
+								assert.Equal(t, expectedValue, actualValue)
+							}
 						})
 					}
 				}
 			}
 		})
 	}
+}
+
+func isJSONPayload(s string) bool {
+	err := json.Unmarshal([]byte(s), &struct{}{})
+	return err == nil
+}
+
+// assertJSONEqual asserts two JSONs are equal no matter the
+func assertJSONEqual(t *testing.T, expected, actual string) {
+	var jExpected, jActual interface{}
+	if err := stdjson.Unmarshal([]byte(expected), &jExpected); err != nil {
+		t.Error(err)
+	}
+	if err := stdjson.Unmarshal([]byte(actual), &jActual); err != nil {
+		t.Error(err)
+	}
+
+	if !reflect.DeepEqual(jExpected, jActual) {
+		msgExpected, _ := stdjson.Marshal(jExpected)
+		msgActual, _ := stdjson.Marshal(jActual)
+		assert.Equal(t, string(msgExpected), string(msgActual))
+	}
+	assert.True(t, true)
 }
