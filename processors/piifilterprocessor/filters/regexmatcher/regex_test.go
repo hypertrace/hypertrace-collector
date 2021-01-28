@@ -13,30 +13,22 @@ func TestCompileRegexs(t *testing.T) {
 			Pattern: "^a$",
 		},
 		{
-			Pattern:        "^b$",
-			RedactStrategy: redaction.Redact,
+			Pattern:  "^b$",
+			Redacter: redaction.RedactRedacter,
 		},
 		{
-			Pattern:        "^c$",
-			RedactStrategy: redaction.Hash,
+			Pattern:  "^c$",
+			Redacter: redaction.HashRedacter,
 		},
 	}
 
-	compiledRegexes, err := compileRegexs(keyRegexes, redaction.Redact)
+	_, err := compileRegexs(keyRegexes)
 	assert.NoError(t, err)
-
-	for _, cr := range compiledRegexes {
-		if cr.Regexp.String() == "^a$" || cr.Regexp.String() == "^b$" {
-			assert.Equal(t, redaction.Redact, cr.RedactStrategy)
-		} else {
-			assert.Equal(t, redaction.Hash, cr.RedactStrategy)
-		}
-	}
 }
 
 func TestFilterMatchedKey(t *testing.T) {
-	m, _ := NewMatcher([]Regex{{Pattern: "^password$"}}, nil, redaction.Redact)
-	isModified, redacted := m.FilterMatchedKey(redaction.Redact, "http.request.header.password", "abc123", "")
+	m, _ := NewMatcher([]Regex{{Pattern: "^password$"}}, nil)
+	isModified, redacted := m.FilterMatchedKey(redaction.RedactRedacter, "http.request.header.password", "abc123", "")
 	assert.True(t, isModified)
 	assert.Equal(t, "***", redacted)
 }

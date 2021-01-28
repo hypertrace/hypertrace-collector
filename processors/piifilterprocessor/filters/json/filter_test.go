@@ -34,7 +34,7 @@ func assertJSONEqual(t *testing.T, expected, actual string) {
 }
 
 func createJSONFilter(t *testing.T, keyRegExs []regexmatcher.Regex) *jsonFilter {
-	m, err := regexmatcher.NewMatcher(keyRegExs, []regexmatcher.Regex{}, redaction.Redact)
+	m, err := regexmatcher.NewMatcher(keyRegExs, []regexmatcher.Regex{})
 
 	assert.NoError(t, err)
 
@@ -61,7 +61,7 @@ func TestFilterFailsOnInvalidJSON(t *testing.T) {
 }
 
 func TestSimpleArrayRemainsTheSameOnNotMatchingRegex(t *testing.T) {
-	filter := createJSONFilter(t, []regexmatcher.Regex{{Pattern: "^password$"}})
+	filter := createJSONFilter(t, []regexmatcher.Regex{{Pattern: "^password$", Redacter: redaction.RedactRedacter}})
 	attrValue := pdata.NewAttributeValueString("[\"12\",\"34\",\"56\"]")
 	isRedacted, err := filter.RedactAttribute("attrib_key", attrValue)
 	assert.False(t, isRedacted)
@@ -98,7 +98,7 @@ func TestJSONFieldRedaction(t *testing.T) {
 
 	for name, tCase := range tCases {
 		t.Run(name, func(t *testing.T) {
-			filter := createJSONFilter(t, []regexmatcher.Regex{{Pattern: "^password$"}})
+			filter := createJSONFilter(t, []regexmatcher.Regex{{Pattern: "^password$", Redacter: redaction.RedactRedacter}})
 
 			attrValue := pdata.NewAttributeValueString(tCase.unredactedValue)
 			isRedacted, err := filter.RedactAttribute("attrib_key", attrValue)
@@ -149,7 +149,7 @@ func TestRedactionOnMatchingValuesByFQN(t *testing.T) {
 
 	for name, tCase := range tCases {
 		t.Run(name, func(t *testing.T) {
-			filter := createJSONFilter(t, []regexmatcher.Regex{{Pattern: tCase.pattern, FQN: true}})
+			filter := createJSONFilter(t, []regexmatcher.Regex{{Pattern: tCase.pattern, FQN: true, Redacter: redaction.RedactRedacter}})
 			attrValue := pdata.NewAttributeValueString(tCase.unredactedValue)
 			isRedacted, err := filter.RedactAttribute("attrib_key", attrValue)
 			assert.True(t, isRedacted)

@@ -1,7 +1,6 @@
 package regexmatcher
 
 import (
-	"crypto/sha1"
 	"fmt"
 	"regexp"
 	"strings"
@@ -11,9 +10,9 @@ import (
 
 // Regex is a regex representation. It should be private
 type Regex struct {
-	Pattern        string
-	RedactStrategy redaction.Strategy
-	FQN            bool
+	Pattern  string
+	Redacter redaction.Redacter
+	FQN      bool
 }
 
 // CompiledRegex is a compiled regex representation. It should be private
@@ -23,39 +22,28 @@ type CompiledRegex struct {
 }
 
 type Matcher struct {
-	hash           func(string) string
-	prefixes       []string
-	keyRegExs      []CompiledRegex
-	valueRegExs    []CompiledRegex
-	globalStrategy redaction.Strategy
-}
-
-func sha1Hash(val string) string {
-	h := sha1.New()
-	h.Write([]byte(val))
-	return fmt.Sprintf("%x", h.Sum(nil))
+	prefixes    []string
+	keyRegExs   []CompiledRegex
+	valueRegExs []CompiledRegex
 }
 
 func NewMatcher(
 	keyRegExs,
 	valueRegExs []Regex,
-	globalStrategy redaction.Strategy,
 ) (*Matcher, error) {
-	compiledKeyRegExs, err := compileRegexs(keyRegExs, globalStrategy)
+	compiledKeyRegExs, err := compileRegexs(keyRegExs)
 	if err != nil {
 		return nil, err
 	}
 
-	compiledValueRegExs, err := compileRegexs(valueRegExs, globalStrategy)
+	compiledValueRegExs, err := compileRegexs(valueRegExs)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Matcher{
-		hash:           sha1Hash,
-		keyRegExs:      compiledKeyRegExs,
-		valueRegExs:    compiledValueRegExs,
-		globalStrategy: globalStrategy,
+		keyRegExs:   compiledKeyRegExs,
+		valueRegExs: compiledValueRegExs,
 	}, nil
 }
 
@@ -63,7 +51,7 @@ func NewMatcher(
 func (rm *Matcher) FilterKeyRegexs(keyToMatch string, actualKey string, value string, path string) (bool, string) {
 	for _, r := range rm.keyRegExs {
 		if r.Regexp.MatchString(keyToMatch) {
-			return rm.FilterMatchedKey(r.RedactStrategy, actualKey, value, path)
+			return rm.FilterMatchedKey(r.Redacter, actualKey, value, path)
 		}
 	}
 
@@ -76,19 +64,18 @@ func (rm *Matcher) FilterStringValueRegexs(value string, key string, path string
 
 	filtered := false
 	for _, r := range rm.valueRegExs {
-		filtered, value = rm.replacingRegex(value, inspectorKey, r.Regexp, r.RedactStrategy)
+		filtered, value = rm.replacingRegex(value, inspectorKey, r.Regexp, r.Redacter)
 	}
 
 	return filtered, value
 }
 
-func (rm *Matcher) replacingRegex(value string, key string, regex *regexp.Regexp, rs redaction.Strategy) (bool, string) {
+func (rm *Matcher) replacingRegex(value string, key string, regex *regexp.Regexp, redacter redaction.Redacter) (bool, string) {
 	matchCount := 0
 
 	filtered := regex.ReplaceAllStringFunc(value, func(src string) string {
 		matchCount++
-		_, str := rm.redactAndFilterData(rs, src)
-		return str
+		return redacter(src)
 	})
 
 	return matchCount > 0, filtered
@@ -145,28 +132,8 @@ func getFullyQualifiedInspectorKey(actualKey string, path string) string {
 	return inspectorKey
 }
 
-func (rm *Matcher) RedactString(value string) (bool, string) {
-	return rm.redactAndFilterData(rm.globalStrategy, value)
-}
-
-func (rm *Matcher) redactAndFilterData(redact redaction.Strategy, value string) (bool, string) {
-	var redactedValue string
-	switch redact {
-	case redaction.Redact:
-		redactedValue = "***"
-	case redaction.Hash:
-		redactedValue = rm.hash(value)
-	case redaction.Raw:
-		redactedValue = value
-	default:
-		redactedValue = "***"
-	}
-
-	return true, redactedValue
-}
-
-func (rm *Matcher) FilterMatchedKey(redactionStrategy redaction.Strategy, actualKey string, value string, path string) (bool, string) {
-	return rm.redactAndFilterData(redactionStrategy, value)
+func (rm *Matcher) FilterMatchedKey(redacter redaction.Redacter, actualKey string, value string, path string) (bool, string) {
+	return true, redacter(value)
 }
 
 // MatchKeyRegexs matches a key or a path form the regexmatcher and returns the matching
@@ -198,16 +165,12 @@ func (rm *Matcher) GetTruncatedKey(key string) string {
 	return key
 }
 
-func compileRegexs(regexs []Regex, defaultStrategy redaction.Strategy) ([]CompiledRegex, error) {
+func compileRegexs(regexs []Regex) ([]CompiledRegex, error) {
 	compiledRegexs := make([]CompiledRegex, len(regexs))
 	for i, r := range regexs {
 		cr, err := regexp.Compile(r.Pattern)
 		if err != nil {
 			return nil, fmt.Errorf("error compiling key regex %s already specified", r.Pattern)
-		}
-
-		if r.RedactStrategy == redaction.Unknown {
-			r.RedactStrategy = defaultStrategy
 		}
 
 		compiledRegexs[i] = CompiledRegex{

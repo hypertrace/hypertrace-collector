@@ -29,14 +29,23 @@ type piiFilterProcessor struct {
 	structuredData        map[string]PiiComplexData
 }
 
-func toRegex(es []PiiElement) []regexmatcher.Regex {
+func toRegex(es []PiiElement, globalStrategy redaction.Strategy) []regexmatcher.Regex {
 	var rs []regexmatcher.Regex
 
 	for _, e := range es {
+		rd := redaction.DefaultRedacter
+		if globalStrategy != redaction.Unknown {
+			rd = redaction.Redacters[globalStrategy]
+		}
+
+		if e.RedactStrategy != redaction.Unknown {
+			rd = redaction.Redacters[e.RedactStrategy]
+		}
+
 		rs = append(rs, regexmatcher.Regex{
-			Pattern:        e.Regex,
-			RedactStrategy: e.RedactStrategy,
-			FQN:            e.FQN,
+			Pattern:  e.Regex,
+			Redacter: rd,
+			FQN:      e.FQN,
 		})
 	}
 
@@ -48,9 +57,8 @@ func newPIIFilterProcessor(
 	cfg *Config,
 ) (*piiFilterProcessor, error) {
 	matcher, err := regexmatcher.NewMatcher(
-		toRegex(cfg.KeyRegExs),
-		toRegex(cfg.ValueRegExs),
-		cfg.RedactStrategy,
+		toRegex(cfg.KeyRegExs, cfg.RedactStrategy),
+		toRegex(cfg.ValueRegExs, cfg.RedactStrategy),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create regex matcher: %v", err)
