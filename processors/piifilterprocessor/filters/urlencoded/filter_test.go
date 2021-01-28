@@ -4,14 +4,14 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/consumer/pdata"
 )
 
 func createURLEncodedFilter(t *testing.T, keyRegexs, valueRegexs []regexmatcher.Regex) *urlEncodedFilter {
-	m, err := regexmatcher.NewMatcher(keyRegexs, valueRegexs, filters.Redact)
+	m, err := regexmatcher.NewMatcher(keyRegexs, valueRegexs, redaction.Redact)
 
 	assert.NoError(t, err)
 

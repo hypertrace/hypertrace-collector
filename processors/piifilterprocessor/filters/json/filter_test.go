@@ -10,6 +10,7 @@ import (
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/internal/json"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/consumer/pdata"
 )
@@ -33,7 +34,7 @@ func assertJSONEqual(t *testing.T, expected, actual string) {
 }
 
 func createJSONFilter(t *testing.T, keyRegExs []regexmatcher.Regex) *jsonFilter {
-	m, err := regexmatcher.NewMatcher(keyRegExs, []regexmatcher.Regex{}, filters.Redact)
+	m, err := regexmatcher.NewMatcher(keyRegExs, []regexmatcher.Regex{}, redaction.Redact)
 
 	assert.NoError(t, err)
 

@@ -6,13 +6,13 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 )
 
 // Regex is a regex representation. It should be private
 type Regex struct {
 	Pattern        string
-	RedactStrategy filters.RedactionStrategy
+	RedactStrategy redaction.Strategy
 	FQN            bool
 }
 
@@ -27,7 +27,7 @@ type Matcher struct {
 	prefixes       []string
 	keyRegExs      []CompiledRegex
 	valueRegExs    []CompiledRegex
-	globalStrategy filters.RedactionStrategy
+	globalStrategy redaction.Strategy
 }
 
 func sha1Hash(val string) string {
@@ -39,7 +39,7 @@ func sha1Hash(val string) string {
 func NewMatcher(
 	keyRegExs,
 	valueRegExs []Regex,
-	globalStrategy filters.RedactionStrategy,
+	globalStrategy redaction.Strategy,
 ) (*Matcher, error) {
 	compiledKeyRegExs, err := compileRegexs(keyRegExs, globalStrategy)
 	if err != nil {
@@ -82,7 +82,7 @@ func (rm *Matcher) FilterStringValueRegexs(value string, key string, path string
 	return filtered, value
 }
 
-func (rm *Matcher) replacingRegex(value string, key string, regex *regexp.Regexp, rs filters.RedactionStrategy) (bool, string) {
+func (rm *Matcher) replacingRegex(value string, key string, regex *regexp.Regexp, rs redaction.Strategy) (bool, string) {
 	matchCount := 0
 
 	filtered := regex.ReplaceAllStringFunc(value, func(src string) string {
@@ -149,23 +149,23 @@ func (rm *Matcher) RedactString(value string) (bool, string) {
 	return rm.redactAndFilterData(rm.globalStrategy, value)
 }
 
-func (rm *Matcher) redactAndFilterData(redact filters.RedactionStrategy, value string) (bool, string) {
+func (rm *Matcher) redactAndFilterData(redact redaction.Strategy, value string) (bool, string) {
 	var redactedValue string
 	switch redact {
-	case filters.Redact:
-		redactedValue = filters.RedactedText
-	case filters.Hash:
+	case redaction.Redact:
+		redactedValue = "***"
+	case redaction.Hash:
 		redactedValue = rm.hash(value)
-	case filters.Raw:
+	case redaction.Raw:
 		redactedValue = value
 	default:
-		redactedValue = filters.RedactedText
+		redactedValue = "***"
 	}
 
 	return true, redactedValue
 }
 
-func (rm *Matcher) FilterMatchedKey(redactionStrategy filters.RedactionStrategy, actualKey string, value string, path string) (bool, string) {
+func (rm *Matcher) FilterMatchedKey(redactionStrategy redaction.Strategy, actualKey string, value string, path string) (bool, string) {
 	return rm.redactAndFilterData(redactionStrategy, value)
 }
 
@@ -198,7 +198,7 @@ func (rm *Matcher) GetTruncatedKey(key string) string {
 	return key
 }
 
-func compileRegexs(regexs []Regex, defaultStrategy filters.RedactionStrategy) ([]CompiledRegex, error) {
+func compileRegexs(regexs []Regex, defaultStrategy redaction.Strategy) ([]CompiledRegex, error) {
 	compiledRegexs := make([]CompiledRegex, len(regexs))
 	for i, r := range regexs {
 		cr, err := regexp.Compile(r.Pattern)
@@ -206,7 +206,7 @@ func compileRegexs(regexs []Regex, defaultStrategy filters.RedactionStrategy) ([
 			return nil, fmt.Errorf("error compiling key regex %s already specified", r.Pattern)
 		}
 
-		if r.RedactStrategy == filters.Unknown {
+		if r.RedactStrategy == redaction.Unknown {
 			r.RedactStrategy = defaultStrategy
 		}
 

@@ -1,7 +1,7 @@
 package piifilterprocessor
 
 import (
-	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 	"go.opentelemetry.io/collector/config/configmodels"
 )
 
@@ -9,7 +9,7 @@ type Config struct {
 	configmodels.ProcessorSettings `mapstructure:",squash"`
 
 	// Global redaction strategy. Defaults to Redact
-	RedactStrategy filters.RedactionStrategy `mapstructure:"redaction_strategy"`
+	RedactStrategy redaction.Strategy `mapstructure:"redaction_strategy"`
 
 	// Regexs are the attribute name of which the value will be filtered
 	// when the regex matches the name
@@ -26,10 +26,9 @@ type Config struct {
 
 // PiiElement identifies configuration for PII filtering
 type PiiElement struct {
-	Regex          string                    `mapstructure:"regex"`
-	Category       string                    `mapstructure:"category"`
-	RedactStrategy filters.RedactionStrategy `mapstructure:"redaction_strategy"`
-	FQN            bool                      `mapstructure:"fqn,omitempty"`
+	Regex          string             `mapstructure:"regex"`
+	RedactStrategy redaction.Strategy `mapstructure:"redaction_strategy"`
+	FQN            bool               `mapstructure:"fqn,omitempty"`
 }
 
 // PiiComplexData identifes the attribute names which define

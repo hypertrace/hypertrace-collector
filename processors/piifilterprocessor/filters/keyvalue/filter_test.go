@@ -3,8 +3,8 @@ package keyvalue
 import (
 	"testing"
 
-	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/consumer/pdata"
 )
@@ -63,7 +63,7 @@ func newFilter(
 	keyRegExs []regexmatcher.Regex,
 	valueRegExs []regexmatcher.Regex,
 ) *keyValueFilter {
-	m, err := regexmatcher.NewMatcher(keyRegExs, valueRegExs, filters.Redact)
+	m, err := regexmatcher.NewMatcher(keyRegExs, valueRegExs, redaction.Redact)
 	if err != nil {
 		t.Fatalf("failed to create cookie filter: %v\n", err)
 	}

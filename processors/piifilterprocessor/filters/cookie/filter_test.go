@@ -3,8 +3,8 @@ package cookie
 import (
 	"testing"
 
-	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/consumer/pdata"
 )
@@ -52,7 +52,7 @@ func TestCookieFilterFiltersSetCookieKey(t *testing.T) {
 func newCookieFilter(t *testing.T) *cookieFilter {
 	m, err := regexmatcher.NewMatcher([]regexmatcher.Regex{{
 		Pattern: "^password$",
-	}}, []regexmatcher.Regex{}, filters.Redact)
+	}}, []regexmatcher.Regex{}, redaction.Redact)
 	if err != nil {
 		t.Fatalf("failed to create cookie filter: %v\n", err)
 	}

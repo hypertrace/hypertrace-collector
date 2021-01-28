@@ -6,31 +6,19 @@ import (
 
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
-	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/sql/internal"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 	"go.opentelemetry.io/collector/consumer/pdata"
 )
 
 type sqlFilter struct {
-	rm         *regexmatcher.Matcher
-	targetKeys map[string]struct{}
+	redacter redaction.Redacter
 }
 
 var _ filters.Filter = (*sqlFilter)(nil)
 
-func toLookupMap(keys []string) map[string]struct{} {
-	keysMap := map[string]struct{}{}
-	for _, key := range keys {
-		keysMap[key] = struct{}{}
-	}
-	return keysMap
-}
-
-func NewFilter(rm *regexmatcher.Matcher, targetKeys []string) filters.Filter {
-	return &sqlFilter{
-		rm:         rm,
-		targetKeys: toLookupMap(targetKeys),
-	}
+func NewFilter(r redaction.Redacter) filters.Filter {
+	return &sqlFilter{r}
 }
 
 func (f *sqlFilter) Name() string {
@@ -38,10 +26,6 @@ func (f *sqlFilter) Name() string {
 }
 
 func (f *sqlFilter) RedactAttribute(key string, value pdata.AttributeValue) (bool, error) {
-	if _, ok := f.targetKeys[key]; !ok {
-		return false, nil
-	}
-
 	if len(value.StringVal()) == 0 {
 		return false, nil
 	}
@@ -66,7 +50,7 @@ func (f *sqlFilter) RedactAttribute(key string, value pdata.AttributeValue) (boo
 				closeQuote = string(text[lenText-1])
 				text = text[:lenText-1]
 			}
-			_, redacted := f.rm.RedactString(text)
+			redacted := f.redacter(text)
 			token.SetText(openQuote + redacted + closeQuote)
 			isRedacted = true
 		}
