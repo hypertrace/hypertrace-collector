@@ -87,7 +87,7 @@ func (rm *Matcher) replacingRegex(value string, key string, regex *regexp.Regexp
 
 	filtered := regex.ReplaceAllStringFunc(value, func(src string) string {
 		matchCount++
-		_, str := rm.redactAndFilterData(rs, src, key)
+		_, str := rm.redactAndFilterData(rs, src)
 		return str
 	})
 
@@ -146,10 +146,10 @@ func getFullyQualifiedInspectorKey(actualKey string, path string) string {
 }
 
 func (rm *Matcher) RedactString(value string) (bool, string) {
-	return rm.redactAndFilterData(rm.globalStrategy, value, "")
+	return rm.redactAndFilterData(rm.globalStrategy, value)
 }
 
-func (rm *Matcher) redactAndFilterData(redact filters.RedactionStrategy, value string, _ string) (bool, string) {
+func (rm *Matcher) redactAndFilterData(redact filters.RedactionStrategy, value string) (bool, string) {
 	var redactedValue string
 	switch redact {
 	case filters.Redact:
@@ -166,9 +166,7 @@ func (rm *Matcher) redactAndFilterData(redact filters.RedactionStrategy, value s
 }
 
 func (rm *Matcher) FilterMatchedKey(redactionStrategy filters.RedactionStrategy, actualKey string, value string, path string) (bool, string) {
-	inspectorKey := getFullyQualifiedInspectorKey(actualKey, path)
-
-	return rm.redactAndFilterData(redactionStrategy, value, inspectorKey)
+	return rm.redactAndFilterData(redactionStrategy, value)
 }
 
 // MatchKeyRegexs matches a key or a path form the regexmatcher and returns the matching
