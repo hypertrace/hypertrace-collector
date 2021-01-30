@@ -54,6 +54,7 @@ func toRegex(es []PiiElement, globalStrategy redaction.Strategy) []regexmatcher.
 
 func newPIIFilterProcessor(logger *zap.Logger, cfg *Config) (*piiFilterProcessor, error) {
 	matcher, err := regexmatcher.NewMatcher(
+		cfg.Prefixes,
 		toRegex(cfg.KeyRegExs, cfg.RedactStrategy),
 		toRegex(cfg.ValueRegExs, cfg.RedactStrategy),
 	)

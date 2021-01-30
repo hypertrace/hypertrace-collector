@@ -3,6 +3,8 @@ receivers:
 
 processors:
   hypertrace_piifilter:
+    prefixes:
+      - hypertrace.
     redaction_strategy: "hash"
 
 exporters:

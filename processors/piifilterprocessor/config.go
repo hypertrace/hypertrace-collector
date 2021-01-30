@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 	"go.opentelemetry.io/collector/config/configmodels"
@@ -15,6 +16,9 @@ type TransportConfig struct {
 
 	// Global redaction strategy. Defaults to Redact
 	RedactStrategyName string `mapstructure:"redaction_strategy"`
+
+	// Prefixes attribute name prefix to match the keyword against
+	Prefixes []string `mapstructure:"prefixes"`
 
 	// Regexs are the attribute name of which the value will be filtered
 	// when the regex matches the name
@@ -58,6 +62,12 @@ func (tc *TransportConfig) toConfig() (*Config, error) {
 	c := &Config{
 		ProcessorSettings: tc.ProcessorSettings,
 		RedactStrategy:    mapToRedactionStrategy(tc.RedactStrategyName),
+	}
+
+	for _, prefix := range tc.Prefixes {
+		if strings.Trim(prefix, " ") == "" {
+			return nil, fmt.Errorf("invalid prefix, ")
+		}
 	}
 
 	c.KeyRegExs = make([]PiiElement, len(tc.KeyRegExs))
@@ -105,6 +115,7 @@ func mapToRedactionStrategy(name string) redaction.Strategy {
 type Config struct {
 	configmodels.ProcessorSettings
 	RedactStrategy redaction.Strategy
+	Prefixes       []string
 	KeyRegExs      []PiiElement
 	ValueRegExs    []PiiElement
 	ComplexData    []PiiComplexData

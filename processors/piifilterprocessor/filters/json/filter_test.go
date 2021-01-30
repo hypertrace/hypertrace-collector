@@ -35,7 +35,7 @@ func assertJSONEqual(t *testing.T, expected, actual string) {
 }
 
 func createJSONFilter(t *testing.T, keyRegExs []regexmatcher.Regex) *jsonFilter {
-	m, err := regexmatcher.NewMatcher(keyRegExs, []regexmatcher.Regex{})
+	m, err := regexmatcher.NewMatcher(nil, keyRegExs, nil)
 
 	assert.NoError(t, err)
 

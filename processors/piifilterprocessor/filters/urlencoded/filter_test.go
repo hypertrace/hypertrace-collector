@@ -12,7 +12,7 @@ import (
 )
 
 func createURLEncodedFilter(t *testing.T, keyRegexs, valueRegexs []regexmatcher.Regex) *urlEncodedFilter {
-	m, err := regexmatcher.NewMatcher(keyRegexs, valueRegexs)
+	m, err := regexmatcher.NewMatcher(nil, keyRegexs, valueRegexs)
 
 	assert.NoError(t, err)
 

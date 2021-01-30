@@ -21,10 +21,12 @@ type Matcher struct {
 }
 
 func NewMatcher(
+	prefixes []string,
 	keyRegExs,
 	valueRegExs []Regex,
 ) (*Matcher, error) {
 	return &Matcher{
+		prefixes:    prefixes,
 		keyRegExs:   keyRegExs,
 		valueRegExs: valueRegExs,
 	}, nil
