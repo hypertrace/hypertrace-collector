@@ -134,7 +134,7 @@ func (f *jsonFilter) filterJSONScalar(
 	switch tt := value.(type) {
 	case string:
 		if matchedRegex != nil {
-			_, redacted := f.m.FilterMatchedKey(matchedRegex.Redacter, actualKey, tt, jsonPath)
+			_, redacted := f.m.FilterMatchedKey(matchedRegex.Redactor, actualKey, tt, jsonPath)
 			return true, redacted
 		}
 		stringValueFiltered, vvFiltered := f.m.FilterStringValueRegexs(tt, actualKey, jsonPath)
@@ -144,7 +144,7 @@ func (f *jsonFilter) filterJSONScalar(
 	case interface{}:
 		if matchedRegex != nil {
 			str := fmt.Sprintf("%v", tt)
-			isModified, redacted := f.m.FilterMatchedKey(matchedRegex.Redacter, actualKey, str, jsonPath)
+			isModified, redacted := f.m.FilterMatchedKey(matchedRegex.Redactor, actualKey, str, jsonPath)
 			return isModified, redacted
 		}
 	}

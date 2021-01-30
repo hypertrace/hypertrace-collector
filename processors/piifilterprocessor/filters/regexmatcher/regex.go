@@ -11,7 +11,7 @@ import (
 // Regex is a regex representation. It should be private
 type Regex struct {
 	Pattern  string
-	Redacter redaction.Redacter
+	Redactor redaction.Redactor
 	FQN      bool
 }
 
@@ -51,7 +51,7 @@ func NewMatcher(
 func (rm *Matcher) FilterKeyRegexs(keyToMatch string, actualKey string, value string, path string) (bool, string) {
 	for _, r := range rm.keyRegExs {
 		if r.Regexp.MatchString(keyToMatch) {
-			return rm.FilterMatchedKey(r.Redacter, actualKey, value, path)
+			return rm.FilterMatchedKey(r.Redactor, actualKey, value, path)
 		}
 	}
 
@@ -64,18 +64,18 @@ func (rm *Matcher) FilterStringValueRegexs(value string, key string, path string
 
 	filtered := false
 	for _, r := range rm.valueRegExs {
-		filtered, value = rm.replacingRegex(value, inspectorKey, r.Regexp, r.Redacter)
+		filtered, value = rm.replacingRegex(value, inspectorKey, r.Regexp, r.Redactor)
 	}
 
 	return filtered, value
 }
 
-func (rm *Matcher) replacingRegex(value string, key string, regex *regexp.Regexp, redacter redaction.Redacter) (bool, string) {
+func (rm *Matcher) replacingRegex(value string, key string, regex *regexp.Regexp, redactor redaction.Redactor) (bool, string) {
 	matchCount := 0
 
 	filtered := regex.ReplaceAllStringFunc(value, func(src string) string {
 		matchCount++
-		return redacter(src)
+		return redactor(src)
 	})
 
 	return matchCount > 0, filtered
@@ -132,8 +132,8 @@ func getFullyQualifiedInspectorKey(actualKey string, path string) string {
 	return inspectorKey
 }
 
-func (rm *Matcher) FilterMatchedKey(redacter redaction.Redacter, actualKey string, value string, path string) (bool, string) {
-	return true, redacter(value)
+func (rm *Matcher) FilterMatchedKey(redactor redaction.Redactor, actualKey string, value string, path string) (bool, string) {
+	return true, redactor(value)
 }
 
 // MatchKeyRegexs matches a key or a path form the regexmatcher and returns the matching

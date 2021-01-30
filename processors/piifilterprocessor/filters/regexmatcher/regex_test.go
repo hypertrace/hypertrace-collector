@@ -14,11 +14,11 @@ func TestCompileRegexs(t *testing.T) {
 		},
 		{
 			Pattern:  "^b$",
-			Redacter: redaction.RedactRedacter,
+			Redactor: redaction.RedactRedactor,
 		},
 		{
 			Pattern:  "^c$",
-			Redacter: redaction.HashRedacter,
+			Redactor: redaction.HashRedactor,
 		},
 	}
 
@@ -28,7 +28,7 @@ func TestCompileRegexs(t *testing.T) {
 
 func TestFilterMatchedKey(t *testing.T) {
 	m, _ := NewMatcher([]Regex{{Pattern: "^password$"}}, nil)
-	isModified, redacted := m.FilterMatchedKey(redaction.RedactRedacter, "http.request.header.password", "abc123", "")
+	isModified, redacted := m.FilterMatchedKey(redaction.RedactRedactor, "http.request.header.password", "abc123", "")
 	assert.True(t, isModified)
 	assert.Equal(t, "***", redacted)
 }

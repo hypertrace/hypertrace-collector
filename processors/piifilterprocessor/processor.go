@@ -33,18 +33,18 @@ func toRegex(es []PiiElement, globalStrategy redaction.Strategy) []regexmatcher.
 	var rs []regexmatcher.Regex
 
 	for _, e := range es {
-		rd := redaction.DefaultRedacter
+		rd := redaction.DefaultRedactor
 		if globalStrategy != redaction.Unknown {
-			rd = redaction.Redacters[globalStrategy]
+			rd = redaction.Redactors[globalStrategy]
 		}
 
 		if e.RedactStrategy != redaction.Unknown {
-			rd = redaction.Redacters[e.RedactStrategy]
+			rd = redaction.Redactors[e.RedactStrategy]
 		}
 
 		rs = append(rs, regexmatcher.Regex{
 			Pattern:  e.Regex,
-			Redacter: rd,
+			Redactor: rd,
 			FQN:      e.FQN,
 		})
 	}
@@ -72,7 +72,7 @@ func newPIIFilterProcessor(
 		"cookie":     cookie.NewFilter(matcher),
 		"urlencoded": urlencoded.NewFilter(matcher),
 		"json":       json.NewFilter(matcher),
-		"sql":        sql.NewFilter(redaction.Redacters[cfg.RedactStrategy]),
+		"sql":        sql.NewFilter(redaction.Redactors[cfg.RedactStrategy]),
 	}
 
 	var complexData = map[string]PiiComplexData{}
