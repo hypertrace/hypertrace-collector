@@ -12,12 +12,12 @@ import (
 )
 
 type sqlFilter struct {
-	redacter redaction.Redacter
+	redactor redaction.Redactor
 }
 
 var _ filters.Filter = (*sqlFilter)(nil)
 
-func NewFilter(r redaction.Redacter) filters.Filter {
+func NewFilter(r redaction.Redactor) filters.Filter {
 	return &sqlFilter{r}
 }
 
@@ -50,7 +50,7 @@ func (f *sqlFilter) RedactAttribute(key string, value pdata.AttributeValue) (boo
 				closeQuote = string(text[lenText-1])
 				text = text[:lenText-1]
 			}
-			redacted := f.redacter(text)
+			redacted := f.redactor(text)
 			token.SetText(openQuote + redacted + closeQuote)
 			isRedacted = true
 		}

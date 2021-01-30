@@ -12,7 +12,7 @@ import (
 func TestRedactsByKeyWithNoMatchings(t *testing.T) {
 	filter := newFilter(t, []regexmatcher.Regex{{
 		Pattern:  "password",
-		Redacter: redaction.RedactRedacter,
+		Redactor: redaction.RedactRedactor,
 	}}, nil)
 
 	attrValue := pdata.NewAttributeValueString("abc123")
@@ -25,7 +25,7 @@ func TestRedactsByKeyWithNoMatchings(t *testing.T) {
 func TestRedactsByKeySuccess(t *testing.T) {
 	filter := newFilter(t, []regexmatcher.Regex{{
 		Pattern:  "^http.request.header.*",
-		Redacter: redaction.RedactRedacter,
+		Redactor: redaction.RedactRedactor,
 	}}, nil)
 
 	attrValue := pdata.NewAttributeValueString("abc123")
@@ -37,8 +37,8 @@ func TestRedactsByKeySuccess(t *testing.T) {
 
 func TestRedactsByChainOfRegexByValueSuccess(t *testing.T) {
 	filter := newFilter(t, nil, []regexmatcher.Regex{
-		{Pattern: "aaa", Redacter: redaction.RedactRedacter},
-		{Pattern: "bbb", Redacter: redaction.RedactRedacter},
+		{Pattern: "aaa", Redactor: redaction.RedactRedactor},
+		{Pattern: "bbb", Redactor: redaction.RedactRedactor},
 	})
 
 	attrValue := pdata.NewAttributeValueString("aaa bbb ccc aaa bbb ccc")
@@ -51,7 +51,7 @@ func TestRedactsByChainOfRegexByValueSuccess(t *testing.T) {
 func TestKeyValueRedactsByValueSuccess(t *testing.T) {
 	filter := newFilter(t, nil, []regexmatcher.Regex{{
 		Pattern:  "(?:\\d[ -]*?){13,16}",
-		Redacter: redaction.RedactRedacter,
+		Redactor: redaction.RedactRedactor,
 	}})
 
 	attrValue := pdata.NewAttributeValueString("4111 2222 3333 4444")

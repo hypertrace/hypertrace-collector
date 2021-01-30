@@ -29,5 +29,5 @@ func TestRedactsWithSQL(t *testing.T) {
 }
 
 func newFilter(t *testing.T) *sqlFilter {
-	return &sqlFilter{redaction.DefaultRedacter}
+	return &sqlFilter{redaction.DefaultRedactor}
 }
