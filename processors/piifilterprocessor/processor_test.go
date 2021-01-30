@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/hypertrace/collector/processors/piifilterprocessor"
-	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 	"github.com/stretchr/testify/assert"
 
 	stdjson "encoding/json"
@@ -68,28 +67,28 @@ func TestConsumeTraceData(t *testing.T) {
 	logger := zap.New(zapcore.NewNopCore())
 
 	testCases := map[string]struct {
-		config         piifilterprocessor.Config
+		config         piifilterprocessor.TransportConfig
 		inputTraces    pdata.Traces
 		expectedTraces pdata.Traces
 	}{
 		"no filter is applied": {
-			config: piifilterprocessor.Config{
-				KeyRegExs: []piifilterprocessor.PiiElement{
+			config: piifilterprocessor.TransportConfig{
+				KeyRegExs: []piifilterprocessor.TransportPiiElement{
 					{
-						Regex: "^password$",
+						RegexPattern: "^password$",
 					},
 				},
-				RedactStrategy: redaction.Redact,
+				RedactStrategyName: "redact",
 			},
 			inputTraces:    newTraces(newTestSpan("tag1", "abc123")),
 			expectedTraces: newTraces(newTestSpan("tag1", "abc123")),
 		},
 		"auth bearer hash": {
-			config: piifilterprocessor.Config{
-				KeyRegExs: []piifilterprocessor.PiiElement{
-					{Regex: "http.request.header.authorization$"},
+			config: piifilterprocessor.TransportConfig{
+				KeyRegExs: []piifilterprocessor.TransportPiiElement{
+					{RegexPattern: "http.request.header.authorization$"},
 				},
-				RedactStrategy: redaction.Hash,
+				RedactStrategyName: "hash",
 			},
 			inputTraces: newTraces(newTestSpan("http.request.header.authorization", "Bearer abc123")),
 			expectedTraces: newTraces(newTestSpan(
@@ -97,12 +96,12 @@ func TestConsumeTraceData(t *testing.T) {
 			)),
 		},
 		"json filter": {
-			config: piifilterprocessor.Config{
-				KeyRegExs: []piifilterprocessor.PiiElement{
-					{Regex: "^password$"},
+			config: piifilterprocessor.TransportConfig{
+				KeyRegExs: []piifilterprocessor.TransportPiiElement{
+					{RegexPattern: "^password$"},
 				},
-				RedactStrategy: redaction.Redact,
-				ComplexData: []piifilterprocessor.PiiComplexData{
+				RedactStrategyName: "redact",
+				ComplexData: []piifilterprocessor.TransportPiiComplexData{
 					{
 						Key:     "http.request.body",
 						TypeKey: "http.request.headers.content-type",

@@ -1,6 +1,7 @@
 package cookie
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
@@ -51,7 +52,7 @@ func TestCookieFilterFiltersSetCookieKey(t *testing.T) {
 
 func newCookieFilter(t *testing.T) *cookieFilter {
 	m, err := regexmatcher.NewMatcher([]regexmatcher.Regex{{
-		Pattern:  "^password$",
+		Regexp:   regexp.MustCompile("^password$"),
 		Redactor: redaction.RedactRedactor,
 	}}, []regexmatcher.Regex{})
 	if err != nil {

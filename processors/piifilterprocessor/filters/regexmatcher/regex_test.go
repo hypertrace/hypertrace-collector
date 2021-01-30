@@ -1,33 +1,15 @@
 package regexmatcher
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCompileRegexs(t *testing.T) {
-	keyRegexes := []Regex{
-		{
-			Pattern: "^a$",
-		},
-		{
-			Pattern:  "^b$",
-			Redactor: redaction.RedactRedactor,
-		},
-		{
-			Pattern:  "^c$",
-			Redactor: redaction.HashRedactor,
-		},
-	}
-
-	_, err := compileRegexs(keyRegexes)
-	assert.NoError(t, err)
-}
-
 func TestFilterMatchedKey(t *testing.T) {
-	m, _ := NewMatcher([]Regex{{Pattern: "^password$"}}, nil)
+	m, _ := NewMatcher([]Regex{{Regexp: regexp.MustCompile("^password$")}}, nil)
 	isModified, redacted := m.FilterMatchedKey(redaction.RedactRedactor, "http.request.header.password", "abc123", "")
 	assert.True(t, isModified)
 	assert.Equal(t, "***", redacted)

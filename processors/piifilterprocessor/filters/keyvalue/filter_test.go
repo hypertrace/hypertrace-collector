@@ -1,6 +1,7 @@
 package keyvalue
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
@@ -11,7 +12,7 @@ import (
 
 func TestRedactsByKeyWithNoMatchings(t *testing.T) {
 	filter := newFilter(t, []regexmatcher.Regex{{
-		Pattern:  "password",
+		Regexp:   regexp.MustCompile("password"),
 		Redactor: redaction.RedactRedactor,
 	}}, nil)
 
@@ -24,7 +25,7 @@ func TestRedactsByKeyWithNoMatchings(t *testing.T) {
 
 func TestRedactsByKeySuccess(t *testing.T) {
 	filter := newFilter(t, []regexmatcher.Regex{{
-		Pattern:  "^http.request.header.*",
+		Regexp:   regexp.MustCompile("^http.request.header.*"),
 		Redactor: redaction.RedactRedactor,
 	}}, nil)
 
@@ -37,8 +38,8 @@ func TestRedactsByKeySuccess(t *testing.T) {
 
 func TestRedactsByChainOfRegexByValueSuccess(t *testing.T) {
 	filter := newFilter(t, nil, []regexmatcher.Regex{
-		{Pattern: "aaa", Redactor: redaction.RedactRedactor},
-		{Pattern: "bbb", Redactor: redaction.RedactRedactor},
+		{Regexp: regexp.MustCompile("aaa"), Redactor: redaction.RedactRedactor},
+		{Regexp: regexp.MustCompile("bbb"), Redactor: redaction.RedactRedactor},
 	})
 
 	attrValue := pdata.NewAttributeValueString("aaa bbb ccc aaa bbb ccc")
@@ -50,7 +51,7 @@ func TestRedactsByChainOfRegexByValueSuccess(t *testing.T) {
 
 func TestKeyValueRedactsByValueSuccess(t *testing.T) {
 	filter := newFilter(t, nil, []regexmatcher.Regex{{
-		Pattern:  "(?:\\d[ -]*?){13,16}",
+		Regexp:   regexp.MustCompile("(?:\\d[ -]*?){13,16}"),
 		Redactor: redaction.RedactRedactor,
 	}})
 
