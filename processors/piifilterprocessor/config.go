@@ -8,6 +8,7 @@ import (
 	"go.opentelemetry.io/collector/config/configmodels"
 )
 
+// TransportConfig is the config coming directly from the user input.
 type TransportConfig struct {
 	configmodels.ProcessorSettings `mapstructure:",squash"`
 
