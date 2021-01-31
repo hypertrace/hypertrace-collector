@@ -24,3 +24,16 @@ else
   exit 1
 fi
 
+# Assertions declared here should be also declared in the test-config.yml
+
+CARD_LAST_4=$(tail -n 1 $EXPORTED_TRACE | jq -r '.resourceSpans[].instrumentationLibrarySpans[].spans[].attributes[] | select (.key | contains("card.last_4")) | .value.stringValue')
+
+if [ "$CARD_LAST_4" == "***" ]; then
+  echo "Attribute card.last_4 has been redacted correctly"
+else
+  echo "Attribute card.last_4 hasn't been redacted correctly"
+  exit 1
+fi
+
+
+
