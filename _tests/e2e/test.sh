@@ -18,9 +18,9 @@ while [ ! -f $EXPORTED_TRACE ]; do sleep 1; done
 TRACE_ID=$(tail -n 1 $EXPORTED_TRACE | jq -r ".resourceSpans[0].instrumentationLibrarySpans[0].spans[0].traceId")
 
 if [ "$TRACE_ID" == "cb5a198128c2f36138d3d48c4b72cd0e" ]; then
-  echo "Trace ID has the expected value"
+  echo "Trace ID has the expected value."
 else
-  echo "Unexpected trace ID \"$TRACE_ID\""
+  echo "Unexpected trace ID \"$TRACE_ID\"."
   exit 1
 fi
 
@@ -29,9 +29,9 @@ fi
 CARD_LAST_4=$(tail -n 1 $EXPORTED_TRACE | jq -r '.resourceSpans[].instrumentationLibrarySpans[].spans[].attributes[] | select (.key | contains("card.last_4")) | .value.stringValue')
 
 if [ "$CARD_LAST_4" == "***" ]; then
-  echo "Attribute card.last_4 has been redacted correctly"
+  echo "Attribute card.last_4 has been redacted correctly."
 else
-  echo "Attribute card.last_4 hasn't been redacted correctly"
+  echo "Attribute card.last_4 hasn't been redacted correctly: \"$CARD_LAST_4\"."
   exit 1
 fi
 
