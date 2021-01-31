@@ -1,7 +1,6 @@
 package regexmatcher
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -44,17 +43,15 @@ func (rm *Matcher) FilterKeyRegexs(keyToMatch string, actualKey string, value st
 
 // FilterStringValueRegexs looks into the string value to decide whether filter the value or not
 func (rm *Matcher) FilterStringValueRegexs(value string, key string, path string) (bool, string) {
-	inspectorKey := getFullyQualifiedInspectorKey(key, path)
-
 	filtered := false
 	for _, r := range rm.valueRegExs {
-		filtered, value = rm.replacingRegex(value, inspectorKey, r.Regexp, r.Redactor)
+		filtered, value = rm.replacingRegex(value, r.Regexp, r.Redactor)
 	}
 
 	return filtered, value
 }
 
-func (rm *Matcher) replacingRegex(value string, _ string, regex *regexp.Regexp, redactor redaction.Redactor) (bool, string) {
+func (rm *Matcher) replacingRegex(value string, regex *regexp.Regexp, redactor redaction.Redactor) (bool, string) {
 	matchCount := 0
 
 	filtered := regex.ReplaceAllStringFunc(value, func(src string) string {
@@ -104,16 +101,6 @@ func mapRawToEnriched(rawTag string, path string) (string, string) {
 	}
 
 	return enrichedTag, enrichedPath
-}
-
-func getFullyQualifiedInspectorKey(actualKey string, path string) string {
-	inspectorKey, enrichedPath := mapRawToEnriched(actualKey, path)
-
-	if len(enrichedPath) > 0 {
-		inspectorKey = fmt.Sprintf("%s.%s", inspectorKey, enrichedPath)
-	}
-
-	return inspectorKey
 }
 
 func (rm *Matcher) FilterMatchedKey(redactor redaction.Redactor, actualKey string, value string, path string) (bool, string) {
