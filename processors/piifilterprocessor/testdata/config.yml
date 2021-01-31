@@ -2,6 +2,8 @@ receivers:
   examplereceiver:
 
 processors:
+  hypertrace_piifilter:
+    redaction_strategy: "hash"
 
 exporters:
   exampleexporter:

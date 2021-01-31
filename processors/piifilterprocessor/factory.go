@@ -24,7 +24,7 @@ func NewFactory() component.ProcessorFactory {
 }
 
 func createDefaultConfig() configmodels.Processor {
-	return &Config{
+	return &TransportConfig{
 		ProcessorSettings: configmodels.ProcessorSettings{
 			TypeVal: typeStr,
 			NameVal: typeStr,
@@ -40,7 +40,12 @@ func createTraceProcessor(
 	cfg configmodels.Processor,
 	nextConsumer consumer.TracesConsumer,
 ) (component.TracesProcessor, error) {
-	piiCfg := cfg.(*Config)
+	transportCfg := cfg.(*TransportConfig)
+
+	piiCfg, err := transportCfg.toConfig()
+	if err != nil {
+		return nil, err
+	}
 
 	proc, err := newPIIFilterProcessor(params.Logger, piiCfg)
 	if err != nil {

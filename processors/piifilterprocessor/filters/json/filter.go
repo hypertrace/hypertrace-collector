@@ -55,7 +55,7 @@ func (f *jsonFilter) RedactAttribute(key string, value pdata.AttributeValue) (bo
 	return true, nil
 }
 
-func (f *jsonFilter) filterJSON(value interface{}, matchedRegex *regexmatcher.CompiledRegex, key string, actualKey string, jsonPath string, checked bool) (bool, interface{}) {
+func (f *jsonFilter) filterJSON(value interface{}, matchedRegex *regexmatcher.Regex, key string, actualKey string, jsonPath string, checked bool) (bool, interface{}) {
 	switch tValue := value.(type) {
 	case []interface{}:
 		return f.filterJSONArray(tValue, matchedRegex, key, actualKey, jsonPath, checked)
@@ -68,7 +68,7 @@ func (f *jsonFilter) filterJSON(value interface{}, matchedRegex *regexmatcher.Co
 
 func (f *jsonFilter) filterJSONArray(
 	arrValue []interface{},
-	matchedRegex *regexmatcher.CompiledRegex,
+	matchedRegex *regexmatcher.Regex,
 	key string,
 	actualKey string,
 	jsonPath string,
@@ -95,7 +95,7 @@ func (f *jsonFilter) filterJSONArray(
 
 func (f *jsonFilter) filterJSONMap(
 	mValue map[string]interface{},
-	matchedRegex *regexmatcher.CompiledRegex,
+	matchedRegex *regexmatcher.Regex,
 	_ string,
 	actualKey string,
 	jsonPath string,
@@ -121,7 +121,7 @@ func (f *jsonFilter) filterJSONMap(
 
 func (f *jsonFilter) filterJSONScalar(
 	value interface{},
-	matchedRegex *regexmatcher.CompiledRegex,
+	matchedRegex *regexmatcher.Regex,
 	key string,
 	actualKey string,
 	jsonPath string,

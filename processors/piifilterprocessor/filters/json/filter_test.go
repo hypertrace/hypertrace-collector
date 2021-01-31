@@ -3,6 +3,7 @@ package json
 import (
 	"errors"
 	"reflect"
+	"regexp"
 	"testing"
 
 	stdjson "encoding/json"
@@ -61,7 +62,9 @@ func TestFilterFailsOnInvalidJSON(t *testing.T) {
 }
 
 func TestSimpleArrayRemainsTheSameOnNotMatchingRegex(t *testing.T) {
-	filter := createJSONFilter(t, []regexmatcher.Regex{{Pattern: "^password$", Redactor: redaction.RedactRedactor}})
+	filter := createJSONFilter(t, []regexmatcher.Regex{
+		{Regexp: regexp.MustCompile("^password$"), Redactor: redaction.RedactRedactor},
+	})
 	attrValue := pdata.NewAttributeValueString("[\"12\",\"34\",\"56\"]")
 	isRedacted, err := filter.RedactAttribute("attrib_key", attrValue)
 	assert.False(t, isRedacted)
@@ -87,18 +90,24 @@ func TestJSONFieldRedaction(t *testing.T) {
 			expectedRedactedAttrValue: "{\"a\": [{\"b\": \"1\"}, {\"password\": [\"***\",\"***\",\"***\"]}]}",
 		},
 		"for object in key": {
-			unredactedValue:           "{\"a\": [{\"b\": \"1\"}, {\"password\":{\"key1\":[\"12\",\"34\",\"56\"], \"key2\":\"val\"}}]}",
-			expectedRedactedAttrValue: "{\"a\": [{\"b\": \"1\"}, {\"password\": {\"key1\":[\"***\",\"***\",\"***\"], \"key2\":\"***\"}}]}",
+			unredactedValue: "{\"a\": [{\"b\": \"1\"}, " +
+				"{\"password\":{\"key1\":[\"12\",\"34\",\"56\"], \"key2\":\"val\"}}]}",
+			expectedRedactedAttrValue: "{\"a\": [{\"b\": \"1\"}, " +
+				"{\"password\": {\"key1\":[\"***\",\"***\",\"***\"], \"key2\":\"***\"}}]}",
 		},
 		"for non string scalar": {
-			unredactedValue:           "{\"a\": [{\"b\": \"1\"}, {\"password\":{\"key1\":[12,34.1,true], \"key2\":false}}]}",
-			expectedRedactedAttrValue: "{\"a\": [{\"b\": \"1\"}, {\"password\": {\"key1\":[\"***\",\"***\",\"***\"], \"key2\":\"***\"}}]}",
+			unredactedValue: "{\"a\": [{\"b\": \"1\"}, " +
+				"{\"password\":{\"key1\":[12,34.1,true], \"key2\":false}}]}",
+			expectedRedactedAttrValue: "{\"a\": [{\"b\": \"1\"}, " +
+				"{\"password\": {\"key1\":[\"***\",\"***\",\"***\"], \"key2\":\"***\"}}]}",
 		},
 	}
 
 	for name, tCase := range tCases {
 		t.Run(name, func(t *testing.T) {
-			filter := createJSONFilter(t, []regexmatcher.Regex{{Pattern: "^password$", Redactor: redaction.RedactRedactor}})
+			filter := createJSONFilter(t, []regexmatcher.Regex{
+				{Regexp: regexp.MustCompile("^password$"), Redactor: redaction.RedactRedactor},
+			})
 
 			attrValue := pdata.NewAttributeValueString(tCase.unredactedValue)
 			isRedacted, err := filter.RedactAttribute("attrib_key", attrValue)
@@ -136,20 +145,26 @@ func TestRedactionOnMatchingValuesByFQN(t *testing.T) {
 			expectedRedactedAttrValue: "{\"a\": [{\"b\": \"1\"}, {\"password\": [\"12\",\"***\",\"56\"]}]}",
 		},
 		"all elements in a password object": {
-			pattern:                   "^\\$\\.a\\[1\\]\\.password.key1$",
-			unredactedValue:           "{\"a\": [{\"b\": \"1\"}, {\"password\":{\"key1\":[12,34,56], \"key2\":\"val\"}}]}",
-			expectedRedactedAttrValue: "{\"a\": [{\"b\": \"1\"}, {\"password\": {\"key1\":[\"***\",\"***\",\"***\"], \"key2\":\"val\"}}]}",
+			pattern: "^\\$\\.a\\[1\\]\\.password.key1$",
+			unredactedValue: "{\"a\": [{\"b\": \"1\"}, " +
+				"{\"password\":{\"key1\":[12,34,56], \"key2\":\"val\"}}]}",
+			expectedRedactedAttrValue: "{\"a\": [{\"b\": \"1\"}, " +
+				"{\"password\": {\"key1\":[\"***\",\"***\",\"***\"], \"key2\":\"val\"}}]}",
 		},
 		"one element in a password object": {
-			pattern:                   "^\\$\\.a\\[1\\]\\.password.key1\\[1\\]$",
-			unredactedValue:           "{\"a\": [{\"b\": \"1\"}, {\"password\":{\"key1\":[12,34,56], \"key2\":\"val\"}}]}",
-			expectedRedactedAttrValue: "{\"a\": [{\"b\": \"1\"}, {\"password\": {\"key1\":[12,\"***\",56], \"key2\":\"val\"}}]}",
+			pattern: "^\\$\\.a\\[1\\]\\.password.key1\\[1\\]$",
+			unredactedValue: "{\"a\": [{\"b\": \"1\"}, " +
+				"{\"password\":{\"key1\":[12,34,56], \"key2\":\"val\"}}]}",
+			expectedRedactedAttrValue: "{\"a\": [{\"b\": \"1\"}, " +
+				"{\"password\": {\"key1\":[12,\"***\",56], \"key2\":\"val\"}}]}",
 		},
 	}
 
 	for name, tCase := range tCases {
 		t.Run(name, func(t *testing.T) {
-			filter := createJSONFilter(t, []regexmatcher.Regex{{Pattern: tCase.pattern, FQN: true, Redactor: redaction.RedactRedactor}})
+			filter := createJSONFilter(t, []regexmatcher.Regex{
+				{Regexp: regexp.MustCompile(tCase.pattern), FQN: true, Redactor: redaction.RedactRedactor},
+			})
 			attrValue := pdata.NewAttributeValueString(tCase.unredactedValue)
 			isRedacted, err := filter.RedactAttribute("attrib_key", attrValue)
 			assert.True(t, isRedacted)

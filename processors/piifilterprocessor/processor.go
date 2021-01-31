@@ -43,7 +43,7 @@ func toRegex(es []PiiElement, globalStrategy redaction.Strategy) []regexmatcher.
 		}
 
 		rs = append(rs, regexmatcher.Regex{
-			Pattern:  e.Regex,
+			Regexp:   e.Regex,
 			Redactor: rd,
 			FQN:      e.FQN,
 		})
@@ -52,10 +52,7 @@ func toRegex(es []PiiElement, globalStrategy redaction.Strategy) []regexmatcher.
 	return rs
 }
 
-func newPIIFilterProcessor(
-	logger *zap.Logger,
-	cfg *Config,
-) (*piiFilterProcessor, error) {
+func newPIIFilterProcessor(logger *zap.Logger, cfg *Config) (*piiFilterProcessor, error) {
 	matcher, err := regexmatcher.NewMatcher(
 		toRegex(cfg.KeyRegExs, cfg.RedactStrategy),
 		toRegex(cfg.ValueRegExs, cfg.RedactStrategy),

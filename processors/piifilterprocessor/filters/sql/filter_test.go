@@ -9,7 +9,7 @@ import (
 )
 
 func TestRedactsWithNoSQLMatchings(t *testing.T) {
-	filter := newFilter(t)
+	filter := newFilter()
 
 	attrValue := pdata.NewAttributeValueString("abc123")
 	isRedacted, err := filter.RedactAttribute("unrelated", attrValue)
@@ -19,7 +19,7 @@ func TestRedactsWithNoSQLMatchings(t *testing.T) {
 }
 
 func TestRedactsWithSQL(t *testing.T) {
-	filter := newFilter(t)
+	filter := newFilter()
 	attrValue := pdata.NewAttributeValueString("select password from user where name = 'dave' or name =\"bob\";")
 	isRedacted, err := filter.RedactAttribute("sql.query", attrValue)
 	assert.NoError(t, err)
@@ -28,6 +28,6 @@ func TestRedactsWithSQL(t *testing.T) {
 
 }
 
-func newFilter(t *testing.T) *sqlFilter {
+func newFilter() *sqlFilter {
 	return &sqlFilter{redaction.DefaultRedactor}
 }
