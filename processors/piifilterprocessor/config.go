@@ -1,6 +1,7 @@
 package piifilterprocessor
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 
@@ -78,6 +79,10 @@ func (tc *TransportConfig) toConfig() (*Config, error) {
 	}
 
 	for _, tpe := range tc.ComplexData {
+		if tpe.Key == "" {
+			return nil, errors.New("key for complex data entry is empty")
+		}
+
 		c.ComplexData = append(c.ComplexData, PiiComplexData(tpe))
 	}
 
