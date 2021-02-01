@@ -55,12 +55,16 @@ func newTraces(spans ...pdata.Span) pdata.Traces {
 	return traces
 }
 
-var (
-	jsonInput = `{"a":"aaa","password":"root_pw","b":{"b_1":"bbb","password":"nested_pw"},` +
+const (
+	keyJSONInput = `{"a":"aaa","password":"root_pw","b":{"b_1":"bbb","password":"nested_pw"},` +
 		`"c":[{"c_1":"ccc"},{"password":"array_pw"}]}`
 
-	jsonExpected = `{"a":"aaa","password":"***","b":{"b_1":"bbb","password":"***"},` +
+	keyJSONExpected = `{"a":"aaa","password":"***","b":{"b_1":"bbb","password":"***"},` +
 		`"c":[{"c_1":"ccc"},{"password":"***"}]}`
+
+	valueJSONInput = `{"key_or_value":{"a":"aaa","b":"key_or_value"}}`
+
+	valueJSONExpected = `{"key_or_value":{"a":"aaa","b":"***"}}`
 )
 
 func TestConsumeTraceData(t *testing.T) {
@@ -95,7 +99,7 @@ func TestConsumeTraceData(t *testing.T) {
 				"http.request.header.authorization", "1232de241a44c348f44bfba95206afe9c6e90718",
 			)),
 		},
-		"json filter": {
+		"JSON key filter": {
 			config: piifilterprocessor.TransportConfig{
 				KeyRegExs: []piifilterprocessor.TransportPiiElement{
 					{RegexPattern: "^password$"},
@@ -109,12 +113,55 @@ func TestConsumeTraceData(t *testing.T) {
 				},
 			},
 			inputTraces: newTraces(newTestSpan(
-				"http.request.body", jsonInput,
+				"http.request.body", keyJSONInput,
 				"http.request.headers.content-type", "application/json;charset=utf-8",
 			)),
 			expectedTraces: newTraces(newTestSpan(
-				"http.request.body", jsonExpected,
+				"http.request.body", keyJSONExpected,
 				"http.request.headers.content-type", "application/json;charset=utf-8",
+			)),
+		},
+		"multiple attributes": {
+			config: piifilterprocessor.TransportConfig{
+				KeyRegExs: []piifilterprocessor.TransportPiiElement{
+					{RegexPattern: "^password$"},
+					{RegexPattern: "^auth-key$"},
+				},
+				RedactStrategyName: "redact",
+				ComplexData: []piifilterprocessor.TransportPiiComplexData{
+					{
+						Key:  "http.request.body",
+						Type: "json",
+					},
+				},
+			},
+			inputTraces: newTraces(newTestSpan(
+				"http.request.body", keyJSONInput,
+				"auth-key", "some-auth-key",
+			)),
+			expectedTraces: newTraces(newTestSpan(
+				"http.request.body", keyJSONExpected,
+				"auth-key", "***",
+			)),
+		},
+		"JSON value filter": {
+			config: piifilterprocessor.TransportConfig{
+				ValueRegExs: []piifilterprocessor.TransportPiiElement{
+					{RegexPattern: "key_or_value"},
+				},
+				RedactStrategyName: "redact",
+				ComplexData: []piifilterprocessor.TransportPiiComplexData{
+					{
+						Key:  "http.request.body",
+						Type: "json",
+					},
+				},
+			},
+			inputTraces: newTraces(newTestSpan(
+				"http.request.body", valueJSONInput,
+			)),
+			expectedTraces: newTraces(newTestSpan(
+				"http.request.body", valueJSONExpected,
 			)),
 		},
 	}
