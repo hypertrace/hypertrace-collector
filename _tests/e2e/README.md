@@ -1,4 +1,6 @@
-# Instructions
+# E2E tests
+
+This test suite launches a collector, sends a trace and inspect the output trace to match the expected data.
 
 ## Run collector with test config
 
