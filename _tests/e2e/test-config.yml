@@ -9,7 +9,7 @@ processors:
       - regex: "^password$"
     complex_data:
       - key: http.request.body
-      - type: json
+        type: json
 exporters:
   file:
     path: ./exported-trace.json
