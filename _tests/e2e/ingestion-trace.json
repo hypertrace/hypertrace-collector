@@ -16,7 +16,7 @@
             "http.host": "backend:9000",
             "http.method": "GET",
             "card.last_4": "1234",
-            "http.request.body": "{\"name\":\"Dave\"}",
+            "http.request.body": "{\"name\":\"Dave\", \"password\":\"xyz123\"}",
             "http.request.header.Content-Type": "application/json",
             "http.request.header.Traceparent": "00-cb5a198128c2f36138d3d48c4b72cd0e-a0ddc4b62d6da703-01",
             "http.request_content_length": "15",

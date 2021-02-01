@@ -26,6 +26,7 @@ fi
 
 # Assertions declared here should be also declared in the test-config.yml
 
+# Key base redaction
 CARD_LAST_4=$(tail -n 1 $EXPORTED_TRACE | jq -r '.resourceSpans[].instrumentationLibrarySpans[].spans[].attributes[] | select (.key | contains("card.last_4")) | .value.stringValue')
 
 if [ "$CARD_LAST_4" == "***" ]; then
@@ -35,5 +36,12 @@ else
   exit 1
 fi
 
+# JSON payload key based redaction
+JSON_PASSWORD=$(tail -n 1 $EXPORTED_TRACE | jq -r '.resourceSpans[].instrumentationLibrarySpans[].spans[].attributes[] | select (.key | contains("http.request.body")) | .value.stringValue | select (. | contains("password"))' | jq -r '.password')
 
-
+if [ "$JSON_PASSWORD" == "***" ]; then
+  echo "Attribute http.request.body has been redacted correctly."
+else
+  echo "Attribute http.request.body hasn't been redacted correctly, password field: \"$JSON_PASSWORD\"."
+  exit 1
+fi
