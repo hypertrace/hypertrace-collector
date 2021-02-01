@@ -42,8 +42,20 @@ func TestRedactsByKeyAndPrefixSuccess(t *testing.T) {
 		Redactor: redaction.RedactRedactor,
 	}}, nil)
 
-	attrValue := pdata.NewAttributeValueString("abc123")
+	attrValue := pdata.NewAttributeValueString("aaa123")
 	isRedacted, err := filter.RedactAttribute("http.request.header.password", attrValue)
+	assert.NoError(t, err)
+	assert.True(t, isRedacted)
+	assert.Equal(t, "***", attrValue.StringVal())
+
+	attrValue = pdata.NewAttributeValueString("bbb123")
+	isRedacted, err = filter.RedactAttribute("b.password", attrValue)
+	assert.NoError(t, err)
+	assert.False(t, isRedacted)
+	assert.Equal(t, "bbb123", attrValue.StringVal())
+
+	attrValue = pdata.NewAttributeValueString("ccc123")
+	isRedacted, err = filter.RedactAttribute("password", attrValue)
 	assert.NoError(t, err)
 	assert.True(t, isRedacted)
 	assert.Equal(t, "***", attrValue.StringVal())
