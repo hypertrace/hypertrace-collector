@@ -9,7 +9,7 @@ import (
 )
 
 func TestFilterMatchedKey(t *testing.T) {
-	m, _ := NewMatcher([]Regex{{Regexp: regexp.MustCompile("^password$")}}, nil)
+	m, _ := NewMatcher(nil, []Regex{{Regexp: regexp.MustCompile("^password$")}}, nil)
 	isModified, redacted := m.FilterMatchedKey(redaction.RedactRedactor, "http.request.header.password", "abc123", "")
 	assert.True(t, isModified)
 	assert.Equal(t, "***", redacted)

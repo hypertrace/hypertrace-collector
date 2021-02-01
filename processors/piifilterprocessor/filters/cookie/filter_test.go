@@ -51,10 +51,10 @@ func TestCookieFilterFiltersSetCookieKey(t *testing.T) {
 }
 
 func newCookieFilter(t *testing.T) *cookieFilter {
-	m, err := regexmatcher.NewMatcher([]regexmatcher.Regex{{
+	m, err := regexmatcher.NewMatcher(nil, []regexmatcher.Regex{{
 		Regexp:   regexp.MustCompile("^password$"),
 		Redactor: redaction.RedactRedactor,
-	}}, []regexmatcher.Regex{})
+	}}, nil)
 	if err != nil {
 		t.Fatalf("failed to create cookie filter: %v\n", err)
 	}
