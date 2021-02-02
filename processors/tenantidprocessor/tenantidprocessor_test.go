@@ -1,22 +1,34 @@
 package tenantidprocessor
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"net/http"
 	"testing"
 	"time"
 
+	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/jaegertracing/jaeger/model"
+	jaegerconvert "github.com/jaegertracing/jaeger/model/converter/thrift/jaeger"
+	jaegerthrift "github.com/jaegertracing/jaeger/thrift-gen/jaeger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/config/configgrpc"
+	"go.opentelemetry.io/collector/config/confighttp"
 	"go.opentelemetry.io/collector/config/configtls"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/consumer/pdata"
 	"go.opentelemetry.io/collector/exporter/otlpexporter"
+	"go.opentelemetry.io/collector/receiver/jaegerreceiver"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 	"go.opentelemetry.io/collector/testutil"
+	"go.opentelemetry.io/collector/translator/trace/jaeger"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -145,6 +157,54 @@ func TestReceiveOTLPGRPC(t *testing.T) {
 	assert.Equal(t, reqTraces.SpanCount(), tenantAttrsFound)
 }
 
+func TestReceiveJaegerThriftHTTP(t *testing.T) {
+	sink := new(consumertest.TracesSink)
+	tenantProcessor := &processor{
+		logger:               zap.NewNop(),
+		tenantIDHeaderName:   defaultTenantIdHeaderName,
+		tenantIDAttributeKey: defaultTenantIdAttributeKey,
+	}
+
+	addr := testutil.GetAvailableLocalAddress(t)
+	cfg := &jaegerreceiver.Config{
+		Protocols: jaegerreceiver.Protocols{
+			ThriftHTTP: &confighttp.HTTPServerSettings{
+				Endpoint: addr,
+			},
+		},
+	}
+	params := component.ReceiverCreateParams{Logger: zap.NewNop()}
+	jrf := jaegerreceiver.NewFactory()
+	rec, err := jrf.CreateTracesReceiver(context.Background(), params, cfg, multiConsumer{
+		sink:              sink,
+		tenantIDprocessor: tenantProcessor,
+	})
+	require.NoError(t, err)
+
+	err = rec.Start(context.Background(), componenttest.NewNopHost())
+	require.NoError(t, err)
+	defer rec.Shutdown(context.Background())
+
+	td := GenerateTraceDataOneSpan()
+	batches, err := jaeger.InternalTracesToJaegerProto(td)
+	require.NoError(t, err)
+	collectorAddr := fmt.Sprintf("http://%s/api/traces", addr)
+	for _, batch := range batches {
+		err := sendToJaegerHTTPThrift(collectorAddr, map[string]string{tenantProcessor.tenantIDHeaderName: testTenantID},jaegerModelToThrift(batch))
+		require.NoError(t, err)
+	}
+
+	traces := sink.AllTraces()
+	assert.Equal(t, 1, len(traces))
+	tenantAttrsFound := assertTenantAttributeExists(
+		t,
+		traces[0],
+		tenantProcessor.tenantIDAttributeKey,
+		testTenantID,
+	)
+	assert.Equal(t, td.SpanCount(), tenantAttrsFound)
+}
+
 func assertTenantAttributeExists(t *testing.T, trace pdata.Traces, tenantAttrKey string, tenantID string) int {
 	numOfTenantAttrs := 0
 	rss := trace.ResourceSpans()
@@ -242,6 +302,8 @@ func fillSpanOne(span pdata.Span) {
 	span.SetStartTime(TestSpanStartTimestamp)
 	span.SetEndTime(TestSpanEndTimestamp)
 	span.SetDroppedAttributesCount(1)
+	span.SetTraceID(pdata.NewTraceID([16]byte{0, 1, 2}))
+	span.SetSpanID(pdata.NewSpanID([8]byte{0, 1}))
 	evs := span.Events()
 	evs.Resize(2)
 	ev0 := evs.At(0)
@@ -261,4 +323,48 @@ func fillSpanOne(span pdata.Span) {
 
 func initSpanEventAttributes(dest pdata.AttributeMap) {
 	dest.InitFromMap(spanEventAttributes)
+}
+
+func jaegerModelToThrift(batch *model.Batch) *jaegerthrift.Batch {
+	return &jaegerthrift.Batch{
+		Process: jaegerProcessModelToThrift(batch.Process),
+		Spans:   jaegerconvert.FromDomain(batch.Spans),
+	}
+}
+
+func jaegerProcessModelToThrift(process *model.Process) *jaegerthrift.Process {
+	if process == nil {
+		return nil
+	}
+	return &jaegerthrift.Process{
+		ServiceName: process.ServiceName,
+	}
+}
+
+func sendToJaegerHTTPThrift(endpoint string, headers map[string]string, batch *jaegerthrift.Batch) error {
+	buf, err := thrift.NewTSerializer().Write(context.Background(), batch)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(buf))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/x-thrift")
+	for k, v := range headers {
+		req.Header.Add(k, v)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	io.Copy(ioutil.Discard, resp.Body)
+	resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("failed to upload traces; HTTP status code: %d", resp.StatusCode)
+	}
+	return nil
 }
