@@ -1,6 +1,6 @@
 VERSION ?= dev
 GIT_HASH ?=$(shell git rev-parse HEAD)
-IMAGE_NAME := "hypertrace/collector"
+IMAGE_NAME ?= "hypertrace/collector"
 CONFIG_FILE ?= ./default-config.yml
 
 .PHONY: unit-test
@@ -21,6 +21,10 @@ run:
 .PHONY: package
 package:
 	@docker build --build-arg VERSION=${VERSION} --build-arg GIT_COMMIT=$(GIT_COMMIT) -t $(IMAGE_NAME):${VERSION} .
+
+.PHONY: docker-push
+docker-push:
+	docker push ${DOCKER_IMAGE}:${VERSION}
 
 .PHONY: lint
 lint:
