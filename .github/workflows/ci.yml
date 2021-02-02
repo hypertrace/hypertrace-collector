@@ -32,7 +32,7 @@ jobs:
         name: Run E2E tests
         run: ./_tests/e2e/test.sh ./exported-trace.json
 
-  package:
+  build-docker-image:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -40,6 +40,8 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@v2
         with:
+          # this workflow runs on PRs, it only tests if the image can be built
+          push: false
           context: .
           file: ./Dockerfile
           tags: hypertrace/hypertrace-collector:latest
