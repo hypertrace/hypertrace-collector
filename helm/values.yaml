@@ -1,0 +1,187 @@
+# Default values for the helm chart.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+###########
+# Deployment and Service
+###########
+logLevel: INFO
+
+minReadySeconds: 5
+progressDeadlineSeconds: 120
+replicaCount: 1
+maxUnavailable: 0
+
+image:
+  repository: hypertrace/hypertrace-collector
+  pullPolicy: IfNotPresent
+
+env:
+  - name: GOGC
+    value: "80"
+
+containerPorts:
+  - name: grpc-otlp
+    containerPort: 4317
+  - name: http-otlp
+    containerPort: 55681
+  - name: grpc-opencensus
+    containerPort: 55678
+  - name: http-jaeger
+    containerPort: 14268
+  - name: grpc-jaeger
+    containerPort: 14250
+  - name: http-zipkin
+    containerPort: 9411
+
+service:
+  type: ClusterIP
+  ports:
+  - name: grpc-otlp
+    port: 4317
+    targetPort: 4317
+    protocol: TCP
+  - name: http-otlp
+    port: 55681
+    targetPort: 55681
+    protocol: TCP
+  - name: grpc-opencensus
+    port: 55678
+    targetPort: 55678
+    protocol: TCP
+  - name: http-jaeger
+    port: 14268
+    targetPort: 14268
+    protocol: TCP
+  - name: grpc-jaeger
+    port: 14250
+    targetPort: 14268
+    protocol: TCP
+  - name: http-zipkin
+    port: 9411
+    targetPort: 9411
+    protocol: TCP
+
+livenessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+readinessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 5
+
+resources:
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+   limits:
+     cpu: 1
+     memory: 2Gi
+   requests:
+     cpu: 200m
+     memory: 400Mi
+
+deploymentLabels:
+  app: hypertrace-collector
+
+podLabels:
+  app: hypertrace-collector
+
+podAnnotations: {}
+
+# The Deployment Selector match labels are different from the pod labels. Note that they should be a subset of the pod
+# labels. You append new labels to them but cannot remove labels. If you remove or modify the labels you will need to
+# delete the existing deployment bearing the same name and then redeploy. This is the reason why they are separated from
+# the pod labels. You can add and remove pod labels without having an effect on the deployment.
+# Also, please use "apiVersion: apps/v1" instead of the deprecated "apiVersion: extensions/v1beta1" for the deployment
+# apiVersion in the yaml file.
+deploymentSelectorMatchLabels:
+  app: hypertrace-collector
+
+serviceSelectorLabels:
+  app: hypertrace-collector
+
+# Volumes and Volume mounts
+volumeMounts:
+  - name: hypertrace-collector-config-vol
+    mountPath: /conf
+
+volumes:
+  - configMap:
+      name: hypertrace-collector-config
+      items:
+        - key: hypertrace-collector-config
+          path: hypertrace-collector-config.yaml
+    name: hypertrace-collector-config-vol
+
+nodeSelector: {}
+
+###########
+# Config Maps
+###########
+configMap:
+  name: hypertrace-collector-config
+  data:
+    extensions:
+      health_check:
+      pprof:
+        endpoint: 0.0.0.0:1777
+      zpages:
+        endpoint: 0.0.0.0:55679
+
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+          http:
+      opencensus:
+      zipkin:
+      jaeger:
+        protocols:
+          grpc:
+          thrift_http:
+      # Collect own metrics
+      prometheus:
+        config:
+          scrape_configs:
+            - job_name: "otel-collector"
+              scrape_interval: 10s
+              static_configs:
+                - targets: ["0.0.0.0:8888"]
+
+    processors:
+      batch:
+
+    exporters:
+      kafka:
+        protocol_version: 2.0.0
+        brokers:
+          - bootstrap:9092
+        topic: jaeger-spans
+        encoding: jaeger_proto
+
+    service:
+      extensions: [health_check, pprof, zpages]
+      pipelines:
+        traces:
+          receivers: [otlp, opencensus, jaeger, zipkin]
+          processors: [batch]
+          exporters: [kafka]
+
+kafka-topic-creator:
+  jobName: jaeger-spans-kafka-topic-creator
+  helmHook: pre-install,pre-upgrade
+  kafka:
+    topics:
+      - name: jaeger-spans
+        replicationFactor: 1
+        partitions: 8
+        configs:
+          - retention.bytes=4294967296
+          - retention.ms=259200000
+  zookeeper:
+    address: zookeeper:2181
+  imagePullSecrets: []
+  podAnnotations:
+    sidecar.istio.io/inject: "false"
