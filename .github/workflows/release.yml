@@ -1,0 +1,50 @@
+name: Release artifacts
+on:
+  # Will only run when release is published.
+  release:
+    types:
+      - created
+  workflow_dispatch:
+
+jobs:
+  publish-artifacts:
+    runs-on: ubuntu-20.04
+    steps:
+      # Set fetch-depth: 0 to fetch commit history and tags for use in version calculation
+      - name: Check out code
+        uses: actions/checkout@v2.3.4
+        with:
+          fetch-depth: 0
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_PUBLISH_USER }}
+          password: ${{ secrets.DOCKERHUB_PUBLISH_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          context: .
+          file: ./Dockerfile
+          tags: hypertrace/hypertrace-collector:${GITHUB_REF##*/}
+          build-args: |
+            VERSION=${GITHUB_REF##*/}
+            GIT_COMMIT=${GITHUB_SHA}
+
+#  publish-helm-charts:
+#    needs: publish-artifacts
+#    runs-on: ubuntu-20.04
+#    steps:
+#      # Set fetch-depth: 0 to fetch commit history and tags for use in version calculation
+#      - name: Checkout Repository
+#        uses: actions/checkout@v2.3.4
+#        with:
+#          fetch-depth: 0
+#
+#      - name: package and release charts
+#        uses: hypertrace/github-actions/helm-gcs-publish@main
+#        with:
+#          helm-gcs-credentials: ${{ secrets.HELM_GCS_CREDENTIALS }}
+#          helm-gcs-repository: ${{ secrets.HELM_GCS_REPOSITORY }}
