@@ -23,7 +23,7 @@ version: 0.1.0
 
 # This is the appVersion which will correspond to build version tag. The "helm package" command will take care of setting
 # this.
-appVersion: main
+appVersion: 0.1.0
 
 dependencies:
   - name: kafka-topic-creator
