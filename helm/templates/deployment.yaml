@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+  annotations:
+    # This annotation distinguishes this deployment from those done with skaffold in order to remove those ones before
+    # deploying this one.
+    deployment.traceable.ai/tool: helm3
+  labels:
+    release: {{ .Release.Name }}
+  {{- with .Values.deploymentLabels }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  minReadySeconds: {{ .Values.minReadySeconds }}
+  progressDeadlineSeconds: {{ .Values.progressDeadlineSeconds }}
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: {{ .Values.maxUnavailable }}
+  selector:
+    matchLabels:
+      {{- toYaml .Values.deploymentSelectorMatchLabels | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/config-map.yaml") . | sha256sum }}
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8888"
+        prometheus.io/scrape: "true"
+      {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        release: {{ .Release.Name }}
+      {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.volumes }}
+      volumes:
+      {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+      {{- toYaml . | nindent 8 }}
+    {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - "/usr/local/bin/hypertrace/collector"
+            - "--config=/conf/hypertrace-collector-config.yaml"
+            - "--log-level={{ .Values.logLevel }}"
+          ports:
+          {{ range $port := .Values.containerPorts }}
+            - name: {{ $port.name }}
+              containerPort: {{ $port.containerPort }}
+          {{ end }}
+        {{- with .Values.env }}
+          env:
+          {{- toYaml . | nindent 12}}
+        {{- end }}
+        {{- with .Values.volumeMounts }}
+          volumeMounts:
+          {{- toYaml . | nindent 12}}
+        {{- end }}
+          livenessProbe:
+            initialDelaySeconds: {{ int .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ int .Values.livenessProbe.periodSeconds }}
+            httpGet:
+              path: /
+              port: 13133
+          readinessProbe:
+            initialDelaySeconds: {{ int .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ int .Values.readinessProbe.periodSeconds }}
+            httpGet:
+              path: /
+              port: 13133
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

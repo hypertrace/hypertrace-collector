@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.configMap.name }}
+  labels:
+    app: hypertrace-collector
+    release: {{ .Release.Name }}
+data:
+  hypertrace-collector-config: |-
+    {{- toYaml .Values.configMap.data | nindent 4 }}
+
