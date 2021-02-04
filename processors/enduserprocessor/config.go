@@ -2,25 +2,20 @@ package enduserprocessor
 
 import "go.opentelemetry.io/collector/config/configmodels"
 
-// Condition is the condition that must be matched
-// before trying to capture the user
-type Condition struct {
-	Key   string `json:"key"`
-	Regex string `json:"regex"`
-}
-
 // Config defines config for the end user.
 type Config struct {
 	configmodels.ProcessorSettings `mapstructure:",squash"`
 
-	Key string `mapstructure:"key"`
-	// TODO renamed Type collided with OTEL processor's TYPE
-	EndType         string `mapstructure:"end_type"`
-	Encoding        string `mapstructure:"encoding"`
-	CookieName      string `mapstructure:"cookie_name"`
-	RawSessionValue bool   `mapstructure:"raw_session_value"`
-	HashAlgo        string `mapstructure:"hash_algo"`
-	//HashAlgorithm    hash.Algorithm
+	EndUserConfig []EndUser `mapstructure:"end_users"`
+}
+
+type EndUser struct {
+	AttributeKey     string      `mapstructure:"key"`
+	Type             string      `mapstructure:"type"`
+	Encoding         string      `mapstructure:"encoding"`
+	CookieName       string      `mapstructure:"cookie_name"`
+	RawSessionValue  bool        `mapstructure:"raw_session_value"`
+	HashAlgo         string      `mapstructure:"hash_algo"`
 	Conditions       []Condition `mapstructure:"conditions"`
 	IDClaims         []string    `mapstructure:"id_claims"`
 	IDPaths          []string    `mapstructure:"id_paths"`
@@ -36,4 +31,11 @@ type Config struct {
 	SessionKeys      []string    `mapstructure:"session_keys"`
 	SessionIndexes   []int       `mapstructure:"session_indexes"`
 	SessionSeparator string      `mapstructure:"session_separator"`
+}
+
+// Condition is the condition that must be matched
+// before trying to capture the user
+type Condition struct {
+	Key   string `json:"key"`
+	Regex string `json:"regex"`
 }

@@ -202,11 +202,11 @@ func (p *piiFilterProcessor) processComplexData(attrs pdata.Span) {
 }
 
 func (p *piiFilterProcessor) attributeKeyContainsComplexData(key string) bool {
-	_, ok := p.structuredData[unindexedKey(key)]
+	_, ok := p.structuredData[UnindexedKey(key)]
 	return ok
 }
 
-func unindexedKey(key string) string {
+func UnindexedKey(key string) string {
 	if len(key) == 0 {
 		return key
 	}

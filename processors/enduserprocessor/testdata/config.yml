@@ -3,7 +3,111 @@ receivers:
 
 processors:
   hypertrace_enduser:
-    encoding: foo
+    end_users:
+      ### This example will extract enduser information from
+      ### a JWT sent as an autorization header
+      - key: http.request.header.authorization
+       # authheader type can be either bearer or basic
+        type: authheader
+        encoding: jwt
+        # claims containing the enduser id
+        id_claims:
+          - sub
+       # claims containing the enduser roles
+        role_claims:
+          - role
+       # claims containing the enduser scope
+        scope_claims:
+          - scope
+      ######################################################
+      ### This example will extract enduser information from
+      ### a JWT sent in the cookie named token
+      - key: http.request.header.cookie
+        type: cookie
+        cookie_name: token
+        encoding: jwt
+        # claims containing the enduser id
+        id_claims:
+          - sub
+        role_claims:
+          - role
+        # claims containing the enduser scope
+        scope_claims:
+          - scope
+      ## This example will extract enduser information from
+      ## a JWT sent as an autorization header where the
+      ## claim is the composite value below and only the
+      ## first two parts of the jwt should be used for
+      ## session identifcation
+      # {
+      #   "data": {
+      #     "id":    "",
+      #     "role":  "",
+      #     "scope": "",
+      #    }
+      # }
+      - key: http.request.header.authorization
+        # authheader type can be either bearer or basic
+        type: authheader
+        encoding: jwt
+        session_indexes: [0,1]
+        session_separator: .
+        # claims containing the enduser id
+        id_claims:
+          - data
+        # json path within the claim containing the id
+        id_paths:
+          - $.id
+        # claims containing the enduser role
+        role_claims:
+          - data
+        # json path within the claim containing the role
+        role_paths:
+          - $.role
+        # claims containing the enduser scope
+        scope_claims:
+          - data
+        # json path within the claim containing the scope
+        scope_paths:
+          - $.scope
+      ### This example will extract enduser information from
+      ### the json response (below) of a login endpoint.
+      # {
+      #   "user": {
+      #     "id": "",
+      #     "role": {
+      #      ...
+      #     },
+      #     "scope": "",
+      #   },
+      #   "token": ""
+      # }
+      - key: http.response.body
+        type: json
+        id_paths:
+        - $.user.id
+        role_paths:
+        - $.user.role
+        scope_paths:
+        - $.user.scope
+        # path to token used to identify a session
+        session_paths:
+        - $.token
+        conditions:
+          - key: http.url
+            regex: \/login
+      ######################################################
+      ### This example will extract enduser id from a header
+      - key: http.request.header.x-user
+        type: id
+      ######################################################
+      ### This example will extract enduser role from a header
+      - key: http.request.header.x-role
+        type: role
+      ######################################################
+      ### This example will extract enduser scope from a header
+      - key: http.request.header.x-scope
+        type: scope
 
 exporters:
   exampleexporter:

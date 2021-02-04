@@ -3,15 +3,19 @@ module github.com/hypertrace/collector
 go 1.15
 
 require (
+	github.com/PaesslerAG/jsonpath v0.1.1
 	github.com/antlr/antlr4 v0.0.0-20210127121638-62a0b02bf460
 	github.com/apache/thrift v0.13.0
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/jaegertracing/jaeger v1.21.0
 	github.com/json-iterator/go v1.1.10
 	github.com/stretchr/testify v1.7.0
 	go.opencensus.io v0.22.5
 	go.opentelemetry.io/collector v0.18.0
 	go.uber.org/zap v1.16.0
+	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
 	google.golang.org/grpc v1.35.0
+	gotest.tools v2.2.0+incompatible
 )
 
 // branch jaeger-thrift-http-headers
