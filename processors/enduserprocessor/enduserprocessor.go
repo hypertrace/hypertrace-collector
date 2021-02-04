@@ -40,7 +40,7 @@ type processor struct {
 
 var _ processorhelper.TProcessor = (*processor)(nil)
 
-func (p *processor) ProcessTraces(ctx context.Context, traces pdata.Traces) (pdata.Traces, error) {
+func (p *processor) ProcessTraces(_ context.Context, traces pdata.Traces) (pdata.Traces, error) {
 	rss := traces.ResourceSpans()
 	for i := 0; i < rss.Len(); i++ {
 		rs := rss.At(i)
@@ -90,7 +90,7 @@ func (p *processor) capture(span pdata.Span, enduser config, value string) {
 	case "cookie":
 		user = p.cookieCapture(enduser, value)
 	default:
-		p.logger.Warn("Unknown enduser type", zap.String("type", enduser.Type))
+		p.logger.Warn("Unknown enduser type, skipping", zap.String("type", enduser.Type), zap.String("key", enduser.AttributeKey))
 	}
 
 	if user == nil {
