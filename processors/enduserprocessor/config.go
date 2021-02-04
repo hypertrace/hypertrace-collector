@@ -10,11 +10,12 @@ type Config struct {
 }
 
 type EndUser struct {
-	AttributeKey     string      `mapstructure:"key"`
-	Type             string      `mapstructure:"type"`
-	Encoding         string      `mapstructure:"encoding"`
-	CookieName       string      `mapstructure:"cookie_name"`
-	RawSessionValue  bool        `mapstructure:"raw_session_value"`
+	AttributeKey    string `mapstructure:"key"`
+	Type            string `mapstructure:"type"`
+	Encoding        string `mapstructure:"encoding"`
+	CookieName      string `mapstructure:"cookie_name"`
+	RawSessionValue bool   `mapstructure:"raw_session_value"`
+	// Hash algorithm used to hash user session
 	HashAlgo         string      `mapstructure:"hash_algo"`
 	Conditions       []Condition `mapstructure:"conditions"`
 	IDClaims         []string    `mapstructure:"id_claims"`
