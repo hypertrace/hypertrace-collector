@@ -38,6 +38,13 @@ type processor struct {
 	attributeConfigMap map[string][]config
 }
 
+type user struct {
+	id      string
+	role    string
+	scope   string
+	session string
+}
+
 var _ processorhelper.TProcessor = (*processor)(nil)
 
 func (p *processor) ProcessTraces(_ context.Context, traces pdata.Traces) (pdata.Traces, error) {
@@ -152,13 +159,6 @@ func (p *processor) passesConditions(span pdata.Span, conditions []Condition) bo
 	}
 
 	return true
-}
-
-type user struct {
-	id      string
-	role    string
-	scope   string
-	session string
 }
 
 func (p *processor) idCapture(value string) *user {

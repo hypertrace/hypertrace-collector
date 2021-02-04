@@ -2,7 +2,10 @@ package enduserprocessor
 
 import "go.opentelemetry.io/collector/config/configmodels"
 
-// Config defines config for the end user.
+// Config defines config for the end user processor.
+// The end user processor parses span attributes (e.g. auth token, headers, body)
+// and extracts user identification information - id, role, scope, session (hashed)
+// as span attributes `enduser.id`, `enduser.role`, `enduser.scope` and `session.id`.
 type Config struct {
 	configmodels.ProcessorSettings `mapstructure:",squash"`
 
@@ -15,7 +18,7 @@ type EndUser struct {
 	Encoding        string `mapstructure:"encoding"`
 	CookieName      string `mapstructure:"cookie_name"`
 	RawSessionValue bool   `mapstructure:"raw_session_value"`
-	// Hash algorithm used to hash user session
+	// Hash algorithm used to hash user session e.g. SHA-1, SHAKE256
 	HashAlgo         string      `mapstructure:"hash_algo"`
 	Conditions       []Condition `mapstructure:"conditions"`
 	IDClaims         []string    `mapstructure:"id_claims"`
