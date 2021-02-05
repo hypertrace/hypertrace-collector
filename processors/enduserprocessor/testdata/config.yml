@@ -2,6 +2,7 @@ receivers:
   examplereceiver:
 
 processors:
+  # The session identification is deprecated and should configured in PII filter.
   hypertrace_enduser:
     end_users:
       ### This example will extract enduser information from

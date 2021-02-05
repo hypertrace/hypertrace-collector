@@ -80,44 +80,44 @@ func (p *processor) capture(span pdata.Span, enduser config, value string) {
 		return
 	}
 
-	var user *user
+	var u *user
 	switch enduser.Type {
 	case "id":
-		user = p.idCapture(value)
+		u = p.idCapture(value)
 	case "role":
-		user = p.roleCapture(value)
+		u = p.roleCapture(value)
 	case "scope":
-		user = p.scopeCapture(value)
+		u = p.scopeCapture(value)
 	case "authheader":
-		user = p.authHeaderCapture(enduser, value)
+		u = p.authHeaderCapture(enduser, value)
 	case "json":
-		user = p.jsonCapture(enduser, value)
+		u = p.jsonCapture(enduser, value)
 	case "urlencoded":
-		user = p.urlencodedCapture(enduser, value)
+		u = p.urlencodedCapture(enduser, value)
 	case "cookie":
-		user = p.cookieCapture(enduser, value)
+		u = p.cookieCapture(enduser, value)
 	default:
 		p.logger.Warn("Unknown enduser type, skipping", zap.String("type", enduser.Type), zap.String("key", enduser.AttributeKey))
 	}
 
-	if user == nil {
+	if u == nil {
 		return
 	}
 
-	if len(user.id) > 0 {
-		addSpanAttribute(span, enduserIDAttribute, user.id)
+	if len(u.id) > 0 {
+		addSpanAttribute(span, enduserIDAttribute, u.id)
 	}
 
-	if len(user.role) > 0 {
-		addSpanAttribute(span, enduserRoleAttribute, user.role)
+	if len(u.role) > 0 {
+		addSpanAttribute(span, enduserRoleAttribute, u.role)
 	}
 
-	if len(user.scope) > 0 {
-		addSpanAttribute(span, enduserScopeAttribute, user.scope)
+	if len(u.scope) > 0 {
+		addSpanAttribute(span, enduserScopeAttribute, u.scope)
 	}
 
-	if len(user.session) > 0 {
-		addSpanAttribute(span, enduserSessionAttribute, user.session)
+	if len(u.session) > 0 {
+		addSpanAttribute(span, enduserSessionAttribute, u.session)
 	}
 }
 
@@ -143,7 +143,6 @@ func (p *processor) passesConditions(span pdata.Span, conditions []Condition) bo
 		}
 
 		value := attrib.StringVal()
-		// TODO is it correct? it was `value == nil` before
 		if value == "" {
 			return false
 		}
@@ -177,17 +176,17 @@ func (p *processor) authHeaderCapture(enduser config, value string) *user {
 	lcValue := strings.ToLower(value)
 	if strings.HasPrefix(lcValue, "bearer ") {
 		tokenString := value[7:]
-		var user *user
+		var u *user
 		switch enduser.Encoding {
 		case "jwt":
-			user = p.decodeJwt(enduser, tokenString)
+			u = p.decodeJwt(enduser, tokenString)
 			// by default use the jwt token as the session id
-			p.setSession(enduser, user, tokenString)
+			p.setSession(enduser, u, tokenString)
 		default:
 			p.logger.Info("Unknown auth header encoding", zap.String("encoding", enduser.Encoding))
 			return nil
 		}
-		return user
+		return u
 	} else if strings.HasPrefix(lcValue, "basic ") {
 		token := value[6:]
 		str, err := base64.StdEncoding.DecodeString(token)
@@ -201,9 +200,9 @@ func (p *processor) authHeaderCapture(enduser config, value string) *user {
 			return nil
 		}
 
-		user := new(user)
-		user.id = string(creds[0])
-		return user
+		u := new(user)
+		u.id = string(creds[0])
+		return u
 	} else {
 		p.logger.Info("Authorization header must be basic or bearer", zap.String("value", value))
 	}
@@ -214,12 +213,12 @@ func (p *processor) authHeaderCapture(enduser config, value string) *user {
 func (p *processor) jsonCapture(enduser config, value string) *user {
 	v := p.getJSON(value)
 
-	user := new(user)
-	p.getUserIDFromPath(enduser, user, v)
-	p.getUserRoleFromPath(enduser, user, v)
-	p.getUserScopeFromPath(enduser, user, v)
-	p.getUserSessionFromPath(enduser, user, v)
-	return user
+	u := new(user)
+	p.getUserIDFromPath(enduser, u, v)
+	p.getUserRoleFromPath(enduser, u, v)
+	p.getUserScopeFromPath(enduser, u, v)
+	p.getUserSessionFromPath(enduser, u, v)
+	return u
 }
 
 func (p *processor) getJSON(value string) interface{} {
@@ -238,10 +237,10 @@ func (p *processor) getJSON(value string) interface{} {
 	return v
 }
 
-func (p *processor) getUserIDFromPath(enduser config, user *user, value interface{}) bool {
+func (p *processor) getUserIDFromPath(enduser config, u *user, value interface{}) bool {
 	for _, path := range enduser.IDPaths {
 		if value, ok := p.getJSONElement(path, value); ok {
-			user.id = value
+			u.id = value
 			return true
 		}
 	}
@@ -293,46 +292,46 @@ func (p *processor) decodeJwt(enduser config, tokenString string) *user {
 		return new(user)
 	}
 
-	user := new(user)
+	u := new(user)
 	for _, claim := range enduser.IDClaims {
 		if value, ok := claims[claim]; ok {
-			if !p.getUserIDFromPath(enduser, user, value) {
-				user.id = p.jsonToString(value)
+			if !p.getUserIDFromPath(enduser, u, value) {
+				u.id = p.jsonToString(value)
 			}
 			break
 		}
 	}
 	for _, claim := range enduser.RoleClaims {
 		if value, ok := claims[claim]; ok {
-			if !p.getUserRoleFromPath(enduser, user, value) {
-				user.role = p.jsonToString(value)
+			if !p.getUserRoleFromPath(enduser, u, value) {
+				u.role = p.jsonToString(value)
 			}
 			break
 		}
 	}
 	for _, claim := range enduser.ScopeClaims {
 		if value, ok := claims[claim]; ok {
-			if !p.getUserScopeFromPath(enduser, user, value) {
-				user.scope = p.jsonToString(value)
+			if !p.getUserScopeFromPath(enduser, u, value) {
+				u.scope = p.jsonToString(value)
 			}
 			break
 		}
 	}
 	for _, claim := range enduser.SessionClaims {
 		if value, ok := claims[claim]; ok {
-			if !p.getUserSessionFromPath(enduser, user, value) {
-				p.setSession(enduser, user, p.jsonToString(value))
+			if !p.getUserSessionFromPath(enduser, u, value) {
+				p.setSession(enduser, u, p.jsonToString(value))
 			}
 			break
 		}
 	}
-	return user
+	return u
 }
 
-func (p *processor) getUserRoleFromPath(enduser config, user *user, value interface{}) bool {
+func (p *processor) getUserRoleFromPath(enduser config, u *user, value interface{}) bool {
 	for _, path := range enduser.RolePaths {
 		if value, ok := p.getJSONElement(path, value); ok {
-			user.role = value
+			u.role = value
 			return true
 		}
 	}
@@ -340,10 +339,10 @@ func (p *processor) getUserRoleFromPath(enduser config, user *user, value interf
 	return false
 }
 
-func (p *processor) getUserScopeFromPath(enduser config, user *user, value interface{}) bool {
+func (p *processor) getUserScopeFromPath(enduser config, u *user, value interface{}) bool {
 	for _, path := range enduser.ScopePaths {
-		if value, ok := p.getJSONElement(path, value); ok {
-			user.scope = value
+		if val, ok := p.getJSONElement(path, value); ok {
+			u.scope = val
 			return true
 		}
 	}
@@ -351,10 +350,10 @@ func (p *processor) getUserScopeFromPath(enduser config, user *user, value inter
 	return false
 }
 
-func (p *processor) getUserSessionFromPath(enduser config, user *user, value interface{}) bool {
+func (p *processor) getUserSessionFromPath(enduser config, u *user, value interface{}) bool {
 	for _, path := range enduser.SessionPaths {
-		if value, ok := p.getJSONElement(path, value); ok {
-			p.setSession(enduser, user, value)
+		if val, ok := p.getJSONElement(path, value); ok {
+			p.setSession(enduser, u, val)
 			return true
 		}
 	}
@@ -362,39 +361,39 @@ func (p *processor) getUserSessionFromPath(enduser config, user *user, value int
 	return false
 }
 
-func (p *processor) setSession(enduser config, user *user, value string) {
+func (p *processor) setSession(enduser config, u *user, value string) {
 	// don't override an existing session value
-	if len(user.session) > 0 {
+	if len(u.session) > 0 {
 		return
 	}
 
-	user.session = value
+	u.session = value
 	if len(enduser.SessionSeparator) > 0 {
-		user.session = formatSessionIdentifier(p.logger, enduser.SessionSeparator, enduser.SessionIndexes, value)
+		u.session = formatSessionIdentifier(p.logger, enduser.SessionSeparator, enduser.SessionIndexes, value)
 	}
 
 	if !enduser.RawSessionValue {
-		user.session = enduser.hashAlgorithm(user.session)
+		u.session = enduser.hashAlgorithm(u.session)
 	}
 }
 
-func (p *processor) urlencodedCapture(enduser config, value string) *user {
-	params, err := url.ParseQuery(value)
+func (p *processor) urlencodedCapture(enduser config, val string) *user {
+	params, err := url.ParseQuery(val)
 	if err != nil {
 		p.logger.Info("Could not parse urlencoded to capture user", zap.Error(err))
 	}
 
-	user := new(user)
+	u := new(user)
 	for _, key := range enduser.IDKeys {
 		if values, ok := params[key]; ok {
 			for _, value := range values {
 				if len(value) > 0 {
-					user.id = value
+					u.id = value
 					break
 				}
 			}
 		}
-		if len(user.id) > 0 {
+		if len(u.id) > 0 {
 			break
 		}
 	}
@@ -402,11 +401,11 @@ func (p *processor) urlencodedCapture(enduser config, value string) *user {
 		if values, ok := params[key]; ok {
 			for _, value := range values {
 				if len(value) > 0 {
-					user.role = value
+					u.role = value
 				}
 			}
 		}
-		if len(user.role) > 0 {
+		if len(u.role) > 0 {
 			break
 		}
 	}
@@ -414,11 +413,11 @@ func (p *processor) urlencodedCapture(enduser config, value string) *user {
 		if values, ok := params[key]; ok {
 			for _, value := range values {
 				if len(value) > 0 {
-					user.scope = value
+					u.scope = value
 				}
 			}
 		}
-		if len(user.scope) > 0 {
+		if len(u.scope) > 0 {
 			break
 		}
 	}
@@ -426,16 +425,16 @@ func (p *processor) urlencodedCapture(enduser config, value string) *user {
 		if values, ok := params[key]; ok {
 			for _, value := range values {
 				if len(value) > 0 {
-					p.setSession(enduser, user, value)
+					p.setSession(enduser, u, value)
 				}
 			}
 		}
-		if len(user.session) > 0 {
+		if len(u.session) > 0 {
 			break
 		}
 	}
 
-	return user
+	return u
 }
 
 func (p *processor) cookieCapture(enduser config, value string) *user {
@@ -469,53 +468,53 @@ func (p *processor) cookieCapture(enduser config, value string) *user {
 		}
 	}
 
-	user := new(user)
+	u := new(user)
 	for _, key := range enduser.IDKeys {
 		for _, cookie := range cookies {
 			if cookie.Name == key {
-				user.id = cookie.Value
+				u.id = cookie.Value
 				break
 			}
 		}
-		if len(user.id) > 0 {
+		if len(u.id) > 0 {
 			break
 		}
 	}
 	for _, key := range enduser.RoleKeys {
 		for _, cookie := range cookies {
 			if cookie.Name == key {
-				user.role = cookie.Value
+				u.role = cookie.Value
 				break
 			}
 		}
-		if len(user.role) > 0 {
+		if len(u.role) > 0 {
 			break
 		}
 	}
 	for _, key := range enduser.ScopeKeys {
 		for _, cookie := range cookies {
 			if cookie.Name == key {
-				user.scope = cookie.Value
+				u.scope = cookie.Value
 				break
 			}
 		}
-		if len(user.scope) > 0 {
+		if len(u.scope) > 0 {
 			break
 		}
 	}
 	for _, key := range enduser.SessionKeys {
 		for _, cookie := range cookies {
 			if cookie.Name == key {
-				p.setSession(enduser, user, cookie.Value)
+				p.setSession(enduser, u, cookie.Value)
 				break
 			}
 		}
-		if len(user.session) > 0 {
+		if len(u.session) > 0 {
 			break
 		}
 	}
 
-	return user
+	return u
 }
 
 func formatSessionIdentifier(logger *zap.Logger, separator string, indexes []int, value string) string {

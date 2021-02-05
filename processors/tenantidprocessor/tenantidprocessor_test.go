@@ -190,7 +190,7 @@ func TestReceiveJaegerThriftHTTP(t *testing.T) {
 	require.NoError(t, err)
 	collectorAddr := fmt.Sprintf("http://%s/api/traces", addr)
 	for _, batch := range batches {
-		err := sendToJaegerHTTPThrift(collectorAddr, map[string]string{tenantProcessor.tenantIDHeaderName: testTenantID},jaegerModelToThrift(batch))
+		err := sendToJaegerHTTPThrift(collectorAddr, map[string]string{tenantProcessor.tenantIDHeaderName: testTenantID}, jaegerModelToThrift(batch))
 		require.NoError(t, err)
 	}
 
