@@ -10,17 +10,12 @@ import (
 )
 
 const (
-	typeStr                     = "hypertrace_tenantid"
-	defaultTenantIdHeaderName   = "x-tenant-id"
-	defaultTenantIdAttributeKey = "tenant-id"
+	typeStr             = "hypertrace_tenantid"
+	defaultHeaderName   = "x-tenant-id"
+	defaultAttributeKey = "tenant-id"
 )
 
-// NewFactory creates a factory for the tenantid processor.
-// The processor adds tenant ID to every received span.
-// The processor returns an error when the tenant ID is missing.
-// The tenant ID header is obtained from the context object.
-// The batch processor cleans context, therefore this processor
-// has to be added before, ideally right after the receiver.
+// NewFactory creates a factory for the tenant ID processor.
 func NewFactory() component.ProcessorFactory {
 	return processorhelper.NewFactory(
 		typeStr,
@@ -35,8 +30,8 @@ func createDefaultConfig() configmodels.Processor {
 			TypeVal: typeStr,
 			NameVal: typeStr,
 		},
-		TenantIDHeaderName:   defaultTenantIdHeaderName,
-		TenantIDAttributeKey: defaultTenantIdAttributeKey,
+		TenantIDHeaderName:   defaultHeaderName,
+		TenantIDAttributeKey: defaultAttributeKey,
 	}
 }
 

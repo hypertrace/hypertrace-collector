@@ -39,8 +39,8 @@ const testTenantID = "jdoe"
 func TestMissingMetadataInContext(t *testing.T) {
 	p := &processor{
 		logger:               zap.NewNop(),
-		tenantIDHeaderName:   defaultTenantIdHeaderName,
-		tenantIDAttributeKey: defaultTenantIdHeaderName,
+		tenantIDHeaderName:   defaultHeaderName,
+		tenantIDAttributeKey: defaultHeaderName,
 	}
 	_, err := p.ProcessTraces(context.Background(), pdata.NewTraces())
 	require.Error(t, err)
@@ -50,8 +50,8 @@ func TestMissingMetadataInContext(t *testing.T) {
 func TestMissingTenantHeader(t *testing.T) {
 	p := &processor{
 		logger:               zap.NewNop(),
-		tenantIDHeaderName:   defaultTenantIdHeaderName,
-		tenantIDAttributeKey: defaultTenantIdHeaderName,
+		tenantIDHeaderName:   defaultHeaderName,
+		tenantIDAttributeKey: defaultHeaderName,
 	}
 
 	md := metadata.New(map[string]string{})
@@ -67,8 +67,8 @@ func TestMissingTenantHeader(t *testing.T) {
 func TestMultipleTenantHeaders(t *testing.T) {
 	p := &processor{
 		logger:               zap.NewNop(),
-		tenantIDHeaderName:   defaultTenantIdHeaderName,
-		tenantIDAttributeKey: defaultTenantIdHeaderName,
+		tenantIDHeaderName:   defaultHeaderName,
+		tenantIDAttributeKey: defaultHeaderName,
 	}
 
 	md := metadata.New(map[string]string{p.tenantIDHeaderName: testTenantID})
@@ -85,8 +85,8 @@ func TestMultipleTenantHeaders(t *testing.T) {
 func TestEmptyTraces(t *testing.T) {
 	p := &processor{
 		logger:               zap.NewNop(),
-		tenantIDHeaderName:   defaultTenantIdHeaderName,
-		tenantIDAttributeKey: defaultTenantIdHeaderName,
+		tenantIDHeaderName:   defaultHeaderName,
+		tenantIDAttributeKey: defaultHeaderName,
 	}
 	traces := pdata.NewTraces()
 	md := metadata.New(map[string]string{p.tenantIDHeaderName: testTenantID})
@@ -103,8 +103,8 @@ func TestReceiveOTLPGRPC(t *testing.T) {
 	sink := new(consumertest.TracesSink)
 	tenantProcessor := &processor{
 		logger:               zap.NewNop(),
-		tenantIDHeaderName:   defaultTenantIdHeaderName,
-		tenantIDAttributeKey: defaultTenantIdAttributeKey,
+		tenantIDHeaderName:   defaultHeaderName,
+		tenantIDAttributeKey: defaultAttributeKey,
 	}
 
 	addr := testutil.GetAvailableLocalAddress(t)
@@ -161,8 +161,8 @@ func TestReceiveJaegerThriftHTTP(t *testing.T) {
 	sink := new(consumertest.TracesSink)
 	tenantProcessor := &processor{
 		logger:               zap.NewNop(),
-		tenantIDHeaderName:   defaultTenantIdHeaderName,
-		tenantIDAttributeKey: defaultTenantIdAttributeKey,
+		tenantIDHeaderName:   defaultHeaderName,
+		tenantIDAttributeKey: defaultAttributeKey,
 	}
 
 	addr := testutil.GetAvailableLocalAddress(t)
@@ -190,7 +190,7 @@ func TestReceiveJaegerThriftHTTP(t *testing.T) {
 	require.NoError(t, err)
 	collectorAddr := fmt.Sprintf("http://%s/api/traces", addr)
 	for _, batch := range batches {
-		err := sendToJaegerHTTPThrift(collectorAddr, map[string]string{tenantProcessor.tenantIDHeaderName: testTenantID},jaegerModelToThrift(batch))
+		err := sendToJaegerHTTPThrift(collectorAddr, map[string]string{tenantProcessor.tenantIDHeaderName: testTenantID}, jaegerModelToThrift(batch))
 		require.NoError(t, err)
 	}
 
