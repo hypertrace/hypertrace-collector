@@ -3,8 +3,8 @@ receivers:
 
 processors:
   hypertrace_tenantid:
-    tenantid_header_name: header-tenant
-    tenantid_attribute_key: attribute-tenant
+    header_name: header-tenant
+    attribute_key: attribute-tenant
 
 exporters:
   exampleexporter:

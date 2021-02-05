@@ -8,6 +8,6 @@ import (
 
 func TestCreateDefaultConfig(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
-	assert.Equal(t, defaultTenantIdHeaderName, cfg.TenantIDHeaderName)
-	assert.Equal(t, defaultTenantIdAttributeKey, cfg.TenantIDAttributeKey)
+	assert.Equal(t, defaultHeaderName, cfg.TenantIDHeaderName)
+	assert.Equal(t, defaultAttributeKey, cfg.TenantIDAttributeKey)
 }
