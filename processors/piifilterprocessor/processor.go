@@ -7,6 +7,11 @@ import (
 	"mime"
 	"strings"
 
+	"go.opentelemetry.io/collector/consumer/pdata"
+	"go.opentelemetry.io/collector/processor/processorhelper"
+	"go.uber.org/zap"
+
+	"github.com/hypertrace/collector/processors"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/cookie"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/json"
@@ -15,9 +20,6 @@ import (
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/sql"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/urlencoded"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
-	"go.opentelemetry.io/collector/consumer/pdata"
-	"go.opentelemetry.io/collector/processor/processorhelper"
-	"go.uber.org/zap"
 )
 
 var _ processorhelper.TProcessor = (*piiFilterProcessor)(nil)
@@ -43,9 +45,10 @@ func toRegex(es []PiiElement, globalStrategy redaction.Strategy) []regexmatcher.
 		}
 
 		rs = append(rs, regexmatcher.Regex{
-			Regexp:   e.Regex,
-			Redactor: rd,
-			FQN:      e.FQN,
+			Regexp:            e.Regex,
+			Redactor:          rd,
+			FQN:               e.FQN,
+			SessionIdentifier: e.SessionIdentifier,
 		})
 	}
 
@@ -86,8 +89,12 @@ func newPIIFilterProcessor(logger *zap.Logger, cfg *Config) (*piiFilterProcessor
 	}, nil
 }
 
-func (p *piiFilterProcessor) ProcessTraces(_ context.Context, td pdata.Traces) (pdata.Traces, error) {
+func (p *piiFilterProcessor) ProcessTraces(ctx context.Context, td pdata.Traces) (pdata.Traces, error) {
 	rss := td.ResourceSpans()
+
+	ctxWithData, parsedTraceData := processors.FromContext(ctx)
+	ctx = ctxWithData
+
 	for i := 0; i < rss.Len(); i++ {
 		rs := rss.At(i)
 
@@ -97,6 +104,7 @@ func (p *piiFilterProcessor) ProcessTraces(_ context.Context, td pdata.Traces) (
 			spans := ils.Spans()
 			for k := 0; k < spans.Len(); k++ {
 				span := spans.At(k)
+				parsedSpanData := parsedTraceData.GetParsedSpanData(span.SpanID())
 
 				span.Attributes().ForEach(func(key string, value pdata.AttributeValue) {
 					if p.attributeKeyContainsComplexData(key) {
@@ -104,7 +112,10 @@ func (p *piiFilterProcessor) ProcessTraces(_ context.Context, td pdata.Traces) (
 						return
 					}
 
-					p.processMatchingAttributes(key, value)
+					parsedAttr := p.processMatchingAttributes(key, value)
+					if parsedAttr != nil {
+						parsedSpanData.PutParsedAttribute(key, parsedAttr)
+					}
 				})
 
 				p.processComplexData(span)
@@ -135,9 +146,10 @@ func getDataTypeFromContentType(dataType string) (string, error) {
 	return lcDataType, nil
 }
 
-func (p *piiFilterProcessor) processMatchingAttributes(key string, value pdata.AttributeValue) {
+func (p *piiFilterProcessor) processMatchingAttributes(key string, value pdata.AttributeValue) *processors.ParsedAttribute {
 	for _, filter := range p.scalarFilters {
-		if isRedacted, err := filter.RedactAttribute(key, value); err != nil {
+		parsedAttribute, err := filter.RedactAttribute(key, value)
+		if err != nil {
 			if errors.Is(err, filters.ErrUnprocessableValue) {
 				p.logger.Sugar().Debugf(
 					"failed to apply filter %q to attribute with key %q. Unsuitable value.",
@@ -149,18 +161,22 @@ func (p *piiFilterProcessor) processMatchingAttributes(key string, value pdata.A
 					"failed to apply filter %q to attribute with key %q", filter.Name(), key, err,
 				)
 			}
-		} else if isRedacted {
+		} else if parsedAttribute != nil && len(parsedAttribute.Redacted) > 0 {
 			// if an attribute is redacted by one filter we don't want to process
 			// it again.
 			p.logger.Sugar().Debugf("attribute with key %q redacted by filter %q", key, filter.Name())
-			break
+			return parsedAttribute
 		}
 	}
+	return nil
 }
 
-func (p *piiFilterProcessor) processComplexData(attrs pdata.Span) {
+// http.request.body = {"authorization": {"b": "c"} }
+// http.request.body.authorization.b = c -> redacted http.request.body.authorization = ***
+
+func (p *piiFilterProcessor) processComplexData(span pdata.Span) {
 	for attrKey, elem := range p.structuredData {
-		attr, found := attrs.Attributes().Get(attrKey)
+		attr, found := span.Attributes().Get(attrKey)
 		if !found {
 			continue
 		}
@@ -172,7 +188,7 @@ func (p *piiFilterProcessor) processComplexData(attrs pdata.Span) {
 
 		var dataType = elem.Type
 		if len(dataType) == 0 {
-			if typeValue, ok := attrs.Attributes().Get(elem.TypeKey); ok {
+			if typeValue, ok := span.Attributes().Get(elem.TypeKey); ok {
 				var err error
 				dataType, err = getDataTypeFromContentType(typeValue.StringVal())
 				if err != nil {
@@ -188,7 +204,7 @@ func (p *piiFilterProcessor) processComplexData(attrs pdata.Span) {
 			continue
 		}
 
-		if isRedacted, err := filter.RedactAttribute(elem.Key, attr); isRedacted {
+		if parsedAttr, err := filter.RedactAttribute(elem.Key, attr); len(parsedAttr.Redacted) > 0 {
 			p.logger.Sugar().Debugf("attribute with key %q redacted by filter %q", attrKey, filter.Name())
 		} else if err != nil {
 			p.logger.Sugar().Errorf(

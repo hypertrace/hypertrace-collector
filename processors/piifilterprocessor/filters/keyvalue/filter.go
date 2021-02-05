@@ -1,8 +1,10 @@
 package keyvalue
 
 import (
+	"github.com/hypertrace/collector/processors"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
+
 	"go.opentelemetry.io/collector/consumer/pdata"
 )
 
@@ -18,21 +20,30 @@ func (f *keyValueFilter) Name() string {
 	return "key-value"
 }
 
-func (f *keyValueFilter) RedactAttribute(key string, value pdata.AttributeValue) (bool, error) {
+func (f *keyValueFilter) RedactAttribute(key string, value pdata.AttributeValue) (*processors.ParsedAttribute, error) {
 	if len(value.StringVal()) == 0 {
-		return false, nil
+		return nil, nil
 	}
 
 	truncatedKey := f.m.GetTruncatedKey(key)
-	if isRedacted, redactedValue := f.m.FilterKeyRegexs(truncatedKey, key, value.StringVal(), ""); isRedacted {
+	if isRedacted, isSession, redactedValue := f.m.FilterKeyRegexs(truncatedKey, key, value.StringVal(), ""); isRedacted {
+		if isSession {
+			// TODO
+		}
+		attr := &processors.ParsedAttribute{
+			Redacted: map[string]string{key: value.StringVal()},
+		}
 		value.SetStringVal(redactedValue)
-		return true, nil
+		return attr, nil
 	}
 
 	if isRedacted, redactedValue := f.m.FilterStringValueRegexs(value.StringVal(), key, ""); isRedacted {
+		attr := &processors.ParsedAttribute{
+			Redacted: map[string]string{key: value.StringVal()},
+		}
 		value.SetStringVal(redactedValue)
-		return true, nil
+		return attr, nil
 	}
 
-	return false, nil
+	return nil, nil
 }

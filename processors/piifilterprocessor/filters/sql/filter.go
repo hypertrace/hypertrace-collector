@@ -1,14 +1,16 @@
 package sql
 
 import (
+	"github.com/hypertrace/collector/processors"
 	"strings"
 	"unicode"
 
 	"github.com/antlr/antlr4/runtime/Go/antlr"
+	"go.opentelemetry.io/collector/consumer/pdata"
+
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/sql/internal"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
-	"go.opentelemetry.io/collector/consumer/pdata"
 )
 
 type sqlFilter struct {
@@ -25,15 +27,17 @@ func (f *sqlFilter) Name() string {
 	return "sql"
 }
 
-func (f *sqlFilter) RedactAttribute(key string, value pdata.AttributeValue) (bool, error) {
+func (f *sqlFilter) RedactAttribute(key string, value pdata.AttributeValue) (*processors.ParsedAttribute, error) {
 	if len(value.StringVal()) == 0 {
-		return false, nil
+		return nil, nil
 	}
 
 	is := newCaseChangingStream(antlr.NewInputStream(value.StringVal()), true)
 	lexer := internal.NewMySqlLexer(is)
 
-	isRedacted := false
+	attr := &processors.ParsedAttribute{
+		Redacted: map[string]string{},
+	}
 	var str strings.Builder
 	for token := lexer.NextToken(); token.GetTokenType() != antlr.TokenEOF; {
 		if token.GetTokenType() == internal.MySqlLexerSTRING_LITERAL {
@@ -50,19 +54,19 @@ func (f *sqlFilter) RedactAttribute(key string, value pdata.AttributeValue) (boo
 				closeQuote = string(text[lenText-1])
 				text = text[:lenText-1]
 			}
-			redacted := f.redactor(text)
-			token.SetText(openQuote + redacted + closeQuote)
-			isRedacted = true
+			redactedVal := f.redactor(text)
+			token.SetText(openQuote + redactedVal + closeQuote)
+			attr.Redacted[key] = value.StringVal()
 		}
 		str.WriteString(token.GetText())
 		token = lexer.NextToken()
 	}
 
-	if isRedacted {
+	if len(attr.Redacted) > 0 {
 		value.SetStringVal(str.String())
 	}
 
-	return isRedacted, nil
+	return attr, nil
 }
 
 type caseChangingStream struct {

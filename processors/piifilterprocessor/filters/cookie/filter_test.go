@@ -1,16 +1,18 @@
 package cookie
 
 import (
+	"github.com/hypertrace/collector/processors"
 	"regexp"
 	"testing"
 
-	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
-	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/consumer/pdata"
+
+	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 )
 
-func Test_piifilterprocessor_cookie_FilterKey(t *testing.T) {
+func Test_CookieFilterNoReduction(t *testing.T) {
 	key := headerCookie
 	cookieValue := "cookie1=value1"
 	expectedCookieFilteredValue := "cookie1=value1"
@@ -18,9 +20,14 @@ func Test_piifilterprocessor_cookie_FilterKey(t *testing.T) {
 	filter := newCookieFilter(t)
 
 	attrValue := pdata.NewAttributeValueString(cookieValue)
-	isRedacted, err := filter.RedactAttribute(key, attrValue)
+	parsedAttr, err := filter.RedactAttribute(key, attrValue)
 	assert.NoError(t, err)
-	assert.False(t, isRedacted)
+	assert.Equal(t, 0, len(parsedAttr.Redacted))
+	assert.Equal(t, map[string]string{"http.request.header.cookie.cookie1": "value1"}, parsedAttr.Flattered)
+	assert.Equal(t, &processors.ParsedAttribute{
+		Flattered: map[string]string{"http.request.header.cookie.cookie1": "value1"},
+		Redacted:  map[string]string{},
+	}, parsedAttr)
 	assert.Equal(t, expectedCookieFilteredValue, attrValue.StringVal())
 }
 
@@ -31,9 +38,9 @@ func TestCookieFilterFiltersCookieKey(t *testing.T) {
 	filter := newCookieFilter(t)
 
 	attrValue := pdata.NewAttributeValueString(cookieValue)
-	isRedacted, err := filter.RedactAttribute(key, attrValue)
+	parsedAttr, err := filter.RedactAttribute(key, attrValue)
 	assert.NoError(t, err)
-	assert.True(t, isRedacted)
+	assert.Equal(t, map[string]string{"http.request.header.cookie.password": "value2"}, parsedAttr.Redacted)
 	assert.Equal(t, expectedCookieFilteredValue, attrValue.StringVal())
 }
 
@@ -44,9 +51,9 @@ func TestCookieFilterFiltersSetCookieKey(t *testing.T) {
 	filter := newCookieFilter(t)
 
 	attrValue := pdata.NewAttributeValueString(cookieValue)
-	isRedacted, err := filter.RedactAttribute(key, attrValue)
+	redacted, err := filter.RedactAttribute(key, attrValue)
 	assert.NoError(t, err)
-	assert.True(t, isRedacted)
+	assert.Equal(t, map[string]string{"http.response.header.set-cookie.password": "value2"}, redacted.Redacted)
 	assert.Equal(t, expectedCookieFilteredValue, attrValue.StringVal())
 }
 

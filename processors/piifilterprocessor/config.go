@@ -11,10 +11,14 @@ import (
 )
 
 // TransportConfig is the config coming directly from the user input.
+// The processor first matches span attribute key with attribute keys in complex data where the complex
+// data defines type of the attribute.
+// If there is no match the attribute key is checked against prefixes to remove prefix (e.g. http.request.header) and then
+// the final the key value is matched against key_regexs.
 type TransportConfig struct {
 	configmodels.ProcessorSettings `mapstructure:",squash"`
 
-	// Global redaction strategy. Defaults to Redact
+	// Global redaction strategy. Available redact, hash, Defaults to Redact
 	RedactStrategyName string `mapstructure:"redaction_strategy"`
 
 	// Prefixes attribute name prefix to match the keyword against
@@ -34,14 +38,21 @@ type TransportConfig struct {
 }
 
 type TransportPiiElement struct {
-	RegexPattern       string `mapstructure:"regex"`
+	RegexPattern string `mapstructure:"regex"`
+	// Redaction strategy e.g. raw (keep the attribute), redact (***), hash (SHA-1)
 	RedactStrategyName string `mapstructure:"redaction_strategy"`
-	FQN                bool   `mapstructure:"fqn,omitempty"`
+	// Use fully qualified name of flattened complex data
+	FQN bool `mapstructure:"fqn,omitempty"`
+	// Whether the element represents a user session.
+	// The redacted element is added as session.id attribute to span.
+	SessionIdentifier bool `mapstructure:"session_identifier"`
 }
 
 type TransportPiiComplexData struct {
-	Key     string `mapstructure:"key"`
-	Type    string `mapstructure:"type"`
+	Key string `mapstructure:"key"`
+	// Type of the attribute - json, urlencoded, keyvalue, cookie, sql
+	Type string `mapstructure:"type"`
+	// Attribute key with type.
 	TypeKey string `mapstructure:"type_key"`
 }
 
@@ -52,9 +63,10 @@ func (tpe *TransportPiiElement) toPiiElement() (*PiiElement, error) {
 	}
 
 	return &PiiElement{
-		Regex:          rp,
-		RedactStrategy: mapToRedactionStrategy(tpe.RedactStrategyName),
-		FQN:            tpe.FQN,
+		Regex:             rp,
+		RedactStrategy:    mapToRedactionStrategy(tpe.RedactStrategyName),
+		FQN:               tpe.FQN,
+		SessionIdentifier: tpe.SessionIdentifier,
 	}, nil
 }
 
@@ -122,9 +134,10 @@ type Config struct {
 }
 
 type PiiElement struct {
-	Regex          *regexp.Regexp
-	RedactStrategy redaction.Strategy
-	FQN            bool
+	Regex             *regexp.Regexp
+	RedactStrategy    redaction.Strategy
+	FQN               bool
+	SessionIdentifier bool
 }
 
 type PiiComplexData struct {

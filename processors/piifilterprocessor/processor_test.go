@@ -3,6 +3,8 @@ package piifilterprocessor_test
 import (
 	"context"
 	"encoding/json"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/consumer"
 	"reflect"
 	"testing"
 
@@ -246,4 +248,50 @@ func assertJSONEqual(t *testing.T, expected, actual string) {
 		assert.Equal(t, string(msgExpected), string(msgActual))
 	}
 	assert.True(t, true)
+}
+
+func TestContextContainsReducedFields(t *testing.T) {
+	f := piifilterprocessor.NewFactory()
+	cfg := &piifilterprocessor.TransportConfig{
+		KeyRegExs: []piifilterprocessor.TransportPiiElement{
+			{RegexPattern: "^password$"},
+		},
+		RedactStrategyName: "hash",
+		ComplexData: []piifilterprocessor.TransportPiiComplexData{
+			{
+				Key:  "http.request.body",
+				Type: "json",
+				//TypeKey: "http.request.headers.content-type",
+			},
+		},
+	}
+
+	sink := &consumertest.TracesSink{}
+	p, err := f.CreateTracesProcessor(
+		context.Background(),
+		component.ProcessorCreateParams{
+			Logger: zap.NewNop(),
+		},
+		cfg,
+		sink,
+	)
+	require.NoError(t, err)
+
+	td := newTraces(newTestSpan("http.request.body", keyJSONInput, "http.request.headers.content-type", "application/json;charset=utf-8"))
+	err = p.ConsumeTraces(context.Background(), td)
+	require.NoError(t, err)
+
+	traces := sink.AllTraces()
+	assert.Equal(t, 1, len(traces))
+}
+
+type delegatingConsumer struct {
+	sink     *consumertest.TracesSink
+	contexts []context.Context
+}
+
+var _ consumer.TracesConsumer = (*delegatingConsumer)(nil)
+
+func (f delegatingConsumer) ConsumeTraces(ctx context.Context, td pdata.Traces) error {
+	return f.sink.ConsumeTraces(ctx, td)
 }

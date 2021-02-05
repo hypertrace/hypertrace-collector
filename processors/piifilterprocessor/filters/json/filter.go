@@ -4,12 +4,13 @@ import (
 	"fmt"
 
 	jsoniter "github.com/json-iterator/go"
+	"go.opentelemetry.io/collector/consumer/pdata"
 	"go.uber.org/zap"
 
+	"github.com/hypertrace/collector/processors"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/internal/json"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
-	"go.opentelemetry.io/collector/consumer/pdata"
 )
 
 var _ filters.Filter = (*jsonFilter)(nil)
@@ -31,9 +32,9 @@ func (f *jsonFilter) Name() string {
 
 const jsonPathPrefix = "$"
 
-func (f *jsonFilter) RedactAttribute(key string, value pdata.AttributeValue) (bool, error) {
+func (f *jsonFilter) RedactAttribute(key string, value pdata.AttributeValue) (*processors.ParsedAttribute, error) {
 	if len(value.StringVal()) == 0 {
-		return false, nil
+		return nil, nil
 	}
 
 	var jsonPayload interface{}
@@ -45,40 +46,55 @@ func (f *jsonFilter) RedactAttribute(key string, value pdata.AttributeValue) (bo
 		f.logger.Debug("Problem parsing json. Falling back to value regex filtering")
 
 		if isRedacted, redactedValue := f.m.FilterStringValueRegexs(value.StringVal(), key, ""); isRedacted {
+			attr := &processors.ParsedAttribute{
+				Redacted: map[string]string{key: value.StringVal()},
+			}
 			value.SetStringVal(redactedValue)
-			return true, nil
+			return attr, nil
 		}
 
-		return false, filters.WrapError(filters.ErrUnprocessableValue, err.Error())
+		return nil, filters.WrapError(filters.ErrUnprocessableValue, err.Error())
 	}
 
-	isRedacted, redactedValue := f.filterJSON(jsonPayload, nil, "", key, jsonPathPrefix, false)
+	parsedAttr := &processors.ParsedAttribute{
+		Redacted:  map[string]string{},
+		Flattered: map[string]string{},
+	}
+	isRedacted, redactedValue := f.filterJSON(parsedAttr, jsonPayload, nil, "", key, jsonPathPrefix, false)
 	if !isRedacted {
-		return false, nil
+		return parsedAttr, nil
 	}
 
 	redactedValueAsString, err := f.mu.MarshalToString(redactedValue)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	value.SetStringVal(redactedValueAsString)
 
-	return true, nil
+	return parsedAttr, nil
 }
 
-func (f *jsonFilter) filterJSON(value interface{}, matchedRegex *regexmatcher.Regex, key string, actualKey string, jsonPath string, checked bool) (bool, interface{}) {
+func (f *jsonFilter) filterJSON(
+	parsedAttr *processors.ParsedAttribute,
+	value interface{},
+	matchedRegex *regexmatcher.Regex,
+	key string,
+	actualKey string,
+	jsonPath string,
+	checked bool) (bool, interface{}) {
 	switch tValue := value.(type) {
 	case []interface{}:
-		return f.filterJSONArray(tValue, matchedRegex, key, actualKey, jsonPath, checked)
+		return f.filterJSONArray(parsedAttr, tValue, matchedRegex, key, actualKey, jsonPath, checked)
 	case map[string]interface{}:
-		return f.filterJSONMap(tValue, matchedRegex, key, actualKey, jsonPath, checked)
+		return f.filterJSONMap(parsedAttr, tValue, matchedRegex, key, actualKey, jsonPath, checked)
 	default:
-		return f.filterJSONScalar(tValue, matchedRegex, key, actualKey, jsonPath, checked)
+		return f.filterJSONScalar(parsedAttr, tValue, matchedRegex, key, actualKey, jsonPath, checked)
 	}
 }
 
 func (f *jsonFilter) filterJSONArray(
+	parsedAttr *processors.ParsedAttribute,
 	arrValue []interface{},
 	matchedRegex *regexmatcher.Regex,
 	key string,
@@ -95,7 +111,7 @@ func (f *jsonFilter) filterJSONArray(
 			_, matchedPiiElem = f.m.MatchKeyRegexs(key, tempJSONPath)
 		}
 
-		modified, redacted := f.filterJSON(v, matchedPiiElem, key, actualKey, tempJSONPath, true)
+		modified, redacted := f.filterJSON(parsedAttr, v, matchedPiiElem, key, actualKey, tempJSONPath, true)
 		if modified {
 			arrValue[i] = redacted
 		}
@@ -106,6 +122,7 @@ func (f *jsonFilter) filterJSONArray(
 }
 
 func (f *jsonFilter) filterJSONMap(
+	parsedAttr *processors.ParsedAttribute,
 	mValue map[string]interface{},
 	matchedRegex *regexmatcher.Regex,
 	_ string,
@@ -121,7 +138,7 @@ func (f *jsonFilter) filterJSONMap(
 		if matchedPiiElem == nil {
 			_, matchedPiiElem = f.m.MatchKeyRegexs(key, mapJSONPath)
 		}
-		modified, redacted := f.filterJSON(value, matchedPiiElem, key, actualKey, mapJSONPath, true)
+		modified, redacted := f.filterJSON(parsedAttr, value, matchedPiiElem, key, actualKey, mapJSONPath, true)
 		if modified {
 			mValue[key] = redacted
 		}
@@ -132,6 +149,7 @@ func (f *jsonFilter) filterJSONMap(
 }
 
 func (f *jsonFilter) filterJSONScalar(
+	parsedAttr *processors.ParsedAttribute,
 	value interface{},
 	matchedRegex *regexmatcher.Regex,
 	key string,
@@ -139,6 +157,9 @@ func (f *jsonFilter) filterJSONScalar(
 	jsonPath string,
 	checked bool,
 ) (bool, interface{}) {
+	fqn := fmt.Sprintf("%s%s", actualKey, jsonPath)
+	parsedAttr.Flattered[fqn] = fmt.Sprintf("%v", value)
+
 	if matchedRegex == nil && !checked {
 		_, matchedRegex = f.m.MatchKeyRegexs(key, jsonPath)
 	}
@@ -146,18 +167,19 @@ func (f *jsonFilter) filterJSONScalar(
 	switch tt := value.(type) {
 	case string:
 		if matchedRegex != nil {
-			_, redacted := f.m.FilterMatchedKey(matchedRegex.Redactor, actualKey, tt, jsonPath)
-			return true, redacted
+			parsedAttr.Redacted[fqn] = tt
+			return true, f.m.FilterMatchedKey(matchedRegex.Redactor, actualKey, tt, jsonPath)
 		}
 		stringValueFiltered, vvFiltered := f.m.FilterStringValueRegexs(tt, actualKey, jsonPath)
 		if stringValueFiltered {
+			parsedAttr.Redacted[fqn] = tt
 			return true, vvFiltered
 		}
 	case interface{}:
 		if matchedRegex != nil {
 			str := fmt.Sprintf("%v", tt)
-			isModified, redacted := f.m.FilterMatchedKey(matchedRegex.Redactor, actualKey, str, jsonPath)
-			return isModified, redacted
+			parsedAttr.Redacted[fqn] = str
+			return true, f.m.FilterMatchedKey(matchedRegex.Redactor, actualKey, str, jsonPath)
 		}
 	}
 
