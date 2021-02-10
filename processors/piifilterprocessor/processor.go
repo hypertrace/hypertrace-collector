@@ -138,21 +138,22 @@ func getDataTypeFromContentType(dataType string) (string, error) {
 func (p *piiFilterProcessor) processMatchingAttributes(key string, value pdata.AttributeValue) {
 	for _, filter := range p.scalarFilters {
 		if isRedacted, err := filter.RedactAttribute(key, value); err != nil {
-			if errors.Is(err, filters.ErrUnprocessableValue) {
-				p.logger.Sugar().Debugf(
-					"failed to apply filter %q to attribute with key %q. Unsuitable value.",
-					filter.Name(),
-					key,
-				)
-			} else {
-				p.logger.Sugar().Errorf(
-					"failed to apply filter %q to attribute with key %q", filter.Name(), key, err,
+			if !errors.Is(err, filters.ErrUnprocessableValue) {
+				p.logger.Error(
+					"failed to apply filter",
+					zap.String("attribute_key", key),
+					zap.String("pii_filter_name", filter.Name()),
+					zap.Error(err),
 				)
 			}
 		} else if isRedacted {
 			// if an attribute is redacted by one filter we don't want to process
 			// it again.
-			p.logger.Sugar().Debugf("attribute with key %q redacted by filter %q", key, filter.Name())
+			p.logger.Debug(
+				"attribute redacted",
+				zap.String("attribute_key", key),
+				zap.String("pii_filter_name", filter.Name()),
+			)
 			break
 		}
 	}
@@ -166,7 +167,10 @@ func (p *piiFilterProcessor) processComplexData(attrs pdata.Span) {
 		}
 
 		if attr.StringVal() == "" {
-			p.logger.Sugar().Debug("empty string attribute with key %q", attrKey)
+			p.logger.Debug(
+				"empty string attribute",
+				zap.String("attribute_key", attrKey),
+			)
 			continue
 		}
 
@@ -176,7 +180,10 @@ func (p *piiFilterProcessor) processComplexData(attrs pdata.Span) {
 				var err error
 				dataType, err = getDataTypeFromContentType(typeValue.StringVal())
 				if err != nil {
-					p.logger.Sugar().Debugf("could not parse media type %q: %v", typeValue.StringVal(), err)
+					p.logger.Debug(
+						fmt.Sprintf("could not parse media type %q", typeValue.StringVal()),
+						zap.Error(err),
+					)
 					continue
 				}
 			}
@@ -184,18 +191,22 @@ func (p *piiFilterProcessor) processComplexData(attrs pdata.Span) {
 
 		filter, ok := p.structuredDataFilters[dataType]
 		if !ok {
-			p.logger.Sugar().Debugf("unknown data type %s", dataType)
+			p.logger.Sugar().Errorf("unknown data type %s", dataType)
 			continue
 		}
 
 		if isRedacted, err := filter.RedactAttribute(elem.Key, attr); isRedacted {
-			p.logger.Sugar().Debugf("attribute with key %q redacted by filter %q", attrKey, filter.Name())
+			p.logger.Debug(
+				"attribute redacted",
+				zap.String("attribute_key", attrKey),
+				zap.String("pii_filter_name", filter.Name()),
+			)
 		} else if err != nil {
-			p.logger.Sugar().Errorf(
-				"failed to apply filter %q to attribute with key %q: %v",
-				filter.Name(),
-				attrKey,
-				err,
+			p.logger.Error(
+				"failed to apply filter",
+				zap.String("attribute_key", attrKey),
+				zap.String("pii_filter_name", filter.Name()),
+				zap.Error(err),
 			)
 		}
 	}
