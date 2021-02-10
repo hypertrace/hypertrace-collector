@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	jsoniter "github.com/json-iterator/go"
+	"go.uber.org/zap"
 
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/internal/json"
@@ -14,12 +15,14 @@ import (
 var _ filters.Filter = (*jsonFilter)(nil)
 
 type jsonFilter struct {
-	m  *regexmatcher.Matcher
-	mu json.MarshalUnmarshaler
+	logger *zap.Logger
+	m      *regexmatcher.Matcher
+	mu     json.MarshalUnmarshaler
 }
 
-func NewFilter(m *regexmatcher.Matcher) filters.Filter {
-	return &jsonFilter{m, jsoniter.ConfigDefault}
+// NewFilter creates a JSON filter to be used
+func NewFilter(m *regexmatcher.Matcher, logger *zap.Logger) filters.Filter {
+	return &jsonFilter{logger, m, jsoniter.ConfigDefault}
 }
 
 func (f *jsonFilter) Name() string {
@@ -37,6 +40,15 @@ func (f *jsonFilter) RedactAttribute(key string, value pdata.AttributeValue) (bo
 
 	err := f.mu.UnmarshalFromString(value.StringVal(), &jsonPayload)
 	if err != nil {
+		// if json is invalid, run the value filter on the json string to try and
+		// filter out any keywords out of the string
+		f.logger.Debug("Problem parsing json. Falling back to value regex filtering")
+
+		if isRedacted, redactedValue := f.m.FilterStringValueRegexs(value.StringVal(), key, ""); isRedacted {
+			value.SetStringVal(redactedValue)
+			return true, nil
+		}
+
 		return false, filters.WrapError(filters.ErrUnprocessableValue, err.Error())
 	}
 
