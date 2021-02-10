@@ -14,6 +14,7 @@ import (
 	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/consumer/pdata"
+	"go.uber.org/zap"
 )
 
 // assertJSONEqual asserts two JSONs are equal no matter the
@@ -34,16 +35,16 @@ func assertJSONEqual(t *testing.T, expected, actual string) {
 	assert.True(t, true)
 }
 
-func createJSONFilter(t *testing.T, keyRegExs []regexmatcher.Regex) *jsonFilter {
-	m, err := regexmatcher.NewMatcher(nil, keyRegExs, nil)
+func createJSONFilter(t *testing.T, keyRegExs, valueRegExs []regexmatcher.Regex) *jsonFilter {
+	m, err := regexmatcher.NewMatcher(nil, keyRegExs, valueRegExs)
 
 	assert.NoError(t, err)
 
-	return &jsonFilter{m: m, mu: json.DefaultMarshalUnmarshaler}
+	return &jsonFilter{m: m, mu: json.DefaultMarshalUnmarshaler, logger: zap.NewNop()}
 }
 
 func TestFilterSuccessOnEmptyString(t *testing.T) {
-	filter := createJSONFilter(t, []regexmatcher.Regex{})
+	filter := createJSONFilter(t, []regexmatcher.Regex{}, nil)
 
 	attrValue := pdata.NewAttributeValueString("")
 	isRedacted, err := filter.RedactAttribute("attrib_key", attrValue)
@@ -52,7 +53,7 @@ func TestFilterSuccessOnEmptyString(t *testing.T) {
 }
 
 func TestFilterFailsOnInvalidJSON(t *testing.T) {
-	filter := createJSONFilter(t, []regexmatcher.Regex{})
+	filter := createJSONFilter(t, []regexmatcher.Regex{}, nil)
 
 	attrValue := pdata.NewAttributeValueString("bob")
 	isRedacted, err := filter.RedactAttribute("attrib_key", attrValue)
@@ -64,7 +65,7 @@ func TestFilterFailsOnInvalidJSON(t *testing.T) {
 func TestSimpleArrayRemainsTheSameOnNotMatchingRegex(t *testing.T) {
 	filter := createJSONFilter(t, []regexmatcher.Regex{
 		{Regexp: regexp.MustCompile("^password$"), Redactor: redaction.RedactRedactor},
-	})
+	}, nil)
 	attrValue := pdata.NewAttributeValueString("[\"12\",\"34\",\"56\"]")
 	isRedacted, err := filter.RedactAttribute("attrib_key", attrValue)
 	assert.False(t, isRedacted)
@@ -107,7 +108,7 @@ func TestJSONFieldRedaction(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			filter := createJSONFilter(t, []regexmatcher.Regex{
 				{Regexp: regexp.MustCompile("^password$"), Redactor: redaction.RedactRedactor},
-			})
+			}, nil)
 
 			attrValue := pdata.NewAttributeValueString(tCase.unredactedValue)
 			isRedacted, err := filter.RedactAttribute("attrib_key", attrValue)
@@ -164,7 +165,7 @@ func TestRedactionOnMatchingValuesByFQN(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			filter := createJSONFilter(t, []regexmatcher.Regex{
 				{Regexp: regexp.MustCompile(tCase.pattern), FQN: true, Redactor: redaction.RedactRedactor},
-			})
+			}, nil)
 			attrValue := pdata.NewAttributeValueString(tCase.unredactedValue)
 			isRedacted, err := filter.RedactAttribute("attrib_key", attrValue)
 			assert.True(t, isRedacted)
@@ -172,4 +173,31 @@ func TestRedactionOnMatchingValuesByFQN(t *testing.T) {
 			assertJSONEqual(t, tCase.expectedRedactedAttrValue, attrValue.StringVal())
 		})
 	}
+}
+
+func TestRedactInvalidJSON(t *testing.T) {
+	const (
+		invalidJSONInput = `{
+		"key_or_value":{
+			a:"aaa",
+			"b":"key_or_value"
+			},
+		}`
+
+		invalidJSONExpected = `{
+		"***":{
+			a:"aaa",
+			"b":"***"
+			},
+		}`
+	)
+
+	filter := createJSONFilter(t, nil, []regexmatcher.Regex{
+		{Regexp: regexp.MustCompile("key_or_value"), Redactor: redaction.RedactRedactor},
+	})
+	attrValue := pdata.NewAttributeValueString(invalidJSONInput)
+	isRedacted, err := filter.RedactAttribute("http.request.body", attrValue)
+	assert.True(t, isRedacted)
+	assert.NoError(t, err)
+	assert.Equal(t, invalidJSONExpected, attrValue.StringVal())
 }

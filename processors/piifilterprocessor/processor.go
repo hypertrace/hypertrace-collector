@@ -69,7 +69,7 @@ func newPIIFilterProcessor(logger *zap.Logger, cfg *Config) (*piiFilterProcessor
 	var structuredDataFilters = map[string]filters.Filter{
 		"cookie":     cookie.NewFilter(matcher),
 		"urlencoded": urlencoded.NewFilter(matcher),
-		"json":       json.NewFilter(matcher),
+		"json":       json.NewFilter(matcher, logger),
 		"sql":        sql.NewFilter(redaction.Redactors[cfg.RedactStrategy]),
 	}
 

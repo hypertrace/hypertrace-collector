@@ -45,12 +45,17 @@ func (rm *Matcher) FilterKeyRegexs(keyToMatch string, actualKey string, value st
 
 // FilterStringValueRegexs looks into the string value to decide whether filter the value or not
 func (rm *Matcher) FilterStringValueRegexs(value string, key string, path string) (bool, string) {
-	filtered := false
+	var (
+		isRedacted      bool
+		isRegexRedacted bool
+	)
+
 	for _, r := range rm.valueRegExs {
-		filtered, value = rm.replacingRegex(value, r.Regexp, r.Redactor)
+		isRegexRedacted, value = rm.replacingRegex(value, r.Regexp, r.Redactor)
+		isRedacted = isRedacted || isRegexRedacted
 	}
 
-	return filtered, value
+	return isRedacted, value
 }
 
 func (rm *Matcher) replacingRegex(value string, regex *regexp.Regexp, redactor redaction.Redactor) (bool, string) {
