@@ -6,7 +6,6 @@ import (
 
 	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/config/configtest"
 )
@@ -17,9 +16,8 @@ func TestLoadConfig(t *testing.T) {
 
 	factories.Processors[typeStr] = NewFactory()
 
-	cfg, err := configtest.LoadConfigFile(t, path.Join(".", "testdata", "config.yml"), factories)
-	require.NoError(t, err)
-	require.NotNil(t, cfg)
+	_, err = configtest.LoadConfigFile(t, path.Join(".", "testdata", "config.yml"), factories)
+	assert.NoError(t, err)
 }
 
 func TestTransportConfigToConfig(t *testing.T) {
@@ -47,5 +45,5 @@ func TestTransportConfigToConfig(t *testing.T) {
 	assert.Equal(t, "[a-z]+", cfg.ValueRegExs[0].Regex.String())
 	assert.Equal(t, redaction.Raw, cfg.ValueRegExs[0].RedactStrategy)
 	assert.Equal(t, "query", cfg.ComplexData[0].Key)
-	assert.Equal(t, "sql", cfg.ComplexData[0].Type)
+	assert.Equal(t, sqlType, cfg.ComplexData[0].Type)
 }

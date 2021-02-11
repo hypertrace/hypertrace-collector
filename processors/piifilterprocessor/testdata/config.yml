@@ -6,6 +6,14 @@ processors:
     prefixes:
       - hypertrace.
     redaction_strategy: "hash"
+    key_regexs:
+      - regex: ^password$
+        redaction_strategy: "redact"
+    complex_data:
+      - key: sql.query
+        type: sql
+      - key: http.request.body
+        type_key: http.request.header.content-type
 
 exporters:
   exampleexporter:

@@ -22,10 +22,20 @@ import (
 
 var _ processorhelper.TProcessor = (*piiFilterProcessor)(nil)
 
+type dataType string
+
+const (
+	unknownType    dataType = ""
+	cookieType     dataType = "cookie"
+	urlencodedType dataType = "urlencoded"
+	jsonType       dataType = "json"
+	sqlType        dataType = "sql"
+)
+
 type piiFilterProcessor struct {
 	logger                *zap.Logger
 	scalarFilters         []filters.Filter
-	structuredDataFilters map[string]filters.Filter
+	structuredDataFilters map[dataType]filters.Filter
 	structuredData        map[string]PiiComplexData
 }
 
@@ -66,15 +76,21 @@ func newPIIFilterProcessor(logger *zap.Logger, cfg *Config) (*piiFilterProcessor
 		keyvalue.NewFilter(matcher),
 	}
 
-	var structuredDataFilters = map[string]filters.Filter{
-		"cookie":     cookie.NewFilter(matcher),
-		"urlencoded": urlencoded.NewFilter(matcher),
-		"json":       json.NewFilter(matcher, logger),
-		"sql":        sql.NewFilter(redaction.Redactors[cfg.RedactStrategy]),
+	var structuredDataFilters = map[dataType]filters.Filter{
+		cookieType:     cookie.NewFilter(matcher),
+		urlencodedType: urlencoded.NewFilter(matcher),
+		jsonType:       json.NewFilter(matcher, logger),
+		sqlType:        sql.NewFilter(redaction.Redactors[cfg.RedactStrategy]),
 	}
 
 	var complexData = map[string]PiiComplexData{}
 	for _, e := range cfg.ComplexData {
+		if e.Type != unknownType {
+			if _, ok := structuredDataFilters[e.Type]; !ok {
+				return nil, fmt.Errorf("unknown type %q for structured data", e.Type)
+			}
+		}
+
 		complexData[e.Key] = e
 	}
 
@@ -115,24 +131,24 @@ func (p *piiFilterProcessor) ProcessTraces(_ context.Context, td pdata.Traces) (
 	return td, nil
 }
 
-func getDataTypeFromContentType(dataType string) (string, error) {
-	mt, _, err := mime.ParseMediaType(dataType)
+// getDataTypeFromContentType resolves the data type based on the provided
+// media type.
+func getDataTypeFromContentType(mediaType string) (dataType, error) {
+	dataType, _, err := mime.ParseMediaType(mediaType)
 	if err != nil {
-		return "", err
+		return unknownType, err
 	}
 
-	lcDataType := mt
-	switch lcDataType {
+	switch dataType {
 	case "json", "text/json", "text/x-json", "application/json":
-		lcDataType = "json"
+		return jsonType, nil
 	case "application/x-www-form-urlencoded":
-		lcDataType = "urlencoded"
+		return urlencodedType, nil
 	case "sql":
-		lcDataType = "sql"
+		return sqlType, nil
 	default:
+		return unknownType, errors.New("unresolvable media type")
 	}
-
-	return lcDataType, nil
 }
 
 func (p *piiFilterProcessor) processMatchingAttributes(key string, value pdata.AttributeValue) {
@@ -175,12 +191,12 @@ func (p *piiFilterProcessor) processComplexData(attrs pdata.Span) {
 		}
 
 		var dataType = elem.Type
-		if len(dataType) == 0 {
+		if dataType == unknownType {
 			if typeValue, ok := attrs.Attributes().Get(elem.TypeKey); ok {
 				var err error
 				dataType, err = getDataTypeFromContentType(typeValue.StringVal())
 				if err != nil {
-					p.logger.Debug(
+					p.logger.Error(
 						fmt.Sprintf("could not parse media type %q", typeValue.StringVal()),
 						zap.Error(err),
 					)
@@ -189,11 +205,7 @@ func (p *piiFilterProcessor) processComplexData(attrs pdata.Span) {
 			}
 		}
 
-		filter, ok := p.structuredDataFilters[dataType]
-		if !ok {
-			p.logger.Sugar().Errorf("unknown data type %s", dataType)
-			continue
-		}
+		filter := p.structuredDataFilters[dataType]
 
 		if isRedacted, err := filter.RedactAttribute(elem.Key, attr); isRedacted {
 			p.logger.Debug(

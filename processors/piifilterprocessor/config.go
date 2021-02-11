@@ -93,7 +93,17 @@ func (tc *TransportConfig) toConfig() (*Config, error) {
 			return nil, errors.New("key for complex data entry is empty")
 		}
 
-		c.ComplexData = append(c.ComplexData, PiiComplexData(tpe))
+		if tpe.Type == "" && tpe.TypeKey == "" {
+			return nil, errors.New(
+				"both type and typeKey for complex data entry is empty, at least one should be non empty",
+			)
+		}
+
+		c.ComplexData = append(c.ComplexData, PiiComplexData{
+			Key:     tpe.Key,
+			Type:    dataType(tpe.Type),
+			TypeKey: tpe.TypeKey,
+		})
 	}
 
 	return c, nil
@@ -129,6 +139,6 @@ type PiiElement struct {
 
 type PiiComplexData struct {
 	Key     string
-	Type    string
+	Type    dataType
 	TypeKey string
 }
