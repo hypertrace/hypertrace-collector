@@ -22,14 +22,14 @@ import (
 
 var _ processorhelper.TProcessor = (*piiFilterProcessor)(nil)
 
-type dataType string
+type dataType int
 
 const (
-	unknownType    dataType = ""
-	cookieType     dataType = "cookie"
-	urlencodedType dataType = "urlencoded"
-	jsonType       dataType = "json"
-	sqlType        dataType = "sql"
+	unknownType dataType = iota
+	cookieType
+	urlencodedType
+	jsonType
+	sqlType
 )
 
 type piiFilterProcessor struct {
@@ -85,9 +85,13 @@ func newPIIFilterProcessor(logger *zap.Logger, cfg *Config) (*piiFilterProcessor
 
 	var complexData = map[string]PiiComplexData{}
 	for _, e := range cfg.ComplexData {
+		if e.Type == unknownType && e.TypeKey == "" {
+			return nil, errors.New("unknown type for structured data")
+		}
+
 		if e.Type != unknownType {
 			if _, ok := structuredDataFilters[e.Type]; !ok {
-				return nil, fmt.Errorf("unknown type %q for structured data", e.Type)
+				return nil, errors.New("unsupported type for structured data")
 			}
 		}
 

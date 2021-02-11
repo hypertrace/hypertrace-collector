@@ -10,9 +10,9 @@ import (
 func TestNewProcessor(t *testing.T) {
 	_, err := newPIIFilterProcessor(zap.NewNop(), &Config{
 		ComplexData: []PiiComplexData{
-			{Key: "test_attribute", Type: "unknown"},
+			{Key: "test_attribute"},
 		},
 	})
 	assert.Error(t, err)
-	assert.Equal(t, "unknown type \"unknown\" for structured data", err.Error())
+	assert.Equal(t, "unknown type for structured data", err.Error())
 }

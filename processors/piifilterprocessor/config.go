@@ -99,14 +99,38 @@ func (tc *TransportConfig) toConfig() (*Config, error) {
 			)
 		}
 
+		dataType := unknownType
+		if tpe.Type != "" {
+			var ok bool
+			dataType, ok = mapToDataType(tpe.Type)
+			if !ok {
+				return nil, fmt.Errorf("unknown type %q for complex data entry", tpe.Type)
+			}
+		}
+
 		c.ComplexData = append(c.ComplexData, PiiComplexData{
 			Key:     tpe.Key,
-			Type:    dataType(tpe.Type),
+			Type:    dataType,
 			TypeKey: tpe.TypeKey,
 		})
 	}
 
 	return c, nil
+}
+
+func mapToDataType(_type string) (dataType, bool) {
+	switch _type {
+	case "cookie":
+		return cookieType, true
+	case "urlencoded":
+		return urlencodedType, true
+	case "json":
+		return jsonType, true
+	case "sql":
+		return sqlType, true
+	default:
+		return unknownType, false
+	}
 }
 
 func mapToRedactionStrategy(name string) redaction.Strategy {
