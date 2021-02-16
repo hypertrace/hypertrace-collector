@@ -158,7 +158,7 @@ func (f *jsonFilter) filterJSONScalar(
 	checked bool,
 ) (bool, interface{}) {
 	fqn := fmt.Sprintf("%s%s", actualKey, jsonPath)
-	parsedAttr.Flattened[fqn] = fmt.Sprintf("%v", value)
+	parsedAttr.Flattened[jsonPath] = fmt.Sprintf("%v", value)
 
 	if matchedRegex == nil && !checked {
 		_, matchedRegex = f.m.MatchKeyRegexs(key, jsonPath)

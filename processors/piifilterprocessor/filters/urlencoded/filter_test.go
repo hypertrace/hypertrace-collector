@@ -48,7 +48,7 @@ func TestURLEncodedFilterSuccessOnNoSensitiveValue(t *testing.T) {
 	parsedAttr, err := filter.RedactAttribute("password", attrValue)
 	assert.Equal(t, &processors.ParsedAttribute{
 		Flattened: map[string]string{
-			"password.user": "dave",
+			"user": "dave",
 		},
 		Redacted: map[string]string{},
 	}, parsedAttr)
@@ -73,7 +73,7 @@ func TestURLEncodedFilterSuccessForSensitiveKey(t *testing.T) {
 	parsedAttr, err := filter.RedactAttribute("password", attrValue)
 	assert.Equal(t, &processors.ParsedAttribute{
 		Redacted:  map[string]string{"password.password": "mypw$"},
-		Flattened: map[string]string{"password.password": "mypw$", "password.user": "dave"},
+		Flattened: map[string]string{"password": "mypw$", "user": "dave"},
 	}, parsedAttr)
 	assert.NoError(t, err)
 
@@ -98,8 +98,8 @@ func TestURLEncodedFilterSuccessForSensitiveKeyMultiple(t *testing.T) {
 	parsedAttribute, err := filter.RedactAttribute("password", attrValue)
 	assert.Equal(t, &processors.ParsedAttribute{
 		Flattened: map[string]string{
-			"password.user":     "dave",
-			"password.password": "mypw#",
+			"user":     "dave",
+			"password": "mypw#",
 		},
 		Redacted: map[string]string{
 			"password.password": "mypw#",
@@ -125,7 +125,7 @@ func TestURLEncodedFilterSuccessForURL(t *testing.T) {
 	parsedAttribute, err := filter.RedactAttribute("http.url", attrValue)
 	assert.Equal(t, &processors.ParsedAttribute{
 		Redacted:  map[string]string{"http.url.password": "washington"},
-		Flattened: map[string]string{"http.url.password": "washington", "http.url.username": "george"},
+		Flattened: map[string]string{"password": "washington", "username": "george"},
 	}, parsedAttribute)
 	assert.NoError(t, err)
 
@@ -169,7 +169,7 @@ func TestURLEncodedFilterSuccessForSensitiveValue(t *testing.T) {
 	parsedAttribute, err := filter.RedactAttribute("whatever", attrValue)
 	assert.NoError(t, err)
 	assert.Equal(t, &processors.ParsedAttribute{
-		Flattened: map[string]string{"whatever.key1": "filter_value", "whatever.key2": "value2"},
+		Flattened: map[string]string{"key1": "filter_value", "key2": "value2"},
 		Redacted:  map[string]string{"whatever.key1": "filter_value"},
 	}, parsedAttribute)
 

@@ -58,7 +58,7 @@ func (f *urlEncodedFilter) RedactAttribute(key string, value pdata.AttributeValu
 	for param, values := range params {
 		fqn := fmt.Sprintf("%s.%s", key, param)
 		for idx, value := range values {
-			attr.Flattened[fqn] = value
+			attr.Flattened[param] = value
 			path := param
 			if !isURLAttr {
 				if len(values) > 1 {
