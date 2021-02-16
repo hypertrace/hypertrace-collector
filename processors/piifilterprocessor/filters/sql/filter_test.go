@@ -1,6 +1,7 @@
 package sql
 
 import (
+	"github.com/hypertrace/collector/processors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,9 +25,8 @@ func TestRedactsWithSQL(t *testing.T) {
 	attrValue := pdata.NewAttributeValueString("select password from user where name = 'dave' or name =\"bob\";")
 	parsedAttribute, err := filter.RedactAttribute("sql.query", attrValue)
 	assert.NoError(t, err)
-	assert.Equal(t, map[string]string{"sql.query": "select password from user where name = 'dave' or name =\"bob\";"}, parsedAttribute.Redacted)
+	assert.Equal(t, &processors.ParsedAttribute{Redacted: map[string]string{"sql.query": "select password from user where name = 'dave' or name =\"bob\";"}}, parsedAttribute)
 	assert.Equal(t, "select password from user where name = '***' or name =\"***\";", attrValue.StringVal())
-
 }
 
 func newFilter() *sqlFilter {

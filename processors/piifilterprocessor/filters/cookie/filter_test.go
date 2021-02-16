@@ -1,13 +1,13 @@
 package cookie
 
 import (
-	"github.com/hypertrace/collector/processors"
 	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/consumer/pdata"
 
+	"github.com/hypertrace/collector/processors"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 )
@@ -39,7 +39,13 @@ func TestCookieFilterFiltersCookieKey(t *testing.T) {
 	attrValue := pdata.NewAttributeValueString(cookieValue)
 	parsedAttr, err := filter.RedactAttribute(key, attrValue)
 	assert.NoError(t, err)
-	assert.Equal(t, map[string]string{"http.request.header.cookie.password": "value2"}, parsedAttr.Redacted)
+	assert.Equal(t, &processors.ParsedAttribute{
+		Flattened: map[string]string{
+			"http.request.header.cookie.cookie1":  "value1",
+			"http.request.header.cookie.password": "value2",
+		},
+		Redacted: map[string]string{"http.request.header.cookie.password": "value2"},
+	}, parsedAttr)
 	assert.Equal(t, expectedCookieFilteredValue, attrValue.StringVal())
 }
 
@@ -50,9 +56,15 @@ func TestCookieFilterFiltersSetCookieKey(t *testing.T) {
 	filter := newCookieFilter(t)
 
 	attrValue := pdata.NewAttributeValueString(cookieValue)
-	redacted, err := filter.RedactAttribute(key, attrValue)
+	parsedAttribute, err := filter.RedactAttribute(key, attrValue)
 	assert.NoError(t, err)
-	assert.Equal(t, map[string]string{"http.response.header.set-cookie.password": "value2"}, redacted.Redacted)
+	assert.Equal(t, &processors.ParsedAttribute{
+		Flattened: map[string]string{
+			"http.response.header.set-cookie.password": "value2",
+		}, Redacted: map[string]string{
+			"http.response.header.set-cookie.password": "value2",
+		},
+	}, parsedAttribute)
 	assert.Equal(t, expectedCookieFilteredValue, attrValue.StringVal())
 }
 
