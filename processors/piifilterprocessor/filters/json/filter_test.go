@@ -49,19 +49,21 @@ func TestFilterSuccessOnEmptyString(t *testing.T) {
 	filter := createJSONFilter(t, []regexmatcher.Regex{}, nil)
 
 	attrValue := pdata.NewAttributeValueString("")
-	parsedAttribute, err := filter.RedactAttribute("attrib_key", attrValue)
+	parsedAttribute, newAttr, err := filter.RedactAttribute("attrib_key", attrValue)
 	assert.Nil(t, parsedAttribute)
 	assert.NoError(t, err)
+	assert.Nil(t, newAttr)
 }
 
 func TestFilterFailsOnInvalidJSON(t *testing.T) {
 	filter := createJSONFilter(t, []regexmatcher.Regex{}, nil)
 
 	attrValue := pdata.NewAttributeValueString("bob")
-	parsedAttribute, err := filter.RedactAttribute("attrib_key", attrValue)
+	parsedAttribute, newAttr, err := filter.RedactAttribute("attrib_key", attrValue)
 	assert.Nil(t, parsedAttribute)
 	assert.Error(t, err)
 	assert.Equal(t, filters.ErrUnprocessableValue, errors.Unwrap(err))
+	assert.Nil(t, newAttr)
 }
 
 func TestSimpleArrayRemainsTheSameOnNotMatchingRegex(t *testing.T) {
@@ -69,7 +71,7 @@ func TestSimpleArrayRemainsTheSameOnNotMatchingRegex(t *testing.T) {
 		{Regexp: regexp.MustCompile("^password$"), Redactor: redaction.RedactRedactor},
 	}, nil)
 	attrValue := pdata.NewAttributeValueString("[\"12\",\"34\",\"56\"]")
-	parsedAttr, err := filter.RedactAttribute("attrib_key", attrValue)
+	parsedAttr, newAttr, err := filter.RedactAttribute("attrib_key", attrValue)
 	assert.Equal(t, &processors.ParsedAttribute{
 		Flattened: map[string]string{
 			"$[0]": "12",
@@ -78,6 +80,7 @@ func TestSimpleArrayRemainsTheSameOnNotMatchingRegex(t *testing.T) {
 		Redacted: map[string]string{},
 	}, parsedAttr)
 	assert.NoError(t, err)
+	assert.Nil(t, newAttr)
 	assertJSONEqual(t, "[\"12\",\"34\",\"56\"]", attrValue.StringVal())
 }
 
@@ -181,8 +184,9 @@ func TestJSONFieldRedaction(t *testing.T) {
 			}, nil)
 
 			attrValue := pdata.NewAttributeValueString(tCase.unredactedValue)
-			parsedAttribute, err := filter.RedactAttribute("attrib_key", attrValue)
+			parsedAttribute, newAttr, err := filter.RedactAttribute("attrib_key", attrValue)
 			require.NoError(t, err)
+			assert.Nil(t, newAttr)
 			assert.Equal(t, tCase.parsedAttribute, parsedAttribute)
 			assertJSONEqual(t, tCase.expectedRedactedAttrValue, attrValue.StringVal())
 		})
@@ -303,8 +307,9 @@ func TestRedactionOnMatchingValuesByFQN(t *testing.T) {
 				{Regexp: regexp.MustCompile(tCase.pattern), FQN: true, Redactor: redaction.RedactRedactor},
 			}, nil)
 			attrValue := pdata.NewAttributeValueString(tCase.unredactedValue)
-			parsedAttribute, err := filter.RedactAttribute("attrib_key", attrValue)
+			parsedAttribute, newAttr, err := filter.RedactAttribute("attrib_key", attrValue)
 			require.NoError(t, err)
+			assert.Nil(t, newAttr)
 			assert.Equal(t, tCase.parsedAttribute, parsedAttribute)
 			assertJSONEqual(t, tCase.expectedRedactedAttrValue, attrValue.StringVal())
 		})
@@ -330,8 +335,9 @@ func TestRedactInvalidJSON(t *testing.T) {
 		{Regexp: regexp.MustCompile("key_or_value"), Redactor: redaction.RedactRedactor},
 	})
 	attrValue := pdata.NewAttributeValueString(invalidJSONInput)
-	parsedAttribute, err := filter.RedactAttribute("http.request.body", attrValue)
+	parsedAttribute, newAttr, err := filter.RedactAttribute("http.request.body", attrValue)
 	require.NoError(t, err)
+	assert.Nil(t, newAttr)
 	assert.Equal(t, &processors.ParsedAttribute{
 		Redacted: map[string]string{"http.request.body": invalidJSONInput},
 	}, parsedAttribute)

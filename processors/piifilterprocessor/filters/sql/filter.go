@@ -27,9 +27,9 @@ func (f *sqlFilter) Name() string {
 	return "sql"
 }
 
-func (f *sqlFilter) RedactAttribute(key string, value pdata.AttributeValue) (*processors.ParsedAttribute, error) {
+func (f *sqlFilter) RedactAttribute(key string, value pdata.AttributeValue) (*processors.ParsedAttribute, *filters.Attribute, error) {
 	if len(value.StringVal()) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	is := newCaseChangingStream(antlr.NewInputStream(value.StringVal()), true)
@@ -66,7 +66,7 @@ func (f *sqlFilter) RedactAttribute(key string, value pdata.AttributeValue) (*pr
 		value.SetStringVal(str.String())
 	}
 
-	return attr, nil
+	return attr, nil, nil
 }
 
 type caseChangingStream struct {

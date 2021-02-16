@@ -32,9 +32,9 @@ func (f *jsonFilter) Name() string {
 
 const jsonPathPrefix = "$"
 
-func (f *jsonFilter) RedactAttribute(key string, value pdata.AttributeValue) (*processors.ParsedAttribute, error) {
+func (f *jsonFilter) RedactAttribute(key string, value pdata.AttributeValue) (*processors.ParsedAttribute, *filters.Attribute, error) {
 	if len(value.StringVal()) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	var jsonPayload interface{}
@@ -50,10 +50,10 @@ func (f *jsonFilter) RedactAttribute(key string, value pdata.AttributeValue) (*p
 				Redacted: map[string]string{key: value.StringVal()},
 			}
 			value.SetStringVal(redactedValue)
-			return attr, nil
+			return attr, nil, nil
 		}
 
-		return nil, filters.WrapError(filters.ErrUnprocessableValue, err.Error())
+		return nil, nil, filters.WrapError(filters.ErrUnprocessableValue, err.Error())
 	}
 
 	parsedAttr := &processors.ParsedAttribute{
@@ -62,17 +62,17 @@ func (f *jsonFilter) RedactAttribute(key string, value pdata.AttributeValue) (*p
 	}
 	isRedacted, redactedValue := f.filterJSON(parsedAttr, jsonPayload, nil, "", key, jsonPathPrefix, false)
 	if !isRedacted {
-		return parsedAttr, nil
+		return parsedAttr, nil, nil
 	}
 
 	redactedValueAsString, err := f.mu.MarshalToString(redactedValue)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	value.SetStringVal(redactedValueAsString)
 
-	return parsedAttr, nil
+	return parsedAttr, nil, nil
 }
 
 func (f *jsonFilter) filterJSON(

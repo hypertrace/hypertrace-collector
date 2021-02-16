@@ -112,9 +112,12 @@ func (p *piiFilterProcessor) ProcessTraces(ctx context.Context, td pdata.Traces)
 						return
 					}
 
-					parsedAttr := p.processMatchingAttributes(key, value)
+					parsedAttr, newAttr := p.processMatchingAttributes(key, value)
 					if parsedAttr != nil {
 						parsedSpanData.PutParsedAttribute(key, parsedAttr)
+					}
+					if newAttr != nil {
+						span.Attributes().Insert(newAttr.Key, newAttr.Value)
 					}
 				})
 
@@ -146,9 +149,9 @@ func getDataTypeFromContentType(dataType string) (string, error) {
 	return lcDataType, nil
 }
 
-func (p *piiFilterProcessor) processMatchingAttributes(key string, value pdata.AttributeValue) *processors.ParsedAttribute {
+func (p *piiFilterProcessor) processMatchingAttributes(key string, value pdata.AttributeValue) (*processors.ParsedAttribute, *filters.Attribute) {
 	for _, filter := range p.scalarFilters {
-		parsedAttribute, err := filter.RedactAttribute(key, value)
+		parsedAttribute, newAtt, err := filter.RedactAttribute(key, value)
 		if err != nil {
 			if errors.Is(err, filters.ErrUnprocessableValue) {
 				p.logger.Sugar().Debugf(
@@ -165,10 +168,10 @@ func (p *piiFilterProcessor) processMatchingAttributes(key string, value pdata.A
 			// if an attribute is redacted by one filter we don't want to process
 			// it again.
 			p.logger.Sugar().Debugf("attribute with key %q redacted by filter %q", key, filter.Name())
-			return parsedAttribute
+			return parsedAttribute, newAtt
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 // http.request.body = {"authorization": {"b": "c"} }
@@ -204,7 +207,7 @@ func (p *piiFilterProcessor) processComplexData(span pdata.Span) {
 			continue
 		}
 
-		if parsedAttr, err := filter.RedactAttribute(elem.Key, attr); len(parsedAttr.Redacted) > 0 {
+		if parsedAttr, newAttr, err := filter.RedactAttribute(elem.Key, attr); len(parsedAttr.Redacted) > 0 {
 			p.logger.Sugar().Debugf("attribute with key %q redacted by filter %q", attrKey, filter.Name())
 		} else if err != nil {
 			p.logger.Sugar().Errorf(
@@ -213,6 +216,8 @@ func (p *piiFilterProcessor) processComplexData(span pdata.Span) {
 				attrKey,
 				err,
 			)
+		} else if newAttr != nil {
+			span.Attributes().Insert(newAttr.Key, newAttr.Value)
 		}
 	}
 }

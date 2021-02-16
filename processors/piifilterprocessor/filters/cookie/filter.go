@@ -31,43 +31,46 @@ func (f *cookieFilter) Name() string {
 	return "cookie"
 }
 
-func (f *cookieFilter) RedactAttribute(key string, value pdata.AttributeValue) (*processors.ParsedAttribute, error) {
+func (f *cookieFilter) RedactAttribute(key string, value pdata.AttributeValue) (*processors.ParsedAttribute, *filters.Attribute, error) {
 	if len(value.StringVal()) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	cookies := parseCookies(key, value.StringVal())
 	if cookies == nil {
-		return nil, filters.WrapError(filters.ErrUnprocessableValue, "no cookie values")
+		return nil, nil, filters.WrapError(filters.ErrUnprocessableValue, "no cookie values")
 	}
 
-	attr := &processors.ParsedAttribute{
+	parsedAttr := &processors.ParsedAttribute{
 		Redacted:  map[string]string{},
 		Flattened: map[string]string{},
 	}
 
+	var attr *filters.Attribute
 	for _, cookie := range cookies {
 		fqn := fmt.Sprintf("%s.%s", key, cookie.Name)
-		attr.Flattened[cookie.Name] = cookie.Value
+		parsedAttr.Flattened[cookie.Name] = cookie.Value
 
 		if isRedactedByKey, isSession, redactedValue := f.m.FilterKeyRegexs(cookie.Name, key, cookie.Value, cookie.Name); isRedactedByKey {
 			if isSession {
-				// TODO add attribute
-				//attribute.Span.Attributes().Insert("session.id", attribute.Value)
+				attr = &filters.Attribute{
+					Key:   "session.id",
+					Value: pdata.NewAttributeValueString(redactedValue),
+				}
 			}
-			attr.Redacted[fqn] = cookie.Value
+			parsedAttr.Redacted[fqn] = cookie.Value
 			cookie.Value = redactedValue
 		} else if isRedactedByValue, redactedValue := f.m.FilterStringValueRegexs(cookie.Value, key, cookie.Name); isRedactedByValue {
-			attr.Redacted[fqn] = cookie.Value
+			parsedAttr.Redacted[fqn] = cookie.Value
 			cookie.Value = redactedValue
 		}
 	}
 
-	if len(attr.Redacted) > 0 {
+	if len(parsedAttr.Redacted) > 0 {
 		value.SetStringVal(stitchCookies(cookies))
 	}
 
-	return attr, nil
+	return parsedAttr, attr, nil
 }
 
 func parseCookies(key string, value string) []*http.Cookie {

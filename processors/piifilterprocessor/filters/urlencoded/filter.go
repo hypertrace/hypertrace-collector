@@ -27,9 +27,9 @@ func (f *urlEncodedFilter) Name() string {
 	return "urlencoded"
 }
 
-func (f *urlEncodedFilter) RedactAttribute(key string, value pdata.AttributeValue) (*processors.ParsedAttribute, error) {
+func (f *urlEncodedFilter) RedactAttribute(key string, value pdata.AttributeValue) (*processors.ParsedAttribute, *filters.Attribute, error) {
 	if len(value.StringVal()) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	var u *url.URL
@@ -40,14 +40,14 @@ func (f *urlEncodedFilter) RedactAttribute(key string, value pdata.AttributeValu
 	if isURLAttr {
 		u, err = url.Parse(value.StringVal())
 		if err != nil {
-			return nil, filters.WrapError(filters.ErrUnprocessableValue, err.Error())
+			return nil, nil, filters.WrapError(filters.ErrUnprocessableValue, err.Error())
 		}
 		rawString = u.RawQuery
 	}
 
 	params, err := url.ParseQuery(rawString)
 	if err != nil {
-		return nil, filters.WrapError(filters.ErrUnprocessableValue, err.Error())
+		return nil, nil, filters.WrapError(filters.ErrUnprocessableValue, err.Error())
 	}
 
 	v := url.Values{}
@@ -55,6 +55,7 @@ func (f *urlEncodedFilter) RedactAttribute(key string, value pdata.AttributeValu
 		Redacted:  map[string]string{},
 		Flattened: map[string]string{},
 	}
+	var newAttr *filters.Attribute
 	for param, values := range params {
 		fqn := fmt.Sprintf("%s.%s", key, param)
 		for idx, value := range values {
@@ -70,7 +71,10 @@ func (f *urlEncodedFilter) RedactAttribute(key string, value pdata.AttributeValu
 
 			if isRedactedByKey, isSession, redactedValue := f.m.FilterKeyRegexs(param, key, value, path); isRedactedByKey {
 				if isSession {
-					// TODO
+					newAttr = &filters.Attribute{
+						Key:   "session.id",
+						Value: pdata.NewAttributeValueString(redactedValue),
+					}
 				}
 				attr.Redacted[fqn] = value
 				v.Add(param, redactedValue)
@@ -93,5 +97,5 @@ func (f *urlEncodedFilter) RedactAttribute(key string, value pdata.AttributeValu
 		}
 	}
 
-	return attr, nil
+	return attr, newAttr, nil
 }
