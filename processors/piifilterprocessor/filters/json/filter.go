@@ -58,7 +58,7 @@ func (f *jsonFilter) RedactAttribute(key string, value pdata.AttributeValue) (*p
 
 	parsedAttr := &processors.ParsedAttribute{
 		Redacted:  map[string]string{},
-		Flattered: map[string]string{},
+		Flattened: map[string]string{},
 	}
 	isRedacted, redactedValue := f.filterJSON(parsedAttr, jsonPayload, nil, "", key, jsonPathPrefix, false)
 	if !isRedacted {
@@ -158,7 +158,7 @@ func (f *jsonFilter) filterJSONScalar(
 	checked bool,
 ) (bool, interface{}) {
 	fqn := fmt.Sprintf("%s%s", actualKey, jsonPath)
-	parsedAttr.Flattered[fqn] = fmt.Sprintf("%v", value)
+	parsedAttr.Flattened[fqn] = fmt.Sprintf("%v", value)
 
 	if matchedRegex == nil && !checked {
 		_, matchedRegex = f.m.MatchKeyRegexs(key, jsonPath)

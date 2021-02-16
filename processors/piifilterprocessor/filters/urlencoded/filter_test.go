@@ -69,7 +69,7 @@ func TestURLEncodedFilterSuccessForSensitiveKey(t *testing.T) {
 	assert.Equal(t, map[string]string{"password.password": "mypw$"}, parsedAttr.Redacted)
 	assert.Equal(t, &processors.ParsedAttribute{
 		Redacted:  map[string]string{"password.password": "mypw$"},
-		Flattered: map[string]string{"password.password": "mypw$", "password.user": "dave"},
+		Flattened: map[string]string{"password.password": "mypw$", "password.user": "dave"},
 	}, parsedAttr)
 	assert.NoError(t, err)
 

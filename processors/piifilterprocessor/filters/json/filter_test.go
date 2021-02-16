@@ -71,7 +71,7 @@ func TestSimpleArrayRemainsTheSameOnNotMatchingRegex(t *testing.T) {
 	attrValue := pdata.NewAttributeValueString("[\"12\",\"34\",\"56\"]")
 	parsedAttr, err := filter.RedactAttribute("attrib_key", attrValue)
 	assert.Equal(t, &processors.ParsedAttribute{
-		Flattered: map[string]string{"attrib_key$[0]": "12", "attrib_key$[1]": "34", "attrib_key$[2]": "56"},
+		Flattened: map[string]string{"attrib_key$[0]": "12", "attrib_key$[1]": "34", "attrib_key$[2]": "56"},
 		Redacted:  map[string]string{},
 	}, parsedAttr)
 	assert.NoError(t, err)
@@ -91,7 +91,7 @@ func TestJSONFieldRedaction(t *testing.T) {
 				Redacted: map[string]string{
 					"attrib_key$[1].password": "abc",
 				},
-				Flattered: map[string]string{
+				Flattened: map[string]string{
 					"attrib_key$[0].a":        "1",
 					"attrib_key$[1].password": "abc",
 				},
@@ -104,7 +104,7 @@ func TestJSONFieldRedaction(t *testing.T) {
 				Redacted: map[string]string{
 					"attrib_key$.a[1].password": "abc",
 				},
-				Flattered: map[string]string{
+				Flattened: map[string]string{
 					"attrib_key$.a[0].b":        "1",
 					"attrib_key$.a[1].password": "abc",
 				},
@@ -119,7 +119,7 @@ func TestJSONFieldRedaction(t *testing.T) {
 					"attrib_key$.a[1].password[1]": "34",
 					"attrib_key$.a[1].password[2]": "56",
 				},
-				Flattered: map[string]string{
+				Flattened: map[string]string{
 					"attrib_key$.a[0].b":           "1",
 					"attrib_key$.a[1].password[0]": "12",
 					"attrib_key$.a[1].password[1]": "34",
@@ -139,7 +139,7 @@ func TestJSONFieldRedaction(t *testing.T) {
 					"attrib_key$.a[1].password.key1[2]": "56",
 					"attrib_key$.a[1].password.key2":    "val",
 				},
-				Flattered: map[string]string{
+				Flattened: map[string]string{
 					"attrib_key$.a[0].b":                "1",
 					"attrib_key$.a[1].password.key1[0]": "12",
 					"attrib_key$.a[1].password.key1[1]": "34",
@@ -160,7 +160,7 @@ func TestJSONFieldRedaction(t *testing.T) {
 					"attrib_key$.a[1].password.key1[2]": "true",
 					"attrib_key$.a[1].password.key2":    "false",
 				},
-				Flattered: map[string]string{
+				Flattened: map[string]string{
 					"attrib_key$.a[0].b":                "1",
 					"attrib_key$.a[1].password.key1[0]": "12",
 					"attrib_key$.a[1].password.key1[1]": "34.1",
@@ -201,7 +201,7 @@ func TestRedactionOnMatchingValuesByFQN(t *testing.T) {
 				Redacted: map[string]string{
 					"attrib_key$[1]": "34",
 				},
-				Flattered: map[string]string{
+				Flattened: map[string]string{
 					"attrib_key$[0]": "12",
 					"attrib_key$[1]": "34",
 					"attrib_key$[2]": "56",
@@ -216,7 +216,7 @@ func TestRedactionOnMatchingValuesByFQN(t *testing.T) {
 				Redacted: map[string]string{
 					"attrib_key$.password": "abc",
 				},
-				Flattered: map[string]string{
+				Flattened: map[string]string{
 					"attrib_key$.a":        "1",
 					"attrib_key$.password": "abc",
 				},
@@ -232,7 +232,7 @@ func TestRedactionOnMatchingValuesByFQN(t *testing.T) {
 					"attrib_key$.a[1].password[1]": "34",
 					"attrib_key$.a[1].password[2]": "56",
 				},
-				Flattered: map[string]string{
+				Flattened: map[string]string{
 					"attrib_key$.a[0].b":           "1",
 					"attrib_key$.a[1].password[0]": "12",
 					"attrib_key$.a[1].password[1]": "34",
@@ -248,7 +248,7 @@ func TestRedactionOnMatchingValuesByFQN(t *testing.T) {
 				Redacted: map[string]string{
 					"attrib_key$.a[1].password[1]": "34",
 				},
-				Flattered: map[string]string{
+				Flattened: map[string]string{
 					"attrib_key$.a[0].b":           "1",
 					"attrib_key$.a[1].password[0]": "12",
 					"attrib_key$.a[1].password[1]": "34",
@@ -266,7 +266,7 @@ func TestRedactionOnMatchingValuesByFQN(t *testing.T) {
 					"attrib_key$.a[1].password.key1[1]": "34",
 					"attrib_key$.a[1].password.key1[2]": "56",
 				},
-				Flattered: map[string]string{
+				Flattened: map[string]string{
 					"attrib_key$.a[0].b":                "1",
 					"attrib_key$.a[1].password.key1[0]": "12",
 					"attrib_key$.a[1].password.key1[1]": "34",
@@ -283,7 +283,7 @@ func TestRedactionOnMatchingValuesByFQN(t *testing.T) {
 				Redacted: map[string]string{
 					"attrib_key$.a[1].password.key1[1]": "34",
 				},
-				Flattered: map[string]string{
+				Flattened: map[string]string{
 					"attrib_key$.a[0].b":                "1",
 					"attrib_key$.a[1].password.key1[0]": "12",
 					"attrib_key$.a[1].password.key1[1]": "34",

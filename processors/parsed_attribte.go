@@ -44,8 +44,8 @@ func (p *ParsedSpanData) GetAttribute(key string) *ParsedAttribute {
 	pAttr, ok := p.parsedAttributes[key]
 	if !ok {
 		pAttr = &ParsedAttribute{
-			Flattered: map[string]string{},
-			Redacted: map[string]string{},
+			Flattened: map[string]string{},
+			Redacted:  map[string]string{},
 		}
 		p.parsedAttributes[key] = pAttr
 	}
@@ -66,7 +66,7 @@ const (
 // ParsedAttribute encapsulates
 type ParsedAttribute struct {
 	// flattered JSON, cookie of not redacted fields
-	Flattered map[string]string
+	Flattened map[string]string
 	// redacted flattered data
 	Redacted map[string]string
 }

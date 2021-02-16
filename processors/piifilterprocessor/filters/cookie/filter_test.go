@@ -23,9 +23,8 @@ func Test_CookieFilterNoReduction(t *testing.T) {
 	parsedAttr, err := filter.RedactAttribute(key, attrValue)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(parsedAttr.Redacted))
-	assert.Equal(t, map[string]string{"http.request.header.cookie.cookie1": "value1"}, parsedAttr.Flattered)
 	assert.Equal(t, &processors.ParsedAttribute{
-		Flattered: map[string]string{"http.request.header.cookie.cookie1": "value1"},
+		Flattened: map[string]string{"http.request.header.cookie.cookie1": "value1"},
 		Redacted:  map[string]string{},
 	}, parsedAttr)
 	assert.Equal(t, expectedCookieFilteredValue, attrValue.StringVal())
