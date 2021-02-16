@@ -117,7 +117,7 @@ func (p *piiFilterProcessor) ProcessTraces(ctx context.Context, td pdata.Traces)
 						parsedSpanData.PutParsedAttribute(key, parsedAttr)
 					}
 					if newAttr != nil {
-						span.Attributes().Insert(newAttr.Key, newAttr.Value)
+						span.Attributes().Insert(newAttr.Key, pdata.NewAttributeValueString(newAttr.Value))
 					}
 				})
 
@@ -217,7 +217,7 @@ func (p *piiFilterProcessor) processComplexData(span pdata.Span) {
 				err,
 			)
 		} else if newAttr != nil {
-			span.Attributes().Insert(newAttr.Key, newAttr.Value)
+			span.Attributes().Insert(newAttr.Key, pdata.NewAttributeValueString(newAttr.Value))
 		}
 	}
 }

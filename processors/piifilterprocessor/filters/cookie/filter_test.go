@@ -90,7 +90,7 @@ func TestSessionAttribute(t *testing.T) {
 	attrValue := pdata.NewAttributeValueString(cookieValue)
 	parsedAttribute, newAttr, err := filter.RedactAttribute(key, attrValue)
 	assert.NoError(t, err)
-	assert.Equal(t, &filters.Attribute{Key: "session.id", Value: pdata.NewAttributeValueString(hashedSession)}, newAttr)
+	assert.Equal(t, &filters.Attribute{Key: "session.id", Value: hashedSession}, newAttr)
 	assert.Equal(t, &processors.ParsedAttribute{
 		Flattened: map[string]string{
 			"sessionToken": "foobar",

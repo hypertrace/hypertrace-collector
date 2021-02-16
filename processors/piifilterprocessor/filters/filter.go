@@ -43,5 +43,5 @@ type Filter interface {
 // Attribute holds key and attribute value.
 type Attribute struct {
 	Key   string
-	Value pdata.AttributeValue
+	Value string
 }

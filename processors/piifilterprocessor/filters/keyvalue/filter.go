@@ -31,7 +31,7 @@ func (f *keyValueFilter) RedactAttribute(key string, value pdata.AttributeValue)
 		if isSession {
 			newAttr = &filters.Attribute{
 				Key:   "session.id",
-				Value: pdata.NewAttributeValueString(redactedValue),
+				Value: redactedValue,
 			}
 		}
 		attr := &processors.ParsedAttribute{

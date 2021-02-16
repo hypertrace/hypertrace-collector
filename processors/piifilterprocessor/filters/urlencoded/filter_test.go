@@ -201,7 +201,7 @@ func TestSessionAttribute(t *testing.T) {
 		Redacted:  map[string]string{"http.url.session": "foobar"},
 		Flattened: map[string]string{"session": "foobar", "username": "george"},
 	}, parsedAttribute)
-	assert.Equal(t, &filters.Attribute{Key: "session.id", Value: pdata.NewAttributeValueString(redaction.HashRedactor("foobar"))}, newAttr)
+	assert.Equal(t, &filters.Attribute{Key: "session.id", Value: redaction.HashRedactor("foobar")}, newAttr)
 
 	u, err := url.Parse(attrValue.StringVal())
 	assert.NoError(t, err)

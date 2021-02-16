@@ -2,11 +2,11 @@ package urlencoded
 
 import (
 	"fmt"
-	"github.com/hypertrace/collector/processors"
 	"net/url"
 
 	"go.opentelemetry.io/collector/consumer/pdata"
 
+	"github.com/hypertrace/collector/processors"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
 )
@@ -73,7 +73,7 @@ func (f *urlEncodedFilter) RedactAttribute(key string, value pdata.AttributeValu
 				if isSession {
 					newAttr = &filters.Attribute{
 						Key:   "session.id",
-						Value: pdata.NewAttributeValueString(redactedValue),
+						Value: redactedValue,
 					}
 				}
 				attr.Redacted[fqn] = value

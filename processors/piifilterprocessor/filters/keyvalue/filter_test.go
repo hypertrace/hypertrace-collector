@@ -110,7 +110,7 @@ func TestSessionAttribute(t *testing.T) {
 	hashedSession := redaction.HashRedactor(attrValue.StringVal())
 	parsedAttribute, newAttr, err := filter.RedactAttribute("http.request.header.session", attrValue)
 	require.NoError(t, err)
-	assert.Equal(t, &filters.Attribute{Key: "session.id", Value: pdata.NewAttributeValueString(hashedSession)}, newAttr)
+	assert.Equal(t, &filters.Attribute{Key: "session.id", Value: hashedSession}, newAttr)
 	assert.Equal(t, &processors.ParsedAttribute{
 		Redacted: map[string]string{
 			"http.request.header.session": "foobar",
