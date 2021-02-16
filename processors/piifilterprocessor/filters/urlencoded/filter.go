@@ -77,7 +77,13 @@ func (f *urlEncodedFilter) RedactAttribute(key string, value pdata.AttributeValu
 				}
 				attr.Redacted[param] = value
 				v.Add(param, redactedValue)
-			} else if isRedactedByValue, redactedValue := f.m.FilterStringValueRegexs(value); isRedactedByValue {
+			} else if isRedactedByValue, isSession, redactedValue := f.m.FilterStringValueRegexs(value); isRedactedByValue {
+				if isSession {
+					newAttr = &filters.Attribute{
+						Key:   "session.id",
+						Value: redactedValue,
+					}
+				}
 				attr.Redacted[param] = value
 				v.Add(param, redactedValue)
 			} else {

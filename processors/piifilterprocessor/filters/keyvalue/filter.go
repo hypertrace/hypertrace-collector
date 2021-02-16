@@ -1,11 +1,11 @@
 package keyvalue
 
 import (
+	"go.opentelemetry.io/collector/consumer/pdata"
+
 	"github.com/hypertrace/collector/processors"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
-
-	"go.opentelemetry.io/collector/consumer/pdata"
 )
 
 type keyValueFilter struct {
@@ -41,12 +41,19 @@ func (f *keyValueFilter) RedactAttribute(key string, value pdata.AttributeValue)
 		return attr, newAttr, nil
 	}
 
-	if isRedacted, redactedValue := f.m.FilterStringValueRegexs(value.StringVal()); isRedacted {
+	if isRedacted, isSession, redactedValue := f.m.FilterStringValueRegexs(value.StringVal()); isRedacted {
+		var newAttr *filters.Attribute
+		if isSession {
+			newAttr = &filters.Attribute{
+				Key:   "session.id",
+				Value: redactedValue,
+			}
+		}
 		attr := &processors.ParsedAttribute{
 			Redacted: map[string]string{key: value.StringVal()},
 		}
 		value.SetStringVal(redactedValue)
-		return attr, nil, nil
+		return attr, newAttr, nil
 	}
 
 	return nil, nil, nil

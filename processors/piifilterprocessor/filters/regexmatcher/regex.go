@@ -45,18 +45,20 @@ func (rm *Matcher) FilterKeyRegexs(keyToMatch string, actualKey string, value st
 }
 
 // FilterStringValueRegexs looks into the string value to decide whether filter the value or not
-func (rm *Matcher) FilterStringValueRegexs(value string) (bool, string) {
+func (rm *Matcher) FilterStringValueRegexs(value string) (bool, bool, string) {
 	var (
 		isRedacted      bool
+		isSession       bool
 		isRegexRedacted bool
 	)
 
 	for _, r := range rm.valueRegExs {
 		isRegexRedacted, value = rm.replacingRegex(value, r.Regexp, r.Redactor)
 		isRedacted = isRedacted || isRegexRedacted
+		isSession = isSession || r.SessionIdentifier
 	}
 
-	return isRedacted, value
+	return isRedacted, isSession, value
 }
 
 func (rm *Matcher) replacingRegex(value string, regex *regexp.Regexp, redactor redaction.Redactor) (bool, string) {

@@ -45,24 +45,33 @@ func (f *jsonFilter) RedactAttribute(key string, value pdata.AttributeValue) (*p
 		// filter out any keywords out of the string
 		f.logger.Debug("Problem parsing json. Falling back to value regex filtering")
 
-		if isRedacted, redactedValue := f.m.FilterStringValueRegexs(value.StringVal()); isRedacted {
+		if isRedacted, isSession, redactedValue := f.m.FilterStringValueRegexs(value.StringVal()); isRedacted {
 			attr := &processors.ParsedAttribute{
 				Redacted: map[string]string{key: value.StringVal()},
 			}
+			var newAttr *filters.Attribute
 			value.SetStringVal(redactedValue)
-			return attr, nil, nil
+			if isSession {
+				newAttr = &filters.Attribute{
+					Key:   "session.id",
+					Value: redactedValue,
+				}
+			}
+			return attr, newAttr, nil
 		}
 
 		return nil, nil, filters.WrapError(filters.ErrUnprocessableValue, err.Error())
 	}
 
-	parsedAttr := &processors.ParsedAttribute{
-		Redacted:  map[string]string{},
-		Flattened: map[string]string{},
+	parsedAttr := &parsedAttributeWithNewAttributes{
+		ParsedAttribute: &processors.ParsedAttribute{
+			Redacted:  map[string]string{},
+			Flattened: map[string]string{},
+		},
 	}
 	isRedacted, redactedValue := f.filterJSON(parsedAttr, jsonPayload, nil, "", key, jsonPathPrefix, false)
 	if !isRedacted {
-		return parsedAttr, nil, nil
+		return parsedAttr.ParsedAttribute, nil, nil
 	}
 
 	redactedValueAsString, err := f.mu.MarshalToString(redactedValue)
@@ -72,11 +81,11 @@ func (f *jsonFilter) RedactAttribute(key string, value pdata.AttributeValue) (*p
 
 	value.SetStringVal(redactedValueAsString)
 
-	return parsedAttr, nil, nil
+	return parsedAttr.ParsedAttribute, parsedAttr.sessionAttribute, nil
 }
 
 func (f *jsonFilter) filterJSON(
-	parsedAttr *processors.ParsedAttribute,
+	parsedAttr *parsedAttributeWithNewAttributes,
 	value interface{},
 	matchedRegex *regexmatcher.Regex,
 	key string,
@@ -94,7 +103,7 @@ func (f *jsonFilter) filterJSON(
 }
 
 func (f *jsonFilter) filterJSONArray(
-	parsedAttr *processors.ParsedAttribute,
+	parsedAttr *parsedAttributeWithNewAttributes,
 	arrValue []interface{},
 	matchedRegex *regexmatcher.Regex,
 	key string,
@@ -122,7 +131,7 @@ func (f *jsonFilter) filterJSONArray(
 }
 
 func (f *jsonFilter) filterJSONMap(
-	parsedAttr *processors.ParsedAttribute,
+	parsedAttr *parsedAttributeWithNewAttributes,
 	mValue map[string]interface{},
 	matchedRegex *regexmatcher.Regex,
 	_ string,
@@ -149,7 +158,7 @@ func (f *jsonFilter) filterJSONMap(
 }
 
 func (f *jsonFilter) filterJSONScalar(
-	parsedAttr *processors.ParsedAttribute,
+	parsedAttr *parsedAttributeWithNewAttributes,
 	value interface{},
 	matchedRegex *regexmatcher.Regex,
 	key string,
@@ -157,7 +166,6 @@ func (f *jsonFilter) filterJSONScalar(
 	jsonPath string,
 	checked bool,
 ) (bool, interface{}) {
-	fqn := fmt.Sprintf("%s%s", actualKey, jsonPath)
 	parsedAttr.Flattened[jsonPath] = fmt.Sprintf("%v", value)
 
 	if matchedRegex == nil && !checked {
@@ -167,21 +175,29 @@ func (f *jsonFilter) filterJSONScalar(
 	switch tt := value.(type) {
 	case string:
 		if matchedRegex != nil {
-			parsedAttr.Redacted[fqn] = tt
+			parsedAttr.Redacted[jsonPath] = tt
 			return true, f.m.FilterMatchedKey(matchedRegex.Redactor, actualKey, tt, jsonPath)
 		}
-		stringValueFiltered, vvFiltered := f.m.FilterStringValueRegexs(tt)
+		stringValueFiltered, isSession, vvFiltered := f.m.FilterStringValueRegexs(tt)
 		if stringValueFiltered {
-			parsedAttr.Redacted[fqn] = tt
+			if isSession {
+				parsedAttr.sessionAttribute = &filters.Attribute{Key: "session.id", Value: tt}
+			}
+			parsedAttr.Redacted[jsonPath] = tt
 			return true, vvFiltered
 		}
 	case interface{}:
 		if matchedRegex != nil {
 			str := fmt.Sprintf("%v", tt)
-			parsedAttr.Redacted[fqn] = str
+			parsedAttr.Redacted[jsonPath] = str
 			return true, f.m.FilterMatchedKey(matchedRegex.Redactor, actualKey, str, jsonPath)
 		}
 	}
 
 	return false, value
+}
+
+type parsedAttributeWithNewAttributes struct {
+	*processors.ParsedAttribute
+	sessionAttribute *filters.Attribute
 }

@@ -1,13 +1,13 @@
 package sql
 
 import (
-	"github.com/hypertrace/collector/processors"
 	"strings"
 	"unicode"
 
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 	"go.opentelemetry.io/collector/consumer/pdata"
 
+	"github.com/hypertrace/collector/processors"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/sql/internal"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"

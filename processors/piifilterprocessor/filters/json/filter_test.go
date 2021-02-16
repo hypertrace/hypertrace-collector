@@ -95,7 +95,7 @@ func TestJSONFieldRedaction(t *testing.T) {
 			expectedRedactedAttrValue: `[{"a":"1"},{"password":"***"}]`,
 			parsedAttribute: &processors.ParsedAttribute{
 				Redacted: map[string]string{
-					"attrib_key$[1].password": "abc",
+					"$[1].password": "abc",
 				},
 				Flattened: map[string]string{
 					"$[0].a":        "1",
@@ -108,7 +108,7 @@ func TestJSONFieldRedaction(t *testing.T) {
 			expectedRedactedAttrValue: `{"a": [{"b": "1"}, {"password": "***"}]}`,
 			parsedAttribute: &processors.ParsedAttribute{
 				Redacted: map[string]string{
-					"attrib_key$.a[1].password": "abc",
+					"$.a[1].password": "abc",
 				},
 				Flattened: map[string]string{
 					"$.a[0].b":        "1",
@@ -121,9 +121,9 @@ func TestJSONFieldRedaction(t *testing.T) {
 			expectedRedactedAttrValue: `{"a": [{"b": "1"}, {"password": ["***","***","***"]}]}`,
 			parsedAttribute: &processors.ParsedAttribute{
 				Redacted: map[string]string{
-					"attrib_key$.a[1].password[0]": "12",
-					"attrib_key$.a[1].password[1]": "34",
-					"attrib_key$.a[1].password[2]": "56",
+					"$.a[1].password[0]": "12",
+					"$.a[1].password[1]": "34",
+					"$.a[1].password[2]": "56",
 				},
 				Flattened: map[string]string{
 					"$.a[0].b":           "1",
@@ -140,10 +140,10 @@ func TestJSONFieldRedaction(t *testing.T) {
 				"{\"password\": {\"key1\":[\"***\",\"***\",\"***\"], \"key2\":\"***\"}}]}",
 			parsedAttribute: &processors.ParsedAttribute{
 				Redacted: map[string]string{
-					"attrib_key$.a[1].password.key1[0]": "12",
-					"attrib_key$.a[1].password.key1[1]": "34",
-					"attrib_key$.a[1].password.key1[2]": "56",
-					"attrib_key$.a[1].password.key2":    "val",
+					"$.a[1].password.key1[0]": "12",
+					"$.a[1].password.key1[1]": "34",
+					"$.a[1].password.key1[2]": "56",
+					"$.a[1].password.key2":    "val",
 				},
 				Flattened: map[string]string{
 					"$.a[0].b":                "1",
@@ -161,10 +161,10 @@ func TestJSONFieldRedaction(t *testing.T) {
 				"{\"password\": {\"key1\":[\"***\",\"***\",\"***\"], \"key2\":\"***\"}}]}",
 			parsedAttribute: &processors.ParsedAttribute{
 				Redacted: map[string]string{
-					"attrib_key$.a[1].password.key1[0]": "12",
-					"attrib_key$.a[1].password.key1[1]": "34.1",
-					"attrib_key$.a[1].password.key1[2]": "true",
-					"attrib_key$.a[1].password.key2":    "false",
+					"$.a[1].password.key1[0]": "12",
+					"$.a[1].password.key1[1]": "34.1",
+					"$.a[1].password.key1[2]": "true",
+					"$.a[1].password.key2":    "false",
 				},
 				Flattened: map[string]string{
 					"$.a[0].b":                "1",
@@ -206,7 +206,7 @@ func TestRedactionOnMatchingValuesByFQN(t *testing.T) {
 			expectedRedactedAttrValue: `["12","***","56"]`,
 			parsedAttribute: &processors.ParsedAttribute{
 				Redacted: map[string]string{
-					"attrib_key$[1]": "34",
+					"$[1]": "34",
 				},
 				Flattened: map[string]string{
 					"$[0]": "12",
@@ -221,7 +221,7 @@ func TestRedactionOnMatchingValuesByFQN(t *testing.T) {
 			expectedRedactedAttrValue: `{"a": "1","password": "***"}`,
 			parsedAttribute: &processors.ParsedAttribute{
 				Redacted: map[string]string{
-					"attrib_key$.password": "abc",
+					"$.password": "abc",
 				},
 				Flattened: map[string]string{
 					"$.a":        "1",
@@ -235,9 +235,9 @@ func TestRedactionOnMatchingValuesByFQN(t *testing.T) {
 			expectedRedactedAttrValue: `{"a": [{"b": "1"}, {"password": ["***","***","***"]}]}`,
 			parsedAttribute: &processors.ParsedAttribute{
 				Redacted: map[string]string{
-					"attrib_key$.a[1].password[0]": "12",
-					"attrib_key$.a[1].password[1]": "34",
-					"attrib_key$.a[1].password[2]": "56",
+					"$.a[1].password[0]": "12",
+					"$.a[1].password[1]": "34",
+					"$.a[1].password[2]": "56",
 				},
 				Flattened: map[string]string{
 					"$.a[0].b":           "1",
@@ -253,7 +253,7 @@ func TestRedactionOnMatchingValuesByFQN(t *testing.T) {
 			expectedRedactedAttrValue: `{"a": [{"b": "1"}, {"password": ["12","***","56"]}]}`,
 			parsedAttribute: &processors.ParsedAttribute{
 				Redacted: map[string]string{
-					"attrib_key$.a[1].password[1]": "34",
+					"$.a[1].password[1]": "34",
 				},
 				Flattened: map[string]string{
 					"$.a[0].b":           "1",
@@ -269,9 +269,9 @@ func TestRedactionOnMatchingValuesByFQN(t *testing.T) {
 			expectedRedactedAttrValue: `{"a": [{"b": "1"}, {"password": {"key1":["***","***","***"], "key2":"val"}}]}`,
 			parsedAttribute: &processors.ParsedAttribute{
 				Redacted: map[string]string{
-					"attrib_key$.a[1].password.key1[0]": "12",
-					"attrib_key$.a[1].password.key1[1]": "34",
-					"attrib_key$.a[1].password.key1[2]": "56",
+					"$.a[1].password.key1[0]": "12",
+					"$.a[1].password.key1[1]": "34",
+					"$.a[1].password.key1[2]": "56",
 				},
 				Flattened: map[string]string{
 					"$.a[0].b":                "1",
@@ -288,7 +288,7 @@ func TestRedactionOnMatchingValuesByFQN(t *testing.T) {
 			expectedRedactedAttrValue: `{"a": [{"b": "1"}, {"password": {"key1":[12,"***",56], "key2":"val"}}]}`,
 			parsedAttribute: &processors.ParsedAttribute{
 				Redacted: map[string]string{
-					"attrib_key$.a[1].password.key1[1]": "34",
+					"$.a[1].password.key1[1]": "34",
 				},
 				Flattened: map[string]string{
 					"$.a[0].b":                "1",
