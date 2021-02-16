@@ -8,6 +8,7 @@ import (
 
 type contextKey struct{}
 
+// FromContext returns ParsedTracesData and updated context
 func FromContext(ctx context.Context) (context.Context, *ParsedTracesData) {
 	sAttr, ok := ctx.Value(contextKey{}).(*ParsedTracesData)
 	if ok {
@@ -20,10 +21,12 @@ func FromContext(ctx context.Context) (context.Context, *ParsedTracesData) {
 	return ctx, ptd
 }
 
+// ParsedTracesData
 type ParsedTracesData struct {
 	spanAttributeMap map[pdata.SpanID]*ParsedSpanData
 }
 
+// GetParsedSpanData returns ParsedSpanData for a given span.
 func (p *ParsedTracesData) GetParsedSpanData(spanID pdata.SpanID) *ParsedSpanData {
 	pSpanData, ok := p.spanAttributeMap[spanID]
 	if !ok {
@@ -35,11 +38,12 @@ func (p *ParsedTracesData) GetParsedSpanData(spanID pdata.SpanID) *ParsedSpanDat
 	return pSpanData
 }
 
+// ParsedSpanData encapsulates span parsed attributes.
 type ParsedSpanData struct {
 	parsedAttributes map[string]*ParsedAttribute
 }
 
-// TODO shall it accept span and the original value as well?
+// GetAttribute returns ParsedAttribute for a given attribute key.
 func (p *ParsedSpanData) GetAttribute(key string) *ParsedAttribute {
 	pAttr, ok := p.parsedAttributes[key]
 	if !ok {
@@ -52,20 +56,15 @@ func (p *ParsedSpanData) GetAttribute(key string) *ParsedAttribute {
 	return pAttr
 }
 
+// PutParsedAttribute puts ParsedAttribute into ParsedSpanData.
 func (p *ParsedSpanData) PutParsedAttribute(key string, attr *ParsedAttribute) {
 	p.parsedAttributes[key] = attr
 }
 
-type ComplexDataType int
-
-const (
-	Cookie ComplexDataType = iota
-	JSON
-)
-
-// ParsedAttribute encapsulates
+// ParsedAttribute encapsulates parsed a single attribute.
 type ParsedAttribute struct {
 	// flattered JSON, cookie of not redacted fields
+	// e.g. JSON {"a": "b"} will contain "$.a": "b"
 	Flattened map[string]string
 	// redacted flattered data
 	Redacted map[string]string
