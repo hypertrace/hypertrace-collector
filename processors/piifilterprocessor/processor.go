@@ -174,9 +174,6 @@ func (p *piiFilterProcessor) processMatchingAttributes(key string, value pdata.A
 	return nil, nil
 }
 
-// http.request.body = {"authorization": {"b": "c"} }
-// http.request.body.authorization.b = c -> redacted http.request.body.authorization = ***
-
 func (p *piiFilterProcessor) processComplexData(span pdata.Span) {
 	for attrKey, elem := range p.structuredData {
 		attr, found := span.Attributes().Get(attrKey)
