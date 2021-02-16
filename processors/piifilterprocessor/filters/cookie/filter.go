@@ -1,7 +1,6 @@
 package cookie
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -48,7 +47,6 @@ func (f *cookieFilter) RedactAttribute(key string, value pdata.AttributeValue) (
 
 	var attr *filters.Attribute
 	for _, cookie := range cookies {
-		fqn := fmt.Sprintf("%s.%s", key, cookie.Name)
 		parsedAttr.Flattened[cookie.Name] = cookie.Value
 
 		if isRedactedByKey, isSession, redactedValue := f.m.FilterKeyRegexs(cookie.Name, key, cookie.Value, cookie.Name); isRedactedByKey {
@@ -58,10 +56,10 @@ func (f *cookieFilter) RedactAttribute(key string, value pdata.AttributeValue) (
 					Value: redactedValue,
 				}
 			}
-			parsedAttr.Redacted[fqn] = cookie.Value
+			parsedAttr.Redacted[cookie.Name] = cookie.Value
 			cookie.Value = redactedValue
 		} else if isRedactedByValue, redactedValue := f.m.FilterStringValueRegexs(cookie.Value, key, cookie.Name); isRedactedByValue {
-			parsedAttr.Redacted[fqn] = cookie.Value
+			parsedAttr.Redacted[cookie.Name] = cookie.Value
 			cookie.Value = redactedValue
 		}
 	}

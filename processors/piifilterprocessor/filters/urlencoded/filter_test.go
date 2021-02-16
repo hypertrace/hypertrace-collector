@@ -1,7 +1,6 @@
 package urlencoded
 
 import (
-	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"net/url"
 	"regexp"
 	"testing"
@@ -10,6 +9,7 @@ import (
 	"go.opentelemetry.io/collector/consumer/pdata"
 
 	"github.com/hypertrace/collector/processors"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 )
@@ -75,7 +75,7 @@ func TestURLEncodedFilterSuccessForSensitiveKey(t *testing.T) {
 	parsedAttr, newAttr, err := filter.RedactAttribute("password", attrValue)
 	assert.NoError(t, err)
 	assert.Equal(t, &processors.ParsedAttribute{
-		Redacted:  map[string]string{"password.password": "mypw$"},
+		Redacted:  map[string]string{"password": "mypw$"},
 		Flattened: map[string]string{"password": "mypw$", "user": "dave"},
 	}, parsedAttr)
 	assert.Nil(t, newAttr)
@@ -106,7 +106,7 @@ func TestURLEncodedFilterSuccessForSensitiveKeyMultiple(t *testing.T) {
 			"password": "mypw#",
 		},
 		Redacted: map[string]string{
-			"password.password": "mypw#",
+			"password": "mypw#",
 		},
 	}, parsedAttribute)
 	assert.Nil(t, newAttr)
@@ -129,7 +129,7 @@ func TestURLEncodedFilterSuccessForURL(t *testing.T) {
 	parsedAttribute, newAttr, err := filter.RedactAttribute("http.url", attrValue)
 	assert.NoError(t, err)
 	assert.Equal(t, &processors.ParsedAttribute{
-		Redacted:  map[string]string{"http.url.password": "washington"},
+		Redacted:  map[string]string{"password": "washington"},
 		Flattened: map[string]string{"password": "washington", "username": "george"},
 	}, parsedAttribute)
 	assert.Nil(t, newAttr)
@@ -176,7 +176,7 @@ func TestURLEncodedFilterSuccessForSensitiveValue(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, &processors.ParsedAttribute{
 		Flattened: map[string]string{"key1": "filter_value", "key2": "value2"},
-		Redacted:  map[string]string{"whatever.key1": "filter_value"},
+		Redacted:  map[string]string{"key1": "filter_value"},
 	}, parsedAttribute)
 	assert.Nil(t, newAttr)
 
@@ -198,7 +198,7 @@ func TestSessionAttribute(t *testing.T) {
 	parsedAttribute, newAttr, err := filter.RedactAttribute("http.url", attrValue)
 	assert.NoError(t, err)
 	assert.Equal(t, &processors.ParsedAttribute{
-		Redacted:  map[string]string{"http.url.session": "foobar"},
+		Redacted:  map[string]string{"session": "foobar"},
 		Flattened: map[string]string{"session": "foobar", "username": "george"},
 	}, parsedAttribute)
 	assert.Equal(t, &filters.Attribute{Key: "session.id", Value: redaction.HashRedactor("foobar")}, newAttr)

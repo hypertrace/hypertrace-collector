@@ -48,7 +48,7 @@ func TestCookieFilterFiltersCookieKey(t *testing.T) {
 			"cookie1":  "value1",
 			"password": "value2",
 		},
-		Redacted: map[string]string{"http.request.header.cookie.password": "value2"},
+		Redacted: map[string]string{"password": "value2"},
 	}, parsedAttr)
 	assert.Equal(t, expectedCookieFilteredValue, attrValue.StringVal())
 }
@@ -67,7 +67,7 @@ func TestCookieFilterFiltersSetCookieKey(t *testing.T) {
 		Flattened: map[string]string{
 			"password": "value2",
 		}, Redacted: map[string]string{
-			"http.response.header.set-cookie.password": "value2",
+			"password": "value2",
 		},
 	}, parsedAttribute)
 	assert.Equal(t, expectedCookieFilteredValue, attrValue.StringVal())
@@ -95,7 +95,7 @@ func TestSessionAttribute(t *testing.T) {
 		Flattened: map[string]string{
 			"sessionToken": "foobar",
 		}, Redacted: map[string]string{
-			"http.request.header.cookie.sessionToken": "foobar",
+			"sessionToken": "foobar",
 		},
 	}, parsedAttribute)
 	assert.Equal(t, expectedCookieFilteredValue, attrValue.StringVal())
