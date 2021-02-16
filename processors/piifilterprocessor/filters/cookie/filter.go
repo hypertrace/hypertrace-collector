@@ -48,7 +48,7 @@ func (f *cookieFilter) RedactAttribute(key string, value pdata.AttributeValue) (
 
 	for _, cookie := range cookies {
 		fqn := fmt.Sprintf("%s.%s", key, cookie.Name)
-		attr.Flattened[fqn] = cookie.Value
+		attr.Flattened[cookie.Name] = cookie.Value
 
 		if isRedactedByKey, isSession, redactedValue := f.m.FilterKeyRegexs(cookie.Name, key, cookie.Value, cookie.Name); isRedactedByKey {
 			if isSession {

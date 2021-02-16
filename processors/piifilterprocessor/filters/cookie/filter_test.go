@@ -24,7 +24,7 @@ func Test_CookieFilterNoReduction(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(parsedAttr.Redacted))
 	assert.Equal(t, &processors.ParsedAttribute{
-		Flattened: map[string]string{"http.request.header.cookie.cookie1": "value1"},
+		Flattened: map[string]string{"cookie1": "value1"},
 		Redacted:  map[string]string{},
 	}, parsedAttr)
 	assert.Equal(t, expectedCookieFilteredValue, attrValue.StringVal())
@@ -41,8 +41,8 @@ func TestCookieFilterFiltersCookieKey(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, &processors.ParsedAttribute{
 		Flattened: map[string]string{
-			"http.request.header.cookie.cookie1":  "value1",
-			"http.request.header.cookie.password": "value2",
+			"cookie1":  "value1",
+			"password": "value2",
 		},
 		Redacted: map[string]string{"http.request.header.cookie.password": "value2"},
 	}, parsedAttr)
@@ -60,7 +60,7 @@ func TestCookieFilterFiltersSetCookieKey(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, &processors.ParsedAttribute{
 		Flattened: map[string]string{
-			"http.response.header.set-cookie.password": "value2",
+			"password": "value2",
 		}, Redacted: map[string]string{
 			"http.response.header.set-cookie.password": "value2",
 		},
