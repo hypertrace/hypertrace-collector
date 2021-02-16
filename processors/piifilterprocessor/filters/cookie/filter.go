@@ -58,7 +58,7 @@ func (f *cookieFilter) RedactAttribute(key string, value pdata.AttributeValue) (
 			}
 			parsedAttr.Redacted[cookie.Name] = cookie.Value
 			cookie.Value = redactedValue
-		} else if isRedactedByValue, redactedValue := f.m.FilterStringValueRegexs(cookie.Value, key, cookie.Name); isRedactedByValue {
+		} else if isRedactedByValue, redactedValue := f.m.FilterStringValueRegexs(cookie.Value); isRedactedByValue {
 			parsedAttr.Redacted[cookie.Name] = cookie.Value
 			cookie.Value = redactedValue
 		}

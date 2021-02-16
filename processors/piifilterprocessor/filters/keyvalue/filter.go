@@ -41,7 +41,7 @@ func (f *keyValueFilter) RedactAttribute(key string, value pdata.AttributeValue)
 		return attr, newAttr, nil
 	}
 
-	if isRedacted, redactedValue := f.m.FilterStringValueRegexs(value.StringVal(), key, ""); isRedacted {
+	if isRedacted, redactedValue := f.m.FilterStringValueRegexs(value.StringVal()); isRedacted {
 		attr := &processors.ParsedAttribute{
 			Redacted: map[string]string{key: value.StringVal()},
 		}

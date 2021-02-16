@@ -45,7 +45,7 @@ func (f *jsonFilter) RedactAttribute(key string, value pdata.AttributeValue) (*p
 		// filter out any keywords out of the string
 		f.logger.Debug("Problem parsing json. Falling back to value regex filtering")
 
-		if isRedacted, redactedValue := f.m.FilterStringValueRegexs(value.StringVal(), key, ""); isRedacted {
+		if isRedacted, redactedValue := f.m.FilterStringValueRegexs(value.StringVal()); isRedacted {
 			attr := &processors.ParsedAttribute{
 				Redacted: map[string]string{key: value.StringVal()},
 			}
@@ -170,7 +170,7 @@ func (f *jsonFilter) filterJSONScalar(
 			parsedAttr.Redacted[fqn] = tt
 			return true, f.m.FilterMatchedKey(matchedRegex.Redactor, actualKey, tt, jsonPath)
 		}
-		stringValueFiltered, vvFiltered := f.m.FilterStringValueRegexs(tt, actualKey, jsonPath)
+		stringValueFiltered, vvFiltered := f.m.FilterStringValueRegexs(tt)
 		if stringValueFiltered {
 			parsedAttr.Redacted[fqn] = tt
 			return true, vvFiltered

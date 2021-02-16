@@ -4,8 +4,9 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 )
 
 func TestFilterMatchedKey(t *testing.T) {
