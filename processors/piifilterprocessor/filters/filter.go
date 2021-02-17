@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"go.opentelemetry.io/collector/consumer/pdata"
+
+	"github.com/hypertrace/collector/processors"
 )
 
 type wrappedError struct {
@@ -32,8 +34,14 @@ var (
 type Filter interface {
 	Name() string
 
-	// RedactAttribute decided to redact and attribute and returns true if the value has
-	// been redacted or false otherwise. It also returns and error when something went
-	// went wrong by redacting the value.
-	RedactAttribute(key string, value pdata.AttributeValue) (isRedacted bool, err error)
+	// RedactAttribute redacts and attribute based on the filter configuration.
+	// It returns reduction result as ParsedAttribute and optionally a new attribute
+	// that should be added to a span.
+	RedactAttribute(key string, value pdata.AttributeValue) (parsedAttribute *processors.ParsedAttribute, newAttribute *Attribute, err error)
+}
+
+// Attribute holds key and attribute value.
+type Attribute struct {
+	Key   string
+	Value string
 }

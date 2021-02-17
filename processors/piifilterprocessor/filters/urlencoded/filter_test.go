@@ -5,10 +5,13 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
-	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/consumer/pdata"
+
+	"github.com/hypertrace/collector/processors"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
+	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 )
 
 func createURLEncodedFilter(t *testing.T, keyRegexs, valueRegexs []regexmatcher.Regex) *urlEncodedFilter {
@@ -43,9 +46,15 @@ func TestURLEncodedFilterSuccessOnNoSensitiveValue(t *testing.T) {
 	v.Add("user", "dave")
 
 	attrValue := pdata.NewAttributeValueString(v.Encode())
-	isRedacted, err := filter.RedactAttribute("password", attrValue)
-	assert.False(t, isRedacted)
+	parsedAttr, newAttr, err := filter.RedactAttribute("password", attrValue)
 	assert.NoError(t, err)
+	assert.Equal(t, &processors.ParsedAttribute{
+		Flattened: map[string]string{
+			"user": "dave",
+		},
+		Redacted: map[string]string{},
+	}, parsedAttr)
+	assert.Nil(t, newAttr)
 
 	filteredParams, err := url.ParseQuery(attrValue.StringVal())
 	assert.NoError(t, err)
@@ -63,9 +72,13 @@ func TestURLEncodedFilterSuccessForSensitiveKey(t *testing.T) {
 	v.Add("password", "mypw$")
 
 	attrValue := pdata.NewAttributeValueString(v.Encode())
-	isRedacted, err := filter.RedactAttribute("password", attrValue)
-	assert.True(t, isRedacted)
+	parsedAttr, newAttr, err := filter.RedactAttribute("password", attrValue)
 	assert.NoError(t, err)
+	assert.Equal(t, &processors.ParsedAttribute{
+		Redacted:  map[string]string{"password": "mypw$"},
+		Flattened: map[string]string{"password": "mypw$", "user": "dave"},
+	}, parsedAttr)
+	assert.Nil(t, newAttr)
 
 	filteredParams, err := url.ParseQuery(attrValue.StringVal())
 	assert.NoError(t, err)
@@ -85,9 +98,18 @@ func TestURLEncodedFilterSuccessForSensitiveKeyMultiple(t *testing.T) {
 	v.Add("password", "mypw#")
 
 	attrValue := pdata.NewAttributeValueString(v.Encode())
-	isRedacted, err := filter.RedactAttribute("password", attrValue)
-	assert.True(t, isRedacted)
+	parsedAttribute, newAttr, err := filter.RedactAttribute("password", attrValue)
 	assert.NoError(t, err)
+	assert.Equal(t, &processors.ParsedAttribute{
+		Flattened: map[string]string{
+			"user":     "dave",
+			"password": "mypw#",
+		},
+		Redacted: map[string]string{
+			"password": "mypw#",
+		},
+	}, parsedAttribute)
+	assert.Nil(t, newAttr)
 
 	filteredParams, err := url.ParseQuery(attrValue.StringVal())
 	assert.NoError(t, err)
@@ -104,9 +126,13 @@ func TestURLEncodedFilterSuccessForURL(t *testing.T) {
 	testURL := "http://traceshop.dev/login?username=george&password=washington"
 
 	attrValue := pdata.NewAttributeValueString(testURL)
-	isRedacted, err := filter.RedactAttribute("http.url", attrValue)
-	assert.True(t, isRedacted)
+	parsedAttribute, newAttr, err := filter.RedactAttribute("http.url", attrValue)
 	assert.NoError(t, err)
+	assert.Equal(t, &processors.ParsedAttribute{
+		Redacted:  map[string]string{"password": "washington"},
+		Flattened: map[string]string{"password": "washington", "username": "george"},
+	}, parsedAttribute)
+	assert.Nil(t, newAttr)
 
 	u, err := url.Parse(attrValue.StringVal())
 	assert.NoError(t, err)
@@ -126,9 +152,10 @@ func TestURLEncodedFilterFailsParsingURL(t *testing.T) {
 	testURL := "http://x: namedport"
 
 	attrValue := pdata.NewAttributeValueString(testURL)
-	isRedacted, err := filter.RedactAttribute("http.url", attrValue)
+	parsedAttribute, newAttr, err := filter.RedactAttribute("http.url", attrValue)
 	assert.Error(t, err)
-	assert.False(t, isRedacted)
+	assert.Nil(t, parsedAttribute)
+	assert.Nil(t, newAttr)
 	assert.Equal(t, testURL, attrValue.StringVal())
 }
 
@@ -145,13 +172,43 @@ func TestURLEncodedFilterSuccessForSensitiveValue(t *testing.T) {
 	v.Add("key2", "value2")
 
 	attrValue := pdata.NewAttributeValueString(v.Encode())
-	isRedacted, err := filter.RedactAttribute("whatever", attrValue)
+	parsedAttribute, newAttr, err := filter.RedactAttribute("whatever", attrValue)
 	assert.NoError(t, err)
-	assert.True(t, isRedacted)
+	assert.Equal(t, &processors.ParsedAttribute{
+		Flattened: map[string]string{"key1": "filter_value", "key2": "value2"},
+		Redacted:  map[string]string{"key1": "filter_value"},
+	}, parsedAttribute)
+	assert.Nil(t, newAttr)
 
 	filteredParams, err := url.ParseQuery(attrValue.StringVal())
 	assert.NoError(t, err)
 	assert.Equal(t, grabURLValue(filteredParams, "key1"), "***")
 	assert.Equal(t, grabURLValue(filteredParams, "key2"), "value2")
+	assert.False(t, hasRemainingValues(filteredParams))
+}
+
+func TestSessionAttribute(t *testing.T) {
+	filter := createURLEncodedFilter(t, []regexmatcher.Regex{
+		{Regexp: regexp.MustCompile("^session$"), Redactor: redaction.HashRedactor, SessionIdentifier: true},
+	}, nil)
+
+	testURL := "http://traceshop.dev/login?username=george&session=foobar"
+
+	attrValue := pdata.NewAttributeValueString(testURL)
+	parsedAttribute, newAttr, err := filter.RedactAttribute("http.url", attrValue)
+	assert.NoError(t, err)
+	assert.Equal(t, &processors.ParsedAttribute{
+		Redacted:  map[string]string{"session": "foobar"},
+		Flattened: map[string]string{"session": "foobar", "username": "george"},
+	}, parsedAttribute)
+	assert.Equal(t, &filters.Attribute{Key: "session.id", Value: redaction.HashRedactor("foobar")}, newAttr)
+
+	u, err := url.Parse(attrValue.StringVal())
+	assert.NoError(t, err)
+
+	filteredParams, err := url.ParseQuery(u.RawQuery)
+	assert.NoError(t, err)
+	assert.Equal(t, "george", grabURLValue(filteredParams, "username"))
+	assert.Equal(t, redaction.HashRedactor("foobar"), grabURLValue(filteredParams, "session"))
 	assert.False(t, hasRemainingValues(filteredParams))
 }

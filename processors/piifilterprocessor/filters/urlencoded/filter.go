@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"net/url"
 
+	"go.opentelemetry.io/collector/consumer/pdata"
+
+	"github.com/hypertrace/collector/processors"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters"
 	"github.com/hypertrace/collector/processors/piifilterprocessor/filters/regexmatcher"
-	"go.opentelemetry.io/collector/consumer/pdata"
 )
 
 var _ filters.Filter = (*urlEncodedFilter)(nil)
@@ -25,9 +27,9 @@ func (f *urlEncodedFilter) Name() string {
 	return "urlencoded"
 }
 
-func (f *urlEncodedFilter) RedactAttribute(key string, value pdata.AttributeValue) (bool, error) {
+func (f *urlEncodedFilter) RedactAttribute(key string, value pdata.AttributeValue) (*processors.ParsedAttribute, *filters.Attribute, error) {
 	if len(value.StringVal()) == 0 {
-		return false, nil
+		return nil, nil, nil
 	}
 
 	var u *url.URL
@@ -38,20 +40,25 @@ func (f *urlEncodedFilter) RedactAttribute(key string, value pdata.AttributeValu
 	if isURLAttr {
 		u, err = url.Parse(value.StringVal())
 		if err != nil {
-			return false, filters.WrapError(filters.ErrUnprocessableValue, err.Error())
+			return nil, nil, filters.WrapError(filters.ErrUnprocessableValue, err.Error())
 		}
 		rawString = u.RawQuery
 	}
 
 	params, err := url.ParseQuery(rawString)
 	if err != nil {
-		return false, filters.WrapError(filters.ErrUnprocessableValue, err.Error())
+		return nil, nil, filters.WrapError(filters.ErrUnprocessableValue, err.Error())
 	}
 
 	v := url.Values{}
-	var isRedacted bool
+	attr := &processors.ParsedAttribute{
+		Redacted:  map[string]string{},
+		Flattened: map[string]string{},
+	}
+	var newAttr *filters.Attribute
 	for param, values := range params {
 		for idx, value := range values {
+			attr.Flattened[param] = value
 			path := param
 			if !isURLAttr {
 				if len(values) > 1 {
@@ -61,11 +68,23 @@ func (f *urlEncodedFilter) RedactAttribute(key string, value pdata.AttributeValu
 				}
 			}
 
-			if isRedactedByKey, redactedValue := f.m.FilterKeyRegexs(param, key, value, path); isRedactedByKey {
-				isRedacted = true
+			if isRedactedByKey, isSession, redactedValue := f.m.FilterKeyRegexs(param, key, value, path); isRedactedByKey {
+				if isSession {
+					newAttr = &filters.Attribute{
+						Key:   "session.id",
+						Value: redactedValue,
+					}
+				}
+				attr.Redacted[param] = value
 				v.Add(param, redactedValue)
-			} else if isRedactedByValue, redactedValue := f.m.FilterStringValueRegexs(value, key, path); isRedactedByValue {
-				isRedacted = true
+			} else if isRedactedByValue, isSession, redactedValue := f.m.FilterStringValueRegexs(value); isRedactedByValue {
+				if isSession {
+					newAttr = &filters.Attribute{
+						Key:   "session.id",
+						Value: redactedValue,
+					}
+				}
+				attr.Redacted[param] = value
 				v.Add(param, redactedValue)
 			} else {
 				v.Add(param, value)
@@ -73,7 +92,7 @@ func (f *urlEncodedFilter) RedactAttribute(key string, value pdata.AttributeValu
 		}
 	}
 
-	if isRedacted {
+	if len(attr.Redacted) > 0 {
 		encoded := v.Encode()
 		if isURLAttr {
 			u.RawQuery = encoded
@@ -83,5 +102,5 @@ func (f *urlEncodedFilter) RedactAttribute(key string, value pdata.AttributeValu
 		}
 	}
 
-	return isRedacted, nil
+	return attr, newAttr, nil
 }

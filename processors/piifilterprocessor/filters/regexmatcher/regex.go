@@ -10,8 +10,9 @@ import (
 // Regex is a regex representation. It should be private
 type Regex struct {
 	*regexp.Regexp
-	Redactor redaction.Redactor
-	FQN      bool
+	Redactor          redaction.Redactor
+	FQN               bool
+	SessionIdentifier bool
 }
 
 type Matcher struct {
@@ -33,29 +34,31 @@ func NewMatcher(
 }
 
 // FilterKeyRegexs looks into the key to decide whether filter the value or not
-func (rm *Matcher) FilterKeyRegexs(keyToMatch string, actualKey string, value string, path string) (bool, string) {
+func (rm *Matcher) FilterKeyRegexs(keyToMatch string, actualKey string, value string, path string) (bool, bool, string) {
 	for _, r := range rm.keyRegExs {
 		if r.Regexp.MatchString(keyToMatch) {
-			return rm.FilterMatchedKey(r.Redactor, actualKey, value, path)
+			return true, r.SessionIdentifier, rm.FilterMatchedKey(r.Redactor, actualKey, value, path)
 		}
 	}
 
-	return false, ""
+	return false, false, ""
 }
 
 // FilterStringValueRegexs looks into the string value to decide whether filter the value or not
-func (rm *Matcher) FilterStringValueRegexs(value string, key string, path string) (bool, string) {
+func (rm *Matcher) FilterStringValueRegexs(value string) (bool, bool, string) {
 	var (
 		isRedacted      bool
+		isSession       bool
 		isRegexRedacted bool
 	)
 
 	for _, r := range rm.valueRegExs {
 		isRegexRedacted, value = rm.replacingRegex(value, r.Regexp, r.Redactor)
 		isRedacted = isRedacted || isRegexRedacted
+		isSession = isSession || r.SessionIdentifier
 	}
 
-	return isRedacted, value
+	return isRedacted, isSession, value
 }
 
 func (rm *Matcher) replacingRegex(value string, regex *regexp.Regexp, redactor redaction.Redactor) (bool, string) {
@@ -110,8 +113,8 @@ func mapRawToEnriched(rawTag string, path string) (string, string) {
 	return enrichedTag, enrichedPath
 }
 
-func (rm *Matcher) FilterMatchedKey(redactor redaction.Redactor, actualKey string, value string, path string) (bool, string) {
-	return true, redactor(value)
+func (rm *Matcher) FilterMatchedKey(redactor redaction.Redactor, actualKey string, value string, path string) string {
+	return redactor(value)
 }
 
 // MatchKeyRegexs matches a key or a path form the regex matcher and returns the matching
