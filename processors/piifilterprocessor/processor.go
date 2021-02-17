@@ -7,8 +7,9 @@ import (
 	"mime"
 	"strings"
 
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/consumer/pdata"
-	"go.opentelemetry.io/collector/processor/processorhelper"
 	"go.uber.org/zap"
 
 	"github.com/hypertrace/collector/processors"
@@ -22,13 +23,26 @@ import (
 	"github.com/hypertrace/collector/processors/piifilterprocessor/redaction"
 )
 
-var _ processorhelper.TProcessor = (*piiFilterProcessor)(nil)
+var _ component.TracesProcessor = (*piiFilterProcessor)(nil)
 
 type piiFilterProcessor struct {
 	logger                *zap.Logger
+	nextConsumer          consumer.TracesConsumer
 	scalarFilters         []filters.Filter
 	structuredDataFilters map[string]filters.Filter
 	structuredData        map[string]PiiComplexData
+}
+
+func (p *piiFilterProcessor) Start(_ context.Context, _ component.Host) error {
+	return nil
+}
+
+func (p *piiFilterProcessor) Shutdown(_ context.Context) error {
+	return nil
+}
+
+func (p *piiFilterProcessor) GetCapabilities() component.ProcessorCapabilities {
+	return component.ProcessorCapabilities{MutatesConsumedData: true}
 }
 
 func toRegex(es []PiiElement, globalStrategy redaction.Strategy) []regexmatcher.Regex {
@@ -55,7 +69,7 @@ func toRegex(es []PiiElement, globalStrategy redaction.Strategy) []regexmatcher.
 	return rs
 }
 
-func newPIIFilterProcessor(logger *zap.Logger, cfg *Config) (*piiFilterProcessor, error) {
+func newPIIFilterProcessor(logger *zap.Logger, cfg *Config, nextConsumer consumer.TracesConsumer) (*piiFilterProcessor, error) {
 	matcher, err := regexmatcher.NewMatcher(
 		cfg.Prefixes,
 		toRegex(cfg.KeyRegExs, cfg.RedactStrategy),
@@ -83,13 +97,14 @@ func newPIIFilterProcessor(logger *zap.Logger, cfg *Config) (*piiFilterProcessor
 
 	return &piiFilterProcessor{
 		logger:                logger,
+		nextConsumer:          nextConsumer,
 		scalarFilters:         scalarFilters,
 		structuredDataFilters: structuredDataFilters,
 		structuredData:        complexData,
 	}, nil
 }
 
-func (p *piiFilterProcessor) ProcessTraces(ctx context.Context, td pdata.Traces) (pdata.Traces, error) {
+func (p *piiFilterProcessor) ConsumeTraces(ctx context.Context, td pdata.Traces) error {
 	rss := td.ResourceSpans()
 
 	ctxWithData, parsedTraceData := processors.FromContext(ctx)
@@ -121,12 +136,11 @@ func (p *piiFilterProcessor) ProcessTraces(ctx context.Context, td pdata.Traces)
 					}
 				})
 
-				p.processComplexData(span)
+				p.processComplexData(span, parsedSpanData)
 			}
 		}
 	}
-
-	return td, nil
+	return p.nextConsumer.ConsumeTraces(ctx, td)
 }
 
 func getDataTypeFromContentType(dataType string) (string, error) {
@@ -174,7 +188,7 @@ func (p *piiFilterProcessor) processMatchingAttributes(key string, value pdata.A
 	return nil, nil
 }
 
-func (p *piiFilterProcessor) processComplexData(span pdata.Span) {
+func (p *piiFilterProcessor) processComplexData(span pdata.Span, parsedSpanData *processors.ParsedSpanData) {
 	for attrKey, elem := range p.structuredData {
 		attr, found := span.Attributes().Get(attrKey)
 		if !found {
@@ -206,6 +220,7 @@ func (p *piiFilterProcessor) processComplexData(span pdata.Span) {
 
 		if parsedAttr, newAttr, err := filter.RedactAttribute(elem.Key, attr); len(parsedAttr.Redacted) > 0 {
 			p.logger.Sugar().Debugf("attribute with key %q redacted by filter %q", attrKey, filter.Name())
+			parsedSpanData.PutParsedAttribute(attrKey, parsedAttr)
 		} else if err != nil {
 			p.logger.Sugar().Errorf(
 				"failed to apply filter %q to attribute with key %q: %v",
@@ -215,6 +230,8 @@ func (p *piiFilterProcessor) processComplexData(span pdata.Span) {
 			)
 		} else if newAttr != nil {
 			span.Attributes().Insert(newAttr.Key, pdata.NewAttributeValueString(newAttr.Value))
+		} else if parsedAttr != nil {
+			parsedSpanData.PutParsedAttribute(attrKey, parsedAttr)
 		}
 	}
 }

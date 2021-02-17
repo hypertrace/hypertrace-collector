@@ -3,6 +3,7 @@ package piifilterprocessor_test
 import (
 	"context"
 	"encoding/json"
+	processors "github.com/hypertrace/collector/processors"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/consumer"
 	"reflect"
@@ -254,9 +255,9 @@ func TestContextContainsReducedFields(t *testing.T) {
 	f := piifilterprocessor.NewFactory()
 	cfg := &piifilterprocessor.TransportConfig{
 		KeyRegExs: []piifilterprocessor.TransportPiiElement{
-			{RegexPattern: "^password$"},
+			{RegexPattern: "^sensitive$"},
 		},
-		RedactStrategyName: "hash",
+		//RedactStrategyName: "hash",
 		ComplexData: []piifilterprocessor.TransportPiiComplexData{
 			{
 				Key:  "http.request.body",
@@ -265,23 +266,48 @@ func TestContextContainsReducedFields(t *testing.T) {
 		},
 	}
 
-	sink := &consumertest.TracesSink{}
+	nextConsumer := &delegatingConsumer{sink: &consumertest.TracesSink{}}
 	p, err := f.CreateTracesProcessor(
 		context.Background(),
 		component.ProcessorCreateParams{
 			Logger: zap.NewNop(),
 		},
 		cfg,
-		sink,
+		nextConsumer,
 	)
 	require.NoError(t, err)
 
-	td := newTraces(newTestSpan("http.request.body", keyJSONInput, "http.request.headers.content-type", "application/json;charset=utf-8"))
+	span := newTestSpan("http.request.body", keyJSONInput, "http.request.headers.content-type", "application/json;charset=utf-8", "sensitive", "pass123")
+	td := newTraces(span)
 	err = p.ConsumeTraces(context.Background(), td)
 	require.NoError(t, err)
 
-	traces := sink.AllTraces()
-	assert.Equal(t, 1, len(traces))
+	assert.Equal(t, 1, len(nextConsumer.sink.AllTraces()))
+
+	contexts := nextConsumer.contexts
+	require.Equal(t, 1, len(contexts))
+	ctx := contexts[0]
+	ctx, data := processors.FromContext(ctx)
+	spanData := data.GetParsedSpanData(span)
+	parsedAttribute := spanData.GetAttribute("http.request.body")
+	assert.Equal(t, &processors.ParsedAttribute{
+		Flattened: map[string]string{
+			"$.a":             "aaa",
+			"$.b.b_1":         "bbb",
+			"$.b.password":    "nested_pw",
+			"$.c[0].c_1":      "ccc",
+			"$.c[1].password": "array_pw",
+			"$.password":      "root_pw",
+		},
+		Redacted: map[string]string{},
+	}, parsedAttribute)
+
+	parsedAttribute = spanData.GetAttribute("sensitive")
+	assert.Equal(t, &processors.ParsedAttribute{
+		Redacted: map[string]string{
+			"sensitive": "pass123",
+		},
+	}, parsedAttribute)
 }
 
 type delegatingConsumer struct {
@@ -291,6 +317,7 @@ type delegatingConsumer struct {
 
 var _ consumer.TracesConsumer = (*delegatingConsumer)(nil)
 
-func (f delegatingConsumer) ConsumeTraces(ctx context.Context, td pdata.Traces) error {
+func (f *delegatingConsumer) ConsumeTraces(ctx context.Context, td pdata.Traces) error {
+	f.contexts = append(f.contexts, ctx)
 	return f.sink.ConsumeTraces(ctx, td)
 }

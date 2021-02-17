@@ -32,8 +32,6 @@ func createDefaultConfig() configmodels.Processor {
 	}
 }
 
-var processorCapabilities = component.ProcessorCapabilities{MutatesConsumedData: true}
-
 func createTraceProcessor(
 	_ context.Context,
 	params component.ProcessorCreateParams,
@@ -47,15 +45,10 @@ func createTraceProcessor(
 		return nil, err
 	}
 
-	proc, err := newPIIFilterProcessor(params.Logger, piiCfg)
+	proc, err := newPIIFilterProcessor(params.Logger, piiCfg, nextConsumer)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the PII trace processor: %v", err)
 	}
 
-	return processorhelper.NewTraceProcessor(
-		cfg,
-		nextConsumer,
-		proc,
-		processorhelper.WithCapabilities(processorCapabilities),
-	)
+	return proc, nil
 }
