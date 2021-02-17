@@ -261,7 +261,6 @@ func TestContextContainsReducedFields(t *testing.T) {
 			{
 				Key:  "http.request.body",
 				Type: "json",
-				//TypeKey: "http.request.headers.content-type",
 			},
 		},
 	}

@@ -15,25 +15,25 @@ func FromContext(ctx context.Context) (context.Context, *ParsedTracesData) {
 		return ctx, sAttr
 	}
 	ptd := &ParsedTracesData{
-		spanAttributeMap: map[pdata.SpanID]*ParsedSpanData{},
+		spanAttributeMap: map[pdata.Span]*ParsedSpanData{},
 	}
 	ctx = context.WithValue(ctx, contextKey{}, ptd)
 	return ctx, ptd
 }
 
-// ParsedTracesData
+// ParsedTracesData encapsulates parsed data for multiple traces e.g. pdata.Traces.
 type ParsedTracesData struct {
-	spanAttributeMap map[pdata.SpanID]*ParsedSpanData
+	spanAttributeMap map[pdata.Span]*ParsedSpanData
 }
 
 // GetParsedSpanData returns ParsedSpanData for a given span.
-func (p *ParsedTracesData) GetParsedSpanData(spanID pdata.SpanID) *ParsedSpanData {
-	pSpanData, ok := p.spanAttributeMap[spanID]
+func (p *ParsedTracesData) GetParsedSpanData(span pdata.Span) *ParsedSpanData {
+	pSpanData, ok := p.spanAttributeMap[span]
 	if !ok {
 		pSpanData = &ParsedSpanData{
 			parsedAttributes: map[string]*ParsedAttribute{},
 		}
-		p.spanAttributeMap[spanID] = pSpanData
+		p.spanAttributeMap[span] = pSpanData
 	}
 	return pSpanData
 }

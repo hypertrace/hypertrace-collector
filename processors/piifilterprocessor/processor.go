@@ -104,7 +104,7 @@ func (p *piiFilterProcessor) ProcessTraces(ctx context.Context, td pdata.Traces)
 			spans := ils.Spans()
 			for k := 0; k < spans.Len(); k++ {
 				span := spans.At(k)
-				parsedSpanData := parsedTraceData.GetParsedSpanData(span.SpanID())
+				parsedSpanData := parsedTraceData.GetParsedSpanData(span)
 
 				span.Attributes().ForEach(func(key string, value pdata.AttributeValue) {
 					if p.attributeKeyContainsComplexData(key) {

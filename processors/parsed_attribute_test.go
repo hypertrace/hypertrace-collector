@@ -8,8 +8,6 @@ import (
 	"testing"
 )
 
-var spanID = [8]byte{0, 1, 2}
-
 func TestFromContext(t *testing.T) {
 	ctx := context.Background()
 	ctx, parsedTracesData := FromContext(ctx)
@@ -18,7 +16,21 @@ func TestFromContext(t *testing.T) {
 	assert.Equal(t, ctx, ctx2)
 	assert.Equal(t, parsedTracesData, parsedTracesData2)
 
-	spanData := parsedTracesData.GetParsedSpanData(pdata.NewSpanID(spanID))
+	span := pdata.NewSpan()
+	spanData := parsedTracesData.GetParsedSpanData(span)
 	attr := spanData.GetAttribute("foo")
 	require.NotNil(t, attr)
+	attr.Flattened["a"] = "b"
+
+	spanData2 := parsedTracesData.GetParsedSpanData(pdata.NewSpan())
+	attr2 := spanData2.GetAttribute("foo")
+	assert.Equal(t, &ParsedAttribute{
+		Flattened: map[string]string{},
+		Redacted: map[string]string{},
+	}, attr2)
+
+	assert.Equal(t, &ParsedAttribute{
+		Flattened: map[string]string{"a": "b"},
+		Redacted: map[string]string{},
+	}, parsedTracesData.GetParsedSpanData(span).GetAttribute("foo"))
 }
