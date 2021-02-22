@@ -25,12 +25,6 @@ jobs:
         run: make test
       - name: Build collector
         run: make build
-      - if: ${{ matrix.os}} != "windows-latest"
-        name: Launch collector for E2E tests
-        run: ./collector --config ./_tests/e2e/test-config.yml &
-      - if: ${{ matrix.os}} != "windows-latest"
-        name: Run E2E tests
-        run: ./_tests/e2e/test.sh ./exported-trace.json
 
   build-docker-image:
     runs-on: ubuntu-latest
