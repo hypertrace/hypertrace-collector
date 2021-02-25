@@ -6,6 +6,7 @@
 # Deployment and Service
 ###########
 logLevel: INFO
+metricsAddress: "0.0.0.0:8888"
 
 minReadySeconds: 5
 progressDeadlineSeconds: 120
