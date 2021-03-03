@@ -1,15 +1,6 @@
 receivers:
   zipkin:
 
-processors:
-  hypertrace_piifilter:
-    redaction_strategy: redact
-    key_regexs:
-      - regex: "card.last_4"
-      - regex: "^password$"
-    complex_data:
-      - key: http.request.body
-        type: json
 exporters:
   file:
     path: ./exported-trace.json
@@ -19,7 +10,5 @@ service:
     traces:
       receivers:
         - zipkin
-      processors:
-        - hypertrace_piifilter
       exporters:
         - file
