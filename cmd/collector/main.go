@@ -10,7 +10,6 @@ import (
 	"go.opentelemetry.io/collector/service"
 	"go.opentelemetry.io/collector/service/defaultcomponents"
 
-	"github.com/hypertrace/collector/processors/piifilterprocessor"
 	"github.com/hypertrace/collector/processors/tenantidprocessor"
 )
 
@@ -44,7 +43,6 @@ func components() (component.Factories, error) {
 	}
 
 	processors := []component.ProcessorFactory{
-		piifilterprocessor.NewFactory(),
 		tenantidprocessor.NewFactory(),
 	}
 	for _, pr := range factories.Processors {
