@@ -16,9 +16,8 @@ WORKDIR /usr/local/bin/hypertrace
 
 COPY --from=build-stage /go/src/github.com/hypertrace/collector/collector .
 COPY default-config.yml /etc/opt/hypertrace/config.yml
-COPY default-ht-config.yml /etc/opt/hypertrace/ht-config.yml
 
 EXPOSE 9411
 
 ENTRYPOINT ["/usr/local/bin/hypertrace/collector"]
-CMD ["--config", "/etc/opt/hypertrace/ht-config.yml"]
+CMD ["--config", "/etc/opt/hypertrace/config.yml"]
