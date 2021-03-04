@@ -29,8 +29,8 @@ exporters:
   kafka:
     protocol_version: 2.0.0
     brokers:
-      - ${BROKER}:9092
-    topic: jaeger-spans
+      - ${BROKER}
+    topic: ${TOPIC}
     encoding: jaeger_proto
 
 service:
