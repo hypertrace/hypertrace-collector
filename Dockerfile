@@ -21,4 +21,4 @@ COPY default-ht-config.yml /etc/opt/hypertrace/ht-config.yml
 EXPOSE 9411
 
 ENTRYPOINT ["/usr/local/bin/hypertrace/collector"]
-CMD ["--config", "/etc/opt/hypertrace/config.yml"]
+CMD ["--config", "/etc/opt/hypertrace/ht-config.yml"]
