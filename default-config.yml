@@ -29,8 +29,8 @@ exporters:
   kafka:
     protocol_version: 2.0.0
     brokers:
-      - ${HT_EXPORTER_KAFKA_BROKER}
-    topic: ${HT_EXPORTER_KAFKA_TOPIC}
+      - ${EXPORTER_KAFKA_BROKER}
+    topic: ${EXPORTER_KAFKA_TOPIC}
     encoding: jaeger_proto
 
 service:
@@ -39,5 +39,5 @@ service:
       receivers: [otlp, opencensus, jaeger, zipkin]
       processors: [batch]
       exporters: [kafka]
-      
+
   extensions: [health_check, pprof, zpages]
