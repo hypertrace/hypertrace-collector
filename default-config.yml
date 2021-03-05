@@ -30,7 +30,7 @@ exporters:
     protocol_version: 2.0.0
     brokers:
       - ${HT_EXPORTER_KAFKA_BROKER}
-    topic: ${TOPIC}
+    topic: ${HT_EXPORTER_KAFKA_TOPIC}
     encoding: jaeger_proto
 
 service:
