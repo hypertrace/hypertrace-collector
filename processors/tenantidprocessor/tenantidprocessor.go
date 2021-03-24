@@ -21,6 +21,33 @@ type processor struct {
 
 var _ processorhelper.TProcessor = (*processor)(nil)
 
+var _ processorhelper.MProcessor = (*processor)(nil)
+
+func (p *processor) ProcessMetrics(ctx context.Context, metrics pdata.Metrics) (pdata.Metrics, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		p.logger.Error("Could not extract headers from context", zap.Int("num-metrics", metrics.MetricCount()))
+		return metrics, fmt.Errorf("could not extract headers from context")
+	}
+
+	tenantIDHeaders := md.Get(p.tenantIDHeaderName)
+	if len(tenantIDHeaders) == 0 {
+		return metrics, fmt.Errorf("missing header: %s", p.tenantIDHeaderName)
+	} else if len(tenantIDHeaders) > 1 {
+		return metrics, fmt.Errorf("multiple tenant ID headers were provided, %s: %s", p.tenantIDHeaderName, strings.Join(tenantIDHeaders, ", "))
+	}
+
+	tenantID := tenantIDHeaders[0]
+	p.addTenantIdToMetrics(metrics, tenantID)
+
+	ctx, _ = tag.New(ctx,
+		tag.Insert(tagTenantID, tenantID))
+	stats.Record(ctx, statMetricPerTenant.M(int64(metrics.MetricCount())))
+
+	return metrics, nil
+
+}
+
 // ProcessTraces implements processorhelper.TProcessor
 func (p *processor) ProcessTraces(ctx context.Context, traces pdata.Traces) (pdata.Traces, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
@@ -59,6 +86,63 @@ func (p *processor) addTenantIdToSpans(traces pdata.Traces, tenantIDHeaderValue 
 			for k := 0; k < spans.Len(); k++ {
 				span := spans.At(k)
 				span.Attributes().Insert(p.tenantIDAttributeKey, pdata.NewAttributeValueString(tenantIDHeaderValue))
+			}
+		}
+	}
+}
+
+func (p *processor) addTenantIdToMetrics(metrics pdata.Metrics, tenantIDHeaderValue string) {
+	rms := metrics.ResourceMetrics()
+	for i := 0; i < rms.Len(); i++ {
+		rm := rms.At(i)
+
+		ilms := rm.InstrumentationLibraryMetrics()
+		for j := 0; j < ilms.Len(); j++ {
+			ilm := ilms.At(j)
+
+			metrics := ilm.Metrics()
+			for k := 0; k < metrics.Len(); k++ {
+				metric := metrics.At(k)
+				metricDataType := metric.DataType().String()
+				switch metricDataType {
+				case "None":
+					p.logger.Error("Cannot add tenantId to metric. Metric Data type not present for metric: " + metric.Name())
+				case "IntGauge":
+					metricData := metric.IntGauge().DataPoints()
+					for l := 0; l < metricData.Len(); l++ {
+						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
+					}
+				case "DoubleGauge":
+					metricData := metric.DoubleGauge().DataPoints()
+					for l := 0; l < metricData.Len(); l++ {
+						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
+					}
+				case "IntSum":
+					metricData := metric.IntSum().DataPoints()
+					for l := 0; l < metricData.Len(); l++ {
+						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
+					}
+				case "DoubleSum":
+					metricData := metric.DoubleSum().DataPoints()
+					for l := 0; l < metricData.Len(); l++ {
+						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
+					}
+				case "IntHistogram":
+					metricData := metric.IntHistogram().DataPoints()
+					for l := 0; l < metricData.Len(); l++ {
+						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
+					}
+				case "DoubleHistogram":
+					metricData := metric.DoubleHistogram().DataPoints()
+					for l := 0; l < metricData.Len(); l++ {
+						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
+					}
+				case "DoubleSummary":
+					metricData := metric.DoubleSummary().DataPoints()
+					for l := 0; l < metricData.Len(); l++ {
+						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
+					}
+				}
 			}
 		}
 	}
