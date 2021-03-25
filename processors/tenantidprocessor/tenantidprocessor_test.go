@@ -320,24 +320,10 @@ func assertTenantTagExists(t *testing.T, metricData pdata.Metrics, tenantAttrKey
 	numOfTenantAttrs := 0
 	rms := metricData.ResourceMetrics()
 	for i := 0; i < rms.Len(); i++ {
-		rm := rms.At(i)
-
-		ilms := rm.InstrumentationLibraryMetrics()
-		for j := 0; j < ilms.Len(); j++ {
-			ilm := ilms.At(j)
-
-			metrics := ilm.Metrics()
-			for k := 0; k < metrics.Len(); k++ {
-				metric := metrics.At(k)
-				metricDataPoints := metric.IntSum().DataPoints()
-				for l := 0; l < metricDataPoints.Len(); l++ {
-					tenantAttr, ok := metricDataPoints.At(l).LabelsMap().Get(tenantAttrKey)
-					require.True(t, ok)
-					numOfTenantAttrs++
-					assert.Equal(t, tenantID, tenantAttr)
-				}
-			}
-		}
+		tenantAttr, ok := rms.At(i).Resource().Attributes().Get(tenantAttrKey)
+		require.True(t, ok)
+		numOfTenantAttrs++
+		assert.Equal(t, tenantID, tenantAttr.StringVal())
 	}
 	return numOfTenantAttrs
 }
