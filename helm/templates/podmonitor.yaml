@@ -1,0 +1,21 @@
+{{- if and ( .Capabilities.APIVersions.Has "monitoring.coreos.com/v1" ) ( .Values.podmonitor.enabled ) }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    monitoring: shared
+spec:
+  jobLabel: hypertrace-collector-pods
+  selector:
+    matchLabels:
+      {{- toYaml .Values.deploymentSelectorMatchLabels | nindent 6 }}
+  podMetricsEndpoints:
+#    - port: jmx-prometheus TODO: add relabeling for address
+      interval: {{ .Values.podmonitor.interval }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+{{- end }}
