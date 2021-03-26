@@ -95,6 +95,7 @@ func (p *processor) addTenantIdToMetrics(metrics pdata.Metrics, tenantIDHeaderVa
 	rms := metrics.ResourceMetrics()
 	for i := 0; i < rms.Len(); i++ {
 		rm := rms.At(i)
+		rm.Resource().Attributes().Insert(p.tenantIDAttributeKey, pdata.NewAttributeValueString(tenantIDHeaderValue))
 		ilms := rm.InstrumentationLibraryMetrics()
 		for j := 0; j < ilms.Len(); j++ {
 			ilm := ilms.At(j)
