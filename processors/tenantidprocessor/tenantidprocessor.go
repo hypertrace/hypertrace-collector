@@ -94,6 +94,54 @@ func (p *processor) addTenantIdToSpans(traces pdata.Traces, tenantIDHeaderValue 
 func (p *processor) addTenantIdToMetrics(metrics pdata.Metrics, tenantIDHeaderValue string) {
 	rms := metrics.ResourceMetrics()
 	for i := 0; i < rms.Len(); i++ {
-		rms.At(i).Resource().Attributes().Insert(p.tenantIDAttributeKey, pdata.NewAttributeValueString(tenantIDHeaderValue))
+		rm := rms.At(i)
+		ilms := rm.InstrumentationLibraryMetrics()
+		for j := 0; j < ilms.Len(); j++ {
+			ilm := ilms.At(j)
+			metrics := ilm.Metrics()
+			for k := 0; k < metrics.Len(); k++ {
+				metric := metrics.At(k)
+				metricDataType := metric.DataType().String()
+				switch metricDataType {
+				case "None":
+					p.logger.Error("Cannot add tenantId to metric. Metric Data type not present for metric: " + metric.Name())
+				case "IntGauge":
+					metricData := metric.IntGauge().DataPoints()
+					for l := 0; l < metricData.Len(); l++ {
+						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
+					}
+				case "DoubleGauge":
+					metricData := metric.DoubleGauge().DataPoints()
+					for l := 0; l < metricData.Len(); l++ {
+						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
+					}
+				case "IntSum":
+					metricData := metric.IntSum().DataPoints()
+					for l := 0; l < metricData.Len(); l++ {
+						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
+					}
+				case "DoubleSum":
+					metricData := metric.DoubleSum().DataPoints()
+					for l := 0; l < metricData.Len(); l++ {
+						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
+					}
+				case "IntHistogram":
+					metricData := metric.IntHistogram().DataPoints()
+					for l := 0; l < metricData.Len(); l++ {
+						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
+					}
+				case "DoubleHistogram":
+					metricData := metric.DoubleHistogram().DataPoints()
+					for l := 0; l < metricData.Len(); l++ {
+						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
+					}
+				case "DoubleSummary":
+					metricData := metric.DoubleSummary().DataPoints()
+					for l := 0; l < metricData.Len(); l++ {
+						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
+					}
+				}
+			}
+		}
 	}
 }
