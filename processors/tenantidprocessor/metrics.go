@@ -10,6 +10,7 @@ var (
 	tagTenantID = tag.MustNewKey("tenant-id")
 
 	statSpanPerTenant = stats.Int64("tenant_id_span_count", "Number of spans received from a tenant", stats.UnitDimensionless)
+	statMetricPerTenant = stats.Int64("tenant_id_metric_count", "Number of metrics received from a tenant", stats.UnitDimensionless)
 )
 
 // MetricViews returns the metrics views for tenant id processor.
@@ -24,7 +25,16 @@ func MetricViews() []*view.View {
 		TagKeys:     tags,
 	}
 
+	viewMetricCount := &view.View{
+		Name:        statMetricPerTenant.Name(),
+		Description: statMetricPerTenant.Description(),
+		Measure:     statMetricPerTenant,
+		Aggregation: view.Sum(),
+		TagKeys:     tags,
+	}
+
 	return []*view.View{
 		viewSpanCount,
+		viewMetricCount,
 	}
 }
