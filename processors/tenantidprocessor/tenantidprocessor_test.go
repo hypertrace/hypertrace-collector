@@ -45,6 +45,10 @@ func TestMissingMetadataInContext(t *testing.T) {
 	_, err := p.ProcessTraces(context.Background(), pdata.NewTraces())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "could not extract headers")
+
+	_, err = p.ProcessMetrics(context.Background(), pdata.NewMetrics())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "could not extract headers")
 }
 
 func TestMissingTenantHeader(t *testing.T) {
@@ -60,6 +64,10 @@ func TestMissingTenantHeader(t *testing.T) {
 		md,
 	)
 	_, err := p.ProcessTraces(ctx, pdata.NewTraces())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "missing header")
+
+	_, err = p.ProcessMetrics(ctx, pdata.NewMetrics())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "missing header")
 }
@@ -78,6 +86,10 @@ func TestMultipleTenantHeaders(t *testing.T) {
 		md,
 	)
 	_, err := p.ProcessTraces(ctx, pdata.NewTraces())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "multiple tenant ID headers")
+
+	_, err = p.ProcessMetrics(ctx, pdata.NewMetrics())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "multiple tenant ID headers")
 }
@@ -99,8 +111,25 @@ func TestEmptyTraces(t *testing.T) {
 	assert.Equal(t, traces, gotTraces)
 }
 
-func TestReceiveOTLPGRPC(t *testing.T) {
-	sink := new(consumertest.TracesSink)
+func TestEmptyMetrics(t *testing.T) {
+	p := &processor{
+		logger:               zap.NewNop(),
+		tenantIDHeaderName:   defaultHeaderName,
+		tenantIDAttributeKey: defaultHeaderName,
+	}
+	metrics := pdata.NewMetrics()
+	md := metadata.New(map[string]string{p.tenantIDHeaderName: testTenantID})
+	ctx := metadata.NewIncomingContext(
+		context.Background(),
+		md,
+	)
+	gotMetrics, err := p.ProcessMetrics(ctx, metrics)
+	require.NoError(t, err)
+	assert.Equal(t, metrics, gotMetrics)
+}
+
+func TestReceiveOTLPGRPC_Traces(t *testing.T) {
+	tracesSink := new(consumertest.TracesSink)
 	tenantProcessor := &processor{
 		logger:               zap.NewNop(),
 		tenantIDHeaderName:   defaultHeaderName,
@@ -113,21 +142,21 @@ func TestReceiveOTLPGRPC(t *testing.T) {
 	cfg.GRPC.NetAddr.Endpoint = addr
 	cfg.HTTP = nil
 	params := component.ReceiverCreateParams{Logger: zap.NewNop()}
-	otlpRec, err := factory.CreateTracesReceiver(context.Background(), params, cfg, multiConsumer{
-		sink:              sink,
+	otlpTracesRec, err := factory.CreateTracesReceiver(context.Background(), params, cfg, tracesMultiConsumer{
+		tracesSink:        tracesSink,
 		tenantIDprocessor: tenantProcessor,
 	})
 	require.NoError(t, err)
-	err = otlpRec.Start(context.Background(), componenttest.NewNopHost())
+	err = otlpTracesRec.Start(context.Background(), componenttest.NewNopHost())
 	require.NoError(t, err)
-	defer otlpRec.Shutdown(context.Background())
+	defer otlpTracesRec.Shutdown(context.Background())
 
 	conn, err := grpc.Dial(cfg.GRPC.NetAddr.Endpoint, grpc.WithInsecure())
 	require.NoError(t, err)
 	defer conn.Close()
 
 	otlpExpFac := otlpexporter.NewFactory()
-	exporter, err := otlpExpFac.CreateTracesExporter(
+	tracesExporter, err := otlpExpFac.CreateTracesExporter(
 		context.Background(),
 		component.ExporterCreateParams{Logger: zap.NewNop()},
 		&otlpexporter.Config{
@@ -143,10 +172,10 @@ func TestReceiveOTLPGRPC(t *testing.T) {
 	)
 	require.NoError(t, err)
 	reqTraces := GenerateTraceDataOneSpan()
-	err = exporter.ConsumeTraces(context.Background(), reqTraces)
+	err = tracesExporter.ConsumeTraces(context.Background(), reqTraces)
 	require.NoError(t, err)
 
-	traces := sink.AllTraces()
+	traces := tracesSink.AllTraces()
 	assert.Equal(t, 1, len(traces))
 	tenantAttrsFound := assertTenantAttributeExists(
 		t,
@@ -157,7 +186,65 @@ func TestReceiveOTLPGRPC(t *testing.T) {
 	assert.Equal(t, reqTraces.SpanCount(), tenantAttrsFound)
 }
 
-func TestReceiveJaegerThriftHTTP(t *testing.T) {
+func TestReceiveOTLPGRPC_Metrics(t *testing.T) {
+	metricsSink := new(consumertest.MetricsSink)
+	tenantProcessor := &processor{
+		logger:               zap.NewNop(),
+		tenantIDHeaderName:   defaultHeaderName,
+		tenantIDAttributeKey: defaultAttributeKey,
+	}
+
+	addr := testutil.GetAvailableLocalAddress(t)
+	factory := otlpreceiver.NewFactory()
+	cfg := factory.CreateDefaultConfig().(*otlpreceiver.Config)
+	cfg.GRPC.NetAddr.Endpoint = addr
+	cfg.HTTP = nil
+	params := component.ReceiverCreateParams{Logger: zap.NewNop()}
+	otlpMetricsRec, err := factory.CreateMetricsReceiver(context.Background(), params, cfg, metricsMultiConsumer{
+		metricsSink:        metricsSink,
+		tenantIDprocessor: tenantProcessor,
+	})
+	require.NoError(t, err)
+	err = otlpMetricsRec.Start(context.Background(), componenttest.NewNopHost())
+	require.NoError(t, err)
+	defer otlpMetricsRec.Shutdown(context.Background())
+
+	conn, err := grpc.Dial(cfg.GRPC.NetAddr.Endpoint, grpc.WithInsecure())
+	require.NoError(t, err)
+	defer conn.Close()
+
+	otlpExpFac := otlpexporter.NewFactory()
+	metricsExporter, err := otlpExpFac.CreateMetricsExporter(
+		context.Background(),
+		component.ExporterCreateParams{Logger: zap.NewNop()},
+		&otlpexporter.Config{
+			GRPCClientSettings: configgrpc.GRPCClientSettings{
+				Headers:      map[string]string{tenantProcessor.tenantIDHeaderName: testTenantID},
+				Endpoint:     addr,
+				WaitForReady: true,
+				TLSSetting: configtls.TLSClientSetting{
+					Insecure: true,
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+	reqMetrics := GenerateMetricData()
+	err = metricsExporter.ConsumeMetrics(context.Background(), reqMetrics)
+	require.NoError(t, err)
+
+	metrics := metricsSink.AllMetrics()
+	assert.Equal(t, 1, len(metrics))
+	tenantAttrsFound := assertTenantTagExists(
+		t,
+		metrics[0],
+		tenantProcessor.tenantIDAttributeKey,
+		testTenantID,
+	)
+	assert.Equal(t, reqMetrics.MetricCount(), tenantAttrsFound)
+}
+
+func TestReceiveJaegerThriftHTTP_Traces(t *testing.T) {
 	sink := new(consumertest.TracesSink)
 	tenantProcessor := &processor{
 		logger:               zap.NewNop(),
@@ -175,8 +262,8 @@ func TestReceiveJaegerThriftHTTP(t *testing.T) {
 	}
 	params := component.ReceiverCreateParams{Logger: zap.NewNop()}
 	jrf := jaegerreceiver.NewFactory()
-	rec, err := jrf.CreateTracesReceiver(context.Background(), params, cfg, multiConsumer{
-		sink:              sink,
+	rec, err := jrf.CreateTracesReceiver(context.Background(), params, cfg, tracesMultiConsumer{
+		tracesSink:        sink,
 		tenantIDprocessor: tenantProcessor,
 	})
 	require.NoError(t, err)
@@ -229,19 +316,60 @@ func assertTenantAttributeExists(t *testing.T, trace pdata.Traces, tenantAttrKey
 	return numOfTenantAttrs
 }
 
-type multiConsumer struct {
-	sink              *consumertest.TracesSink
+func assertTenantTagExists(t *testing.T, metricData pdata.Metrics, tenantAttrKey string, tenantID string) int {
+	numOfTenantAttrs := 0
+	rms := metricData.ResourceMetrics()
+	for i := 0; i < rms.Len(); i++ {
+		rm := rms.At(i)
+
+		ilms := rm.InstrumentationLibraryMetrics()
+		for j := 0; j < ilms.Len(); j++ {
+			ilm := ilms.At(j)
+
+			metrics := ilm.Metrics()
+			for k := 0; k < metrics.Len(); k++ {
+				metric := metrics.At(k)
+				metricDataPoints := metric.IntSum().DataPoints()
+				for l := 0; l < metricDataPoints.Len(); l++ {
+					tenantAttr, ok := metricDataPoints.At(l).LabelsMap().Get(tenantAttrKey)
+					require.True(t, ok)
+					numOfTenantAttrs++
+					assert.Equal(t, tenantID, tenantAttr)
+				}
+			}
+		}
+	}
+	return numOfTenantAttrs
+}
+
+type tracesMultiConsumer struct {
+	tracesSink        *consumertest.TracesSink
 	tenantIDprocessor *processor
 }
 
-var _ consumer.TracesConsumer = (*multiConsumer)(nil)
+var _ consumer.TracesConsumer = (*tracesMultiConsumer)(nil)
 
-func (f multiConsumer) ConsumeTraces(ctx context.Context, td pdata.Traces) error {
+func (f tracesMultiConsumer) ConsumeTraces(ctx context.Context, td pdata.Traces) error {
 	traces, err := f.tenantIDprocessor.ProcessTraces(ctx, td)
 	if err != nil {
 		return err
 	}
-	return f.sink.ConsumeTraces(ctx, traces)
+	return f.tracesSink.ConsumeTraces(ctx, traces)
+}
+
+type metricsMultiConsumer struct {
+	metricsSink        *consumertest.MetricsSink
+	tenantIDprocessor  *processor
+}
+
+var _ consumer.MetricsConsumer = (*metricsMultiConsumer)(nil)
+
+func (f metricsMultiConsumer) ConsumeMetrics(ctx context.Context, md pdata.Metrics) error {
+	metrics, err := f.tenantIDprocessor.ProcessMetrics(ctx, md)
+	if err != nil {
+		return err
+	}
+	return f.metricsSink.ConsumeMetrics(ctx, metrics)
 }
 
 var (
@@ -323,6 +451,18 @@ func fillSpanOne(span pdata.Span) {
 
 func initSpanEventAttributes(dest pdata.AttributeMap) {
 	dest.InitFromMap(spanEventAttributes)
+}
+
+
+func GenerateMetricData() pdata.Metrics {
+	md := pdata.NewMetrics()
+	md.ResourceMetrics().Resize(1)
+	md.ResourceMetrics().At(0).InstrumentationLibraryMetrics().Resize(1)
+	md.ResourceMetrics().At(0).InstrumentationLibraryMetrics().At(0).Metrics().Resize(1)
+	metric := md.ResourceMetrics().At(0).InstrumentationLibraryMetrics().At(0).Metrics().At(0)
+	metric.SetDataType(pdata.MetricDataTypeIntSum)
+	metric.IntSum().DataPoints().Resize(1)
+	return md
 }
 
 func jaegerModelToThrift(batch *model.Batch) *jaegerthrift.Batch {

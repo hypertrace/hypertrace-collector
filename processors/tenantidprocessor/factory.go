@@ -21,6 +21,7 @@ func NewFactory() component.ProcessorFactory {
 		typeStr,
 		createDefaultConfig,
 		processorhelper.WithTraces(createTraceProcessor),
+		processorhelper.WithMetrics(createMetricsProcessor),
 	)
 }
 
@@ -43,6 +44,23 @@ func createTraceProcessor(
 ) (component.TracesProcessor, error) {
 	pCfg := cfg.(*Config)
 	return processorhelper.NewTraceProcessor(
+		cfg,
+		nextConsumer,
+		&processor{
+			tenantIDAttributeKey: pCfg.TenantIDAttributeKey,
+			tenantIDHeaderName:   pCfg.TenantIDHeaderName,
+			logger:               params.Logger,
+		})
+}
+
+func createMetricsProcessor(
+	_ context.Context,
+	params component.ProcessorCreateParams,
+	cfg configmodels.Processor,
+	nextConsumer consumer.MetricsConsumer,
+) (component.MetricsProcessor, error) {
+	pCfg := cfg.(*Config)
+	return processorhelper.NewMetricsProcessor(
 		cfg,
 		nextConsumer,
 		&processor{
