@@ -195,3 +195,7 @@ kafka-topic-creator:
   imagePullSecrets: []
   podAnnotations:
     sidecar.istio.io/inject: "false"
+
+podmonitor:
+  enabled: false
+  interval: 15s
