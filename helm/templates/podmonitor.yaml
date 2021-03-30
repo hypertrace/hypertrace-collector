@@ -14,26 +14,13 @@ spec:
       {{- toYaml .Values.deploymentSelectorMatchLabels | nindent 6 }}
   podMetricsEndpoints:
   - interval: {{ .Values.podmonitor.interval }}
+    port: {{ .Values.podmonitor.port }}
+    scheme: {{ .Values.podmonitor.scheme }}
+    {{- if .Values.podmonitor.tlsConfig }}
+    tlsConfig:
+      {{- .Values.podmonitor.tlsConfig | nindent 6 }}
+    {{- end }}
     relabelings:
-    - sourceLabels: [ __meta_kubernetes_pod_annotation_prometheus_io_scrape ]
-      regex: "true"
-      replacement: $1
-      action: keep
-    - sourceLabels: [ __meta_kubernetes_pod_controller_kind, __meta_kubernetes_pod_phase ]
-      regex: "Job;Succeeded"
-      action: drop
-    - regex: container
-      action: labeldrop
-    - sourceLabels: [ __meta_kubernetes_pod_annotation_prometheus_io_path ]
-      regex: (.+)
-      targetLabel: __metrics_path__
-      replacement: $1
-      action: replace
-    - sourceLabels: [ __address__, __meta_kubernetes_pod_annotation_prometheus_io_port_2 ]
-      regex: ([^:]+)(?::\d+)?;(\d+)
-      targetLabel: __address__
-      replacement: $1:$2
-      action: replace
     - regex: __meta_kubernetes_pod_label_(.+)
       replacement: $1
       action: labelmap

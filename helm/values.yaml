@@ -34,6 +34,10 @@ containerPorts:
     containerPort: 14250
   - name: http-zipkin
     containerPort: 9411
+  - name: http-promint
+    containerPort: 8888
+  - name: http-promexp
+    containerPort: 8889
 
 service:
   type: LoadBalancer
@@ -199,3 +203,5 @@ kafka-topic-creator:
 podmonitor:
   enabled: false
   interval: 15s
+  port: "http-promexp"
+  scheme: "http"
