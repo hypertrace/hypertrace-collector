@@ -34,9 +34,11 @@ containerPorts:
     containerPort: 14250
   - name: http-zipkin
     containerPort: 9411
-  - name: http-promint
+#   Port for exposing internal metrics to prometheus. Should match with {{ .Values.metricsAddress }}
+  - name: http-prom-int
     containerPort: 8888
-  - name: http-promexp
+#   Port for exposing prometheus exporter metrics. Should match with {{ .Values.configmap.data.exporters.prometheus.endpoint }}
+  - name: http-prom-exp
     containerPort: 8889
 
 service:
@@ -203,5 +205,5 @@ kafka-topic-creator:
 podmonitor:
   enabled: false
   interval: 15s
-  port: "http-promexp"
+  port: "http-prom-exp"
   scheme: "http"
