@@ -34,6 +34,12 @@ containerPorts:
     containerPort: 14250
   - name: http-zipkin
     containerPort: 9411
+#   Port for exposing internal metrics to prometheus. Should match with {{ .Values.metricsAddress }}
+  - name: http-prom-int
+    containerPort: 8888
+#   Port for exposing prometheus exporter metrics. Should match with {{ .Values.configmap.data.exporters.prometheus.endpoint }}
+  - name: http-prom-exp
+    containerPort: 8889
 
 service:
   type: LoadBalancer
@@ -148,14 +154,6 @@ configMap:
             endpoint: "0.0.0.0:14250"
           thrift_http:
             endpoint: "0.0.0.0:14268"
-      # Collect own metrics
-      prometheus:
-        config:
-          scrape_configs:
-            - job_name: "otel-collector"
-              scrape_interval: 10s
-              static_configs:
-                - targets: ["0.0.0.0:8888"]
     processors:
       batch: {}
 
@@ -166,6 +164,8 @@ configMap:
           - bootstrap:9092
         topic: jaeger-spans
         encoding: jaeger_proto
+      prometheus:
+        endpoint: "0.0.0.0:8889"
 
     service:
       extensions: [health_check, pprof, zpages]
@@ -174,6 +174,10 @@ configMap:
           receivers: [otlp, opencensus, jaeger, zipkin]
           processors: [batch]
           exporters: [kafka]
+        metrics:
+          receivers: [ otlp ]
+          processors: [ batch ]
+          exporters: [ prometheus ]
 
 hpa:
   enabled: false
@@ -197,3 +201,9 @@ kafka-topic-creator:
   imagePullSecrets: []
   podAnnotations:
     sidecar.istio.io/inject: "false"
+
+podmonitor:
+  enabled: false
+  interval: 15s
+  port: "http-prom-exp"
+  scheme: "http"
