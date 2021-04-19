@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"go.opentelemetry.io/collector/consumer/consumererror"
 	"log"
 
 	"go.opencensus.io/stats/view"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/consumer/consumererror"
 	"go.opentelemetry.io/collector/service"
 	"go.opentelemetry.io/collector/service/defaultcomponents"
 
