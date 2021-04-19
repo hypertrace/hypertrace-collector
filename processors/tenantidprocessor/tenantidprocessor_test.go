@@ -347,7 +347,7 @@ type tracesMultiConsumer struct {
 	tenantIDprocessor *processor
 }
 
-var _ consumer.TracesConsumer = (*tracesMultiConsumer)(nil)
+var _ consumer.Traces = (*tracesMultiConsumer)(nil)
 
 func (f tracesMultiConsumer) ConsumeTraces(ctx context.Context, td pdata.Traces) error {
 	traces, err := f.tenantIDprocessor.ProcessTraces(ctx, td)
@@ -362,7 +362,7 @@ type metricsMultiConsumer struct {
 	tenantIDprocessor *processor
 }
 
-var _ consumer.MetricsConsumer = (*metricsMultiConsumer)(nil)
+var _ consumer.Metrics = (*metricsMultiConsumer)(nil)
 
 func (f metricsMultiConsumer) ConsumeMetrics(ctx context.Context, md pdata.Metrics) error {
 	metrics, err := f.tenantIDprocessor.ProcessMetrics(ctx, md)
@@ -375,12 +375,12 @@ func (f metricsMultiConsumer) ConsumeMetrics(ctx context.Context, md pdata.Metri
 var (
 	resourceAttributes1    = map[string]pdata.AttributeValue{"resource-attr": pdata.NewAttributeValueString("resource-attr-val-1")}
 	TestSpanStartTime      = time.Date(2020, 2, 11, 20, 26, 12, 321, time.UTC)
-	TestSpanStartTimestamp = pdata.TimestampUnixNano(TestSpanStartTime.UnixNano())
+	TestSpanStartTimestamp = pdata.TimestampFromTime(TestSpanStartTime)
 	TestSpanEventTime      = time.Date(2020, 2, 11, 20, 26, 13, 123, time.UTC)
-	TestSpanEventTimestamp = pdata.TimestampUnixNano(TestSpanEventTime.UnixNano())
+	TestSpanEventTimestamp = pdata.TimestampFromTime(TestSpanEventTime)
 
 	TestSpanEndTime      = time.Date(2020, 2, 11, 20, 26, 13, 789, time.UTC)
-	TestSpanEndTimestamp = pdata.TimestampUnixNano(TestSpanEndTime.UnixNano())
+	TestSpanEndTimestamp = pdata.TimestampFromTime(TestSpanEndTime)
 	spanEventAttributes  = map[string]pdata.AttributeValue{"span-event-attr": pdata.NewAttributeValueString("span-event-attr-val")}
 )
 
@@ -427,8 +427,8 @@ func initResourceAttributes1(dest pdata.AttributeMap) {
 
 func fillSpanOne(span pdata.Span) {
 	span.SetName("operationA")
-	span.SetStartTime(TestSpanStartTimestamp)
-	span.SetEndTime(TestSpanEndTimestamp)
+	span.SetStartTimestamp(TestSpanStartTimestamp)
+	span.SetEndTimestamp(TestSpanEndTimestamp)
 	span.SetDroppedAttributesCount(1)
 	span.SetTraceID(pdata.NewTraceID([16]byte{0, 1, 2}))
 	span.SetSpanID(pdata.NewSpanID([8]byte{0, 1}))
