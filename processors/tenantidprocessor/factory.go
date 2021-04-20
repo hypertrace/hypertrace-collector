@@ -27,7 +27,7 @@ func NewFactory() component.ProcessorFactory {
 
 func createDefaultConfig() config.Processor {
 	return &Config{
-		ProcessorSettings: config.ProcessorSettings{
+		ProcessorSettings: &config.ProcessorSettings{
 			TypeVal: typeStr,
 			NameVal: typeStr,
 		},
