@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"go.opentelemetry.io/collector/config"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -160,6 +161,7 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 		context.Background(),
 		component.ExporterCreateParams{Logger: zap.NewNop()},
 		&otlpexporter.Config{
+			ExporterSettings: config.NewExporterSettings("otlp"),
 			GRPCClientSettings: configgrpc.GRPCClientSettings{
 				Headers:      map[string]string{tenantProcessor.tenantIDHeaderName: testTenantID},
 				Endpoint:     addr,
@@ -218,6 +220,7 @@ func TestReceiveOTLPGRPC_Metrics(t *testing.T) {
 		context.Background(),
 		component.ExporterCreateParams{Logger: zap.NewNop()},
 		&otlpexporter.Config{
+			ExporterSettings: config.NewExporterSettings("otlp"),
 			GRPCClientSettings: configgrpc.GRPCClientSettings{
 				Headers:      map[string]string{tenantProcessor.tenantIDHeaderName: testTenantID},
 				Endpoint:     addr,
