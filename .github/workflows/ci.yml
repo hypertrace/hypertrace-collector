@@ -21,7 +21,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
       - name: Checkout code
         uses: actions/checkout@v2
-      - if: matrix.os == "ubuntu-latest"
+      - if: ${{ matrix.os }} == "ubuntu-latest"
         name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
@@ -34,7 +34,7 @@ jobs:
       - if: matrix.os != "windows-latest"
         name: Launch collector for E2E tests
         run: ./collector --config ./_tests/e2e/test-config.yml &
-      - if: ${{ matrix.os}} != "windows-latest"
+      - if: ${{ matrix.os }} != "windows-latest"
         name: Run E2E tests
         run: ./_tests/e2e/test.sh ./exported-trace.json
 
