@@ -1,6 +1,8 @@
 package tenantidprocessor
 
-import "go.opentelemetry.io/collector/config/configmodels"
+import (
+	"go.opentelemetry.io/collector/config"
+)
 
 // Config defines config for tenant ID processor.
 // The processor adds tenant ID attribute to every received span.
@@ -9,7 +11,7 @@ import "go.opentelemetry.io/collector/config/configmodels"
 // The batch processor cleans context, therefore this processor
 // has to run before it, ideally right after the receiver.
 type Config struct {
-	configmodels.ProcessorSettings `mapstructure:",squash"`
+	*config.ProcessorSettings `mapstructure:"-"`
 
 	// TenantIDHeaderName defines tenant HTTP header name. Default x-tenant-id.
 	TenantIDHeaderName string `mapstructure:"header_name"`

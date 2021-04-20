@@ -1,5 +1,5 @@
 receivers:
-  examplereceiver:
+  nop:
 
 processors:
   hypertrace_tenantid:
@@ -7,10 +7,10 @@ processors:
     attribute_key: attribute-tenant
 
 exporters:
-  exampleexporter:
+  nop:
 
 service:
   pipelines:
     traces:
-      receivers: [examplereceiver]
-      exporters: [exampleexporter]
+      receivers: [nop]
+      exporters: [nop]

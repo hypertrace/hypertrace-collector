@@ -132,12 +132,12 @@ func (p *processor) addTenantIdToMetrics(metrics pdata.Metrics, tenantIDHeaderVa
 						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
 					}
 				case "DoubleHistogram":
-					metricData := metric.DoubleHistogram().DataPoints()
+					metricData := metric.Histogram().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
 						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
 					}
 				case "DoubleSummary":
-					metricData := metric.DoubleSummary().DataPoints()
+					metricData := metric.Summary().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
 						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
 					}
