@@ -201,7 +201,7 @@ func TestReceiveOTLPGRPC_Metrics(t *testing.T) {
 	cfg.HTTP = nil
 	params := component.ReceiverCreateParams{Logger: zap.NewNop()}
 	otlpMetricsRec, err := factory.CreateMetricsReceiver(context.Background(), params, cfg, metricsMultiConsumer{
-		metricsSink:        metricsSink,
+		metricsSink:       metricsSink,
 		tenantIDprocessor: tenantProcessor,
 	})
 	require.NoError(t, err)
@@ -358,8 +358,8 @@ func (f tracesMultiConsumer) ConsumeTraces(ctx context.Context, td pdata.Traces)
 }
 
 type metricsMultiConsumer struct {
-	metricsSink        *consumertest.MetricsSink
-	tenantIDprocessor  *processor
+	metricsSink       *consumertest.MetricsSink
+	tenantIDprocessor *processor
 }
 
 var _ consumer.MetricsConsumer = (*metricsMultiConsumer)(nil)
@@ -452,7 +452,6 @@ func fillSpanOne(span pdata.Span) {
 func initSpanEventAttributes(dest pdata.AttributeMap) {
 	dest.InitFromMap(spanEventAttributes)
 }
-
 
 func GenerateMetricData() pdata.Metrics {
 	md := pdata.NewMetrics()
