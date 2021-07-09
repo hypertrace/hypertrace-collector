@@ -142,7 +142,7 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 	cfg := factory.CreateDefaultConfig().(*otlpreceiver.Config)
 	cfg.GRPC.NetAddr.Endpoint = addr
 	cfg.HTTP = nil
-	params := component.ReceiverCreateParams{Logger: zap.NewNop()}
+	params := component.ReceiverCreateSettings{Logger: zap.NewNop()}
 	otlpTracesRec, err := factory.CreateTracesReceiver(context.Background(), params, cfg, tracesMultiConsumer{
 		tracesSink:        tracesSink,
 		tenantIDprocessor: tenantProcessor,
@@ -159,9 +159,9 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 	otlpExpFac := otlpexporter.NewFactory()
 	tracesExporter, err := otlpExpFac.CreateTracesExporter(
 		context.Background(),
-		component.ExporterCreateParams{Logger: zap.NewNop()},
+		component.ExporterCreateSettings{Logger: zap.NewNop()},
 		&otlpexporter.Config{
-			ExporterSettings: config.NewExporterSettings("otlp"),
+			ExporterSettings: config.NewExporterSettings(config.NewID("otlp")),
 			GRPCClientSettings: configgrpc.GRPCClientSettings{
 				Headers:      map[string]string{tenantProcessor.tenantIDHeaderName: testTenantID},
 				Endpoint:     addr,
@@ -201,7 +201,7 @@ func TestReceiveOTLPGRPC_Metrics(t *testing.T) {
 	cfg := factory.CreateDefaultConfig().(*otlpreceiver.Config)
 	cfg.GRPC.NetAddr.Endpoint = addr
 	cfg.HTTP = nil
-	params := component.ReceiverCreateParams{Logger: zap.NewNop()}
+	params := component.ReceiverCreateSettings{Logger: zap.NewNop()}
 	otlpMetricsRec, err := factory.CreateMetricsReceiver(context.Background(), params, cfg, metricsMultiConsumer{
 		metricsSink:       metricsSink,
 		tenantIDprocessor: tenantProcessor,
@@ -218,9 +218,9 @@ func TestReceiveOTLPGRPC_Metrics(t *testing.T) {
 	otlpExpFac := otlpexporter.NewFactory()
 	metricsExporter, err := otlpExpFac.CreateMetricsExporter(
 		context.Background(),
-		component.ExporterCreateParams{Logger: zap.NewNop()},
+		component.ExporterCreateSettings{Logger: zap.NewNop()},
 		&otlpexporter.Config{
-			ExporterSettings: config.NewExporterSettings("otlp"),
+			ExporterSettings: config.NewExporterSettings(config.NewID("otlp")),
 			GRPCClientSettings: configgrpc.GRPCClientSettings{
 				Headers:      map[string]string{tenantProcessor.tenantIDHeaderName: testTenantID},
 				Endpoint:     addr,
@@ -263,7 +263,7 @@ func TestReceiveJaegerThriftHTTP_Traces(t *testing.T) {
 			},
 		},
 	}
-	params := component.ReceiverCreateParams{Logger: zap.NewNop()}
+	params := component.ReceiverCreateSettings{Logger: zap.NewNop()}
 	jrf := jaegerreceiver.NewFactory()
 	rec, err := jrf.CreateTracesReceiver(context.Background(), params, cfg, tracesMultiConsumer{
 		tracesSink:        sink,
@@ -311,7 +311,7 @@ func assertTenantAttributeExists(t *testing.T, trace pdata.Traces, tenantAttrKey
 				tenantAttr, ok := span.Attributes().Get(tenantAttrKey)
 				require.True(t, ok)
 				numOfTenantAttrs++
-				assert.Equal(t, pdata.AttributeValueSTRING, tenantAttr.Type())
+				assert.Equal(t, pdata.AttributeValueTypeString, tenantAttr.Type())
 				assert.Equal(t, tenantID, tenantAttr.StringVal())
 			}
 		}
@@ -360,6 +360,10 @@ func (f tracesMultiConsumer) ConsumeTraces(ctx context.Context, td pdata.Traces)
 	return f.tracesSink.ConsumeTraces(ctx, traces)
 }
 
+func (f tracesMultiConsumer) Capabilities() consumer.Capabilities {
+	return consumer.Capabilities{}
+}
+
 type metricsMultiConsumer struct {
 	metricsSink       *consumertest.MetricsSink
 	tenantIDprocessor *processor
@@ -373,6 +377,10 @@ func (f metricsMultiConsumer) ConsumeMetrics(ctx context.Context, md pdata.Metri
 		return err
 	}
 	return f.metricsSink.ConsumeMetrics(ctx, metrics)
+}
+
+func (f metricsMultiConsumer) Capabilities() consumer.Capabilities {
+	return consumer.Capabilities{}
 }
 
 var (

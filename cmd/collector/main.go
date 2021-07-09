@@ -24,7 +24,7 @@ func main() {
 	}
 
 	info := component.BuildInfo{
-		Command:     "hypertrace-collector",
+		Command:     "collector",
 		Description: "Hypertrace Collector",
 		Version:     Version,
 	}
