@@ -23,14 +23,13 @@ func main() {
 		log.Fatalf("failed to build default components: %v", err)
 	}
 
-	info := component.ApplicationStartInfo{
-		ExeName:  "collector",
-		LongName: "Hypertrace Collector",
-		Version:  Version,
-		GitHash:  GitHash,
+	info := component.BuildInfo{
+		Command:     "hypertrace-collector",
+		Description: "Hypertrace Collector",
+		Version:     Version,
 	}
 
-	if err := run(service.Parameters{ApplicationStartInfo: info, Factories: factories}); err != nil {
+	if err := run(service.CollectorSettings{BuildInfo: info, Factories: factories}); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -56,7 +55,7 @@ func components() (component.Factories, error) {
 	return factories, consumererror.Combine(errs)
 }
 
-func run(params service.Parameters) error {
+func run(params service.CollectorSettings) error {
 	app, err := service.New(params)
 	if err != nil {
 		return fmt.Errorf("failed to construct the application: %w", err)

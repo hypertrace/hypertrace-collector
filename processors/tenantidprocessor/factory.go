@@ -2,6 +2,7 @@ package tenantidprocessor
 
 import (
 	"context"
+
 	"go.opentelemetry.io/collector/config"
 
 	"go.opentelemetry.io/collector/component"
@@ -27,10 +28,9 @@ func NewFactory() component.ProcessorFactory {
 
 func createDefaultConfig() config.Processor {
 	return &Config{
-		ProcessorSettings: &config.ProcessorSettings{
-			TypeVal: typeStr,
-			NameVal: typeStr,
-		},
+		ProcessorSettings: config.NewProcessorSettings(
+			config.NewID(typeStr),
+		),
 		TenantIDHeaderName:   defaultHeaderName,
 		TenantIDAttributeKey: defaultAttributeKey,
 	}
@@ -38,12 +38,12 @@ func createDefaultConfig() config.Processor {
 
 func createTraceProcessor(
 	_ context.Context,
-	params component.ProcessorCreateParams,
+	params component.ProcessorCreateSettings,
 	cfg config.Processor,
 	nextConsumer consumer.Traces,
 ) (component.TracesProcessor, error) {
 	pCfg := cfg.(*Config)
-	return processorhelper.NewTraceProcessor(
+	return processorhelper.NewTracesProcessor(
 		cfg,
 		nextConsumer,
 		&processor{
@@ -55,7 +55,7 @@ func createTraceProcessor(
 
 func createMetricsProcessor(
 	_ context.Context,
-	params component.ProcessorCreateParams,
+	params component.ProcessorCreateSettings,
 	cfg config.Processor,
 	nextConsumer consumer.Metrics,
 ) (component.MetricsProcessor, error) {
