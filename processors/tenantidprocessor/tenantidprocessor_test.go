@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"go.opentelemetry.io/collector/config"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"testing"
 	"time"
+
+	"go.opentelemetry.io/collector/config"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/jaegertracing/jaeger/model"
@@ -31,7 +32,6 @@ import (
 	"go.opentelemetry.io/collector/testutil"
 	"go.opentelemetry.io/collector/translator/trace/jaeger"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -152,10 +152,6 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 	require.NoError(t, err)
 	defer otlpTracesRec.Shutdown(context.Background())
 
-	conn, err := grpc.Dial(cfg.GRPC.NetAddr.Endpoint, grpc.WithInsecure())
-	require.NoError(t, err)
-	defer conn.Close()
-
 	otlpExpFac := otlpexporter.NewFactory()
 	tracesExporter, err := otlpExpFac.CreateTracesExporter(
 		context.Background(),
@@ -210,10 +206,6 @@ func TestReceiveOTLPGRPC_Metrics(t *testing.T) {
 	err = otlpMetricsRec.Start(context.Background(), componenttest.NewNopHost())
 	require.NoError(t, err)
 	defer otlpMetricsRec.Shutdown(context.Background())
-
-	conn, err := grpc.Dial(cfg.GRPC.NetAddr.Endpoint, grpc.WithInsecure())
-	require.NoError(t, err)
-	defer conn.Close()
 
 	otlpExpFac := otlpexporter.NewFactory()
 	metricsExporter, err := otlpExpFac.CreateMetricsExporter(
