@@ -11,7 +11,7 @@ import (
 // The batch processor cleans context, therefore this processor
 // has to run before it, ideally right after the receiver.
 type Config struct {
-	*config.ProcessorSettings `mapstructure:"-"`
+	config.ProcessorSettings `mapstructure:"-"`
 
 	// TenantIDHeaderName defines tenant HTTP header name. Default x-tenant-id.
 	TenantIDHeaderName string `mapstructure:"header_name"`
