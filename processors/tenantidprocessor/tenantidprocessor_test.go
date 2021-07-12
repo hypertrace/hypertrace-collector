@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"go.opentelemetry.io/collector/config"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"testing"
 	"time"
+
+	"go.opentelemetry.io/collector/config"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/jaegertracing/jaeger/model"
@@ -129,6 +130,23 @@ func TestEmptyMetrics(t *testing.T) {
 	assert.Equal(t, metrics, gotMetrics)
 }
 
+func createOTLPTracesReceiver(t *testing.T, nextConsumer consumer.Traces) (string, component.MetricsReceiver) {
+	addr := testutil.GetAvailableLocalAddress(t)
+	factory := otlpreceiver.NewFactory()
+	cfg := factory.CreateDefaultConfig().(*otlpreceiver.Config)
+	cfg.GRPC.NetAddr.Endpoint = addr
+	cfg.HTTP = nil
+	params := component.ReceiverCreateSettings{Logger: zap.NewNop()}
+	otlpTracesRec, err := factory.CreateTracesReceiver(context.Background(), params, cfg, nextConsumer)
+	require.NoError(t, err)
+
+	conn, err := grpc.Dial(addr, grpc.WithInsecure())
+	require.NoError(t, err)
+	t.Cleanup(func() { conn.Close() })
+
+	return addr, otlpTracesRec
+}
+
 func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 	tracesSink := new(consumertest.TracesSink)
 	tenantProcessor := &processor{
@@ -137,24 +155,16 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 		tenantIDAttributeKey: defaultAttributeKey,
 	}
 
-	addr := testutil.GetAvailableLocalAddress(t)
-	factory := otlpreceiver.NewFactory()
-	cfg := factory.CreateDefaultConfig().(*otlpreceiver.Config)
-	cfg.GRPC.NetAddr.Endpoint = addr
-	cfg.HTTP = nil
-	params := component.ReceiverCreateSettings{Logger: zap.NewNop()}
-	otlpTracesRec, err := factory.CreateTracesReceiver(context.Background(), params, cfg, tracesMultiConsumer{
+	tracesConsumer := tracesMultiConsumer{
 		tracesSink:        tracesSink,
 		tenantIDprocessor: tenantProcessor,
-	})
-	require.NoError(t, err)
-	err = otlpTracesRec.Start(context.Background(), componenttest.NewNopHost())
+	}
+
+	addr, otlpTracesRec := createOTLPTracesReceiver(t, tracesConsumer)
+
+	err := otlpTracesRec.Start(context.Background(), componenttest.NewNopHost())
 	require.NoError(t, err)
 	defer otlpTracesRec.Shutdown(context.Background())
-
-	conn, err := grpc.Dial(cfg.GRPC.NetAddr.Endpoint, grpc.WithInsecure())
-	require.NoError(t, err)
-	defer conn.Close()
 
 	otlpExpFac := otlpexporter.NewFactory()
 	tracesExporter, err := otlpExpFac.CreateTracesExporter(
@@ -173,7 +183,11 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	reqTraces := GenerateTraceDataOneSpan()
+
+	err = tracesExporter.Start(context.Background(), componenttest.NewNopHost())
+	require.NoError(t, err)
+
+	reqTraces := generateTraceDataOneSpan()
 	err = tracesExporter.ConsumeTraces(context.Background(), reqTraces)
 	require.NoError(t, err)
 
@@ -188,35 +202,60 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 	assert.Equal(t, reqTraces.SpanCount(), tenantAttrsFound)
 }
 
-func TestReceiveOTLPGRPC_Metrics(t *testing.T) {
-	metricsSink := new(consumertest.MetricsSink)
-	tenantProcessor := &processor{
-		logger:               zap.NewNop(),
-		tenantIDHeaderName:   defaultHeaderName,
-		tenantIDAttributeKey: defaultAttributeKey,
-	}
-
+func createOTLPMetricsReceiver(t *testing.T, nextConsumer consumer.Metrics) (string, component.MetricsReceiver) {
 	addr := testutil.GetAvailableLocalAddress(t)
 	factory := otlpreceiver.NewFactory()
 	cfg := factory.CreateDefaultConfig().(*otlpreceiver.Config)
 	cfg.GRPC.NetAddr.Endpoint = addr
 	cfg.HTTP = nil
 	params := component.ReceiverCreateSettings{Logger: zap.NewNop()}
-	otlpMetricsRec, err := factory.CreateMetricsReceiver(context.Background(), params, cfg, metricsMultiConsumer{
+
+	otlpMetricsRec, err := factory.CreateMetricsReceiver(
+		context.Background(),
+		params,
+		cfg,
+		nextConsumer,
+	)
+	require.NoError(t, err)
+
+	conn, err := grpc.Dial(addr, grpc.WithInsecure())
+	require.NoError(t, err)
+	t.Cleanup(func() { conn.Close() })
+
+	return addr, otlpMetricsRec
+}
+
+func generateMetricData() pdata.Metrics {
+	md := pdata.NewMetrics()
+	md.ResourceMetrics().Resize(1)
+	md.ResourceMetrics().At(0).InstrumentationLibraryMetrics().Resize(1)
+	md.ResourceMetrics().At(0).InstrumentationLibraryMetrics().At(0).Metrics().Resize(1)
+	metric := md.ResourceMetrics().At(0).InstrumentationLibraryMetrics().At(0).Metrics().At(0)
+	metric.SetDataType(pdata.MetricDataTypeIntSum)
+	metric.IntSum().DataPoints().Resize(1)
+	return md
+}
+
+func TestReceiveOTLPGRPC_Metrics(t *testing.T) {
+	tenantProcessor := &processor{
+		logger:               zap.NewNop(),
+		tenantIDHeaderName:   defaultHeaderName,
+		tenantIDAttributeKey: defaultAttributeKey,
+	}
+
+	metricsSink := new(consumertest.MetricsSink)
+
+	metricsConsumer := metricsMultiConsumer{
 		metricsSink:       metricsSink,
 		tenantIDprocessor: tenantProcessor,
-	})
-	require.NoError(t, err)
-	err = otlpMetricsRec.Start(context.Background(), componenttest.NewNopHost())
+	}
+
+	addr, otlpMetricsRec := createOTLPMetricsReceiver(t, metricsConsumer)
+	err := otlpMetricsRec.Start(context.Background(), componenttest.NewNopHost())
 	require.NoError(t, err)
 	defer otlpMetricsRec.Shutdown(context.Background())
 
-	conn, err := grpc.Dial(cfg.GRPC.NetAddr.Endpoint, grpc.WithInsecure())
-	require.NoError(t, err)
-	defer conn.Close()
-
-	otlpExpFac := otlpexporter.NewFactory()
-	metricsExporter, err := otlpExpFac.CreateMetricsExporter(
+	metricsExporter, err := otlpexporter.NewFactory().CreateMetricsExporter(
 		context.Background(),
 		component.ExporterCreateSettings{Logger: zap.NewNop()},
 		&otlpexporter.Config{
@@ -232,7 +271,11 @@ func TestReceiveOTLPGRPC_Metrics(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	reqMetrics := GenerateMetricData()
+	err = metricsExporter.Start(context.Background(), componenttest.NewNopHost())
+	require.NoError(t, err)
+
+	reqMetrics := generateMetricData()
+
 	err = metricsExporter.ConsumeMetrics(context.Background(), reqMetrics)
 	require.NoError(t, err)
 
@@ -275,7 +318,7 @@ func TestReceiveJaegerThriftHTTP_Traces(t *testing.T) {
 	require.NoError(t, err)
 	defer rec.Shutdown(context.Background())
 
-	td := GenerateTraceDataOneSpan()
+	td := generateTraceDataOneSpan()
 	batches, err := jaeger.InternalTracesToJaegerProto(td)
 	require.NoError(t, err)
 	collectorAddr := fmt.Sprintf("http://%s/api/traces", addr)
@@ -365,7 +408,7 @@ func (f tracesMultiConsumer) Capabilities() consumer.Capabilities {
 }
 
 type metricsMultiConsumer struct {
-	metricsSink       *consumertest.MetricsSink
+	metricsSink       consumer.Metrics //*consumertest.MetricsSink
 	tenantIDprocessor *processor
 }
 
@@ -395,35 +438,35 @@ var (
 	spanEventAttributes  = map[string]pdata.AttributeValue{"span-event-attr": pdata.NewAttributeValueString("span-event-attr-val")}
 )
 
-func GenerateTraceDataOneSpan() pdata.Traces {
-	td := GenerateTraceDataOneEmptyInstrumentationLibrary()
+func generateTraceDataOneSpan() pdata.Traces {
+	td := generateTraceDataOneEmptyInstrumentationLibrary()
 	rs0ils0 := td.ResourceSpans().At(0).InstrumentationLibrarySpans().At(0)
 	rs0ils0.Spans().Resize(1)
 	fillSpanOne(rs0ils0.Spans().At(0))
 	return td
 }
 
-func GenerateTraceDataOneEmptyInstrumentationLibrary() pdata.Traces {
-	td := GenerateTraceDataNoLibraries()
+func generateTraceDataOneEmptyInstrumentationLibrary() pdata.Traces {
+	td := generateTraceDataNoLibraries()
 	rs0 := td.ResourceSpans().At(0)
 	rs0.InstrumentationLibrarySpans().Resize(1)
 	return td
 }
 
-func GenerateTraceDataNoLibraries() pdata.Traces {
-	td := GenerateTraceDataOneEmptyResourceSpans()
+func generateTraceDataNoLibraries() pdata.Traces {
+	td := generateTraceDataOneEmptyResourceSpans()
 	rs0 := td.ResourceSpans().At(0)
 	initResource1(rs0.Resource())
 	return td
 }
 
-func GenerateTraceDataOneEmptyResourceSpans() pdata.Traces {
-	td := GenerateTraceDataEmpty()
+func generateTraceDataOneEmptyResourceSpans() pdata.Traces {
+	td := generateTraceDataEmpty()
 	td.ResourceSpans().Resize(1)
 	return td
 }
 
-func GenerateTraceDataEmpty() pdata.Traces {
+func generateTraceDataEmpty() pdata.Traces {
 	td := pdata.NewTraces()
 	return td
 }
@@ -462,17 +505,6 @@ func fillSpanOne(span pdata.Span) {
 
 func initSpanEventAttributes(dest pdata.AttributeMap) {
 	dest.InitFromMap(spanEventAttributes)
-}
-
-func GenerateMetricData() pdata.Metrics {
-	md := pdata.NewMetrics()
-	md.ResourceMetrics().Resize(1)
-	md.ResourceMetrics().At(0).InstrumentationLibraryMetrics().Resize(1)
-	md.ResourceMetrics().At(0).InstrumentationLibraryMetrics().At(0).Metrics().Resize(1)
-	metric := md.ResourceMetrics().At(0).InstrumentationLibraryMetrics().At(0).Metrics().At(0)
-	metric.SetDataType(pdata.MetricDataTypeIntSum)
-	metric.IntSum().DataPoints().Resize(1)
-	return md
 }
 
 func jaegerModelToThrift(batch *model.Batch) *jaegerthrift.Batch {
