@@ -13,4 +13,4 @@ require (
 )
 
 // branch jaeger-thrift-http-headers
-replace go.opentelemetry.io/collector => github.com/hypertrace/opentelemetry-collector v0.29.1-0.20210709231914-7cf726f60962
+replace go.opentelemetry.io/collector => github.com/hypertrace/opentelemetry-collector v0.29.1+patches
