@@ -7,8 +7,7 @@ import (
 
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
-	"go.opentelemetry.io/collector/consumer/pdata"
-	"go.opentelemetry.io/collector/processor/processorhelper"
+	"go.opentelemetry.io/collector/model/pdata"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/metadata"
 )
@@ -19,11 +18,7 @@ type processor struct {
 	logger               *zap.Logger
 }
 
-var _ processorhelper.TProcessor = (*processor)(nil)
-
-var _ processorhelper.MProcessor = (*processor)(nil)
-
-// ProcessMetrics implements processorhelper.MProcessor
+// ProcessMetrics implements processorhelper.ProcessMetricsFunc
 func (p *processor) ProcessMetrics(ctx context.Context, metrics pdata.Metrics) (pdata.Metrics, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
@@ -48,7 +43,7 @@ func (p *processor) ProcessMetrics(ctx context.Context, metrics pdata.Metrics) (
 
 }
 
-// ProcessTraces implements processorhelper.TProcessor
+// ProcessTraces implements processorhelper.ProcessTracesFunc
 func (p *processor) ProcessTraces(ctx context.Context, traces pdata.Traces) (pdata.Traces, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
@@ -106,40 +101,25 @@ func (p *processor) addTenantIdToMetrics(metrics pdata.Metrics, tenantIDHeaderVa
 				switch metricDataType {
 				case "None":
 					p.logger.Error("Cannot add tenantId to metric. Metric Data type not present for metric: " + metric.Name())
-				case "IntGauge":
-					metricData := metric.IntGauge().DataPoints()
+				case "Gauge":
+					metricData := metric.Gauge().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
-						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
+						metricData.At(l).Attributes().Insert(p.tenantIDAttributeKey, pdata.NewAttributeValueString(tenantIDHeaderValue))
 					}
-				case "DoubleGauge":
-					metricData := metric.DoubleGauge().DataPoints()
+				case "Sum":
+					metricData := metric.Sum().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
-						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
+						metricData.At(l).Attributes().Insert(p.tenantIDAttributeKey, pdata.NewAttributeValueString(tenantIDHeaderValue))
 					}
-				case "IntSum":
-					metricData := metric.IntSum().DataPoints()
-					for l := 0; l < metricData.Len(); l++ {
-						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
-					}
-				case "DoubleSum":
-					metricData := metric.DoubleSum().DataPoints()
-					for l := 0; l < metricData.Len(); l++ {
-						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
-					}
-				case "IntHistogram":
-					metricData := metric.IntHistogram().DataPoints()
-					for l := 0; l < metricData.Len(); l++ {
-						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
-					}
-				case "DoubleHistogram":
+				case "Histogram":
 					metricData := metric.Histogram().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
-						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
+						metricData.At(l).Attributes().Insert(p.tenantIDAttributeKey, pdata.NewAttributeValueString(tenantIDHeaderValue))
 					}
-				case "DoubleSummary":
+				case "Summary":
 					metricData := metric.Summary().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
-						metricData.At(l).LabelsMap().Insert(p.tenantIDAttributeKey, tenantIDHeaderValue)
+						metricData.At(l).Attributes().Insert(p.tenantIDAttributeKey, pdata.NewAttributeValueString(tenantIDHeaderValue))
 					}
 				}
 			}

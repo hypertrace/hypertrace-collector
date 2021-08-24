@@ -43,14 +43,15 @@ func createTraceProcessor(
 	nextConsumer consumer.Traces,
 ) (component.TracesProcessor, error) {
 	pCfg := cfg.(*Config)
+	processor := &processor{
+		tenantIDAttributeKey: pCfg.TenantIDAttributeKey,
+		tenantIDHeaderName:   pCfg.TenantIDHeaderName,
+		logger:               params.Logger,
+	}
 	return processorhelper.NewTracesProcessor(
 		cfg,
 		nextConsumer,
-		&processor{
-			tenantIDAttributeKey: pCfg.TenantIDAttributeKey,
-			tenantIDHeaderName:   pCfg.TenantIDHeaderName,
-			logger:               params.Logger,
-		})
+		processor.ProcessTraces)
 }
 
 func createMetricsProcessor(
@@ -60,12 +61,13 @@ func createMetricsProcessor(
 	nextConsumer consumer.Metrics,
 ) (component.MetricsProcessor, error) {
 	pCfg := cfg.(*Config)
+	processor := &processor{
+		tenantIDAttributeKey: pCfg.TenantIDAttributeKey,
+		tenantIDHeaderName:   pCfg.TenantIDHeaderName,
+		logger:               params.Logger,
+	}
 	return processorhelper.NewMetricsProcessor(
 		cfg,
 		nextConsumer,
-		&processor{
-			tenantIDAttributeKey: pCfg.TenantIDAttributeKey,
-			tenantIDHeaderName:   pCfg.TenantIDHeaderName,
-			logger:               params.Logger,
-		})
+		processor.ProcessMetrics)
 }

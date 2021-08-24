@@ -25,12 +25,13 @@ import (
 	"go.opentelemetry.io/collector/config/configtls"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/consumer/consumertest"
-	"go.opentelemetry.io/collector/consumer/pdata"
 	"go.opentelemetry.io/collector/exporter/otlpexporter"
+	"go.opentelemetry.io/collector/model/pdata"
 	"go.opentelemetry.io/collector/receiver/jaegerreceiver"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 	"go.opentelemetry.io/collector/testutil"
 	"go.opentelemetry.io/collector/translator/trace/jaeger"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -169,7 +170,7 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 	otlpExpFac := otlpexporter.NewFactory()
 	tracesExporter, err := otlpExpFac.CreateTracesExporter(
 		context.Background(),
-		component.ExporterCreateSettings{Logger: zap.NewNop()},
+		component.ExporterCreateSettings{Logger: zap.NewNop(), TracerProvider: trace.NewNoopTracerProvider()},
 		&otlpexporter.Config{
 			ExporterSettings: config.NewExporterSettings(config.NewID("otlp")),
 			GRPCClientSettings: configgrpc.GRPCClientSettings{
@@ -227,12 +228,12 @@ func createOTLPMetricsReceiver(t *testing.T, nextConsumer consumer.Metrics) (str
 
 func generateMetricData() pdata.Metrics {
 	md := pdata.NewMetrics()
-	md.ResourceMetrics().Resize(1)
-	md.ResourceMetrics().At(0).InstrumentationLibraryMetrics().Resize(1)
-	md.ResourceMetrics().At(0).InstrumentationLibraryMetrics().At(0).Metrics().Resize(1)
+	md.ResourceMetrics().AppendEmpty()
+	md.ResourceMetrics().At(0).InstrumentationLibraryMetrics().AppendEmpty()
+	md.ResourceMetrics().At(0).InstrumentationLibraryMetrics().At(0).Metrics().AppendEmpty()
 	metric := md.ResourceMetrics().At(0).InstrumentationLibraryMetrics().At(0).Metrics().At(0)
-	metric.SetDataType(pdata.MetricDataTypeIntSum)
-	metric.IntSum().DataPoints().Resize(1)
+	metric.SetDataType(pdata.MetricDataTypeSum)
+	metric.Sum().DataPoints().AppendEmpty()
 	return md
 }
 
@@ -257,7 +258,7 @@ func TestReceiveOTLPGRPC_Metrics(t *testing.T) {
 
 	metricsExporter, err := otlpexporter.NewFactory().CreateMetricsExporter(
 		context.Background(),
-		component.ExporterCreateSettings{Logger: zap.NewNop()},
+		component.ExporterCreateSettings{Logger: zap.NewNop(), TracerProvider: trace.NewNoopTracerProvider()},
 		&otlpexporter.Config{
 			ExporterSettings: config.NewExporterSettings(config.NewID("otlp")),
 			GRPCClientSettings: configgrpc.GRPCClientSettings{
@@ -375,12 +376,12 @@ func assertTenantTagExists(t *testing.T, metricData pdata.Metrics, tenantAttrKey
 			metrics := ilm.Metrics()
 			for k := 0; k < metrics.Len(); k++ {
 				metric := metrics.At(k)
-				metricDataPoints := metric.IntSum().DataPoints()
+				metricDataPoints := metric.Sum().DataPoints()
 				for l := 0; l < metricDataPoints.Len(); l++ {
-					tenantAttr, ok := metricDataPoints.At(l).LabelsMap().Get(tenantAttrKey)
+					tenantAttr, ok := metricDataPoints.At(l).Attributes().Get(tenantAttrKey)
 					require.True(t, ok)
 					numOfTenantAttrs++
-					assert.Equal(t, tenantID, tenantAttr)
+					assert.Equal(t, pdata.NewAttributeValueString(tenantID), tenantAttr)
 				}
 			}
 		}
@@ -441,7 +442,7 @@ var (
 func generateTraceDataOneSpan() pdata.Traces {
 	td := generateTraceDataOneEmptyInstrumentationLibrary()
 	rs0ils0 := td.ResourceSpans().At(0).InstrumentationLibrarySpans().At(0)
-	rs0ils0.Spans().Resize(1)
+	rs0ils0.Spans().AppendEmpty()
 	fillSpanOne(rs0ils0.Spans().At(0))
 	return td
 }
@@ -449,7 +450,7 @@ func generateTraceDataOneSpan() pdata.Traces {
 func generateTraceDataOneEmptyInstrumentationLibrary() pdata.Traces {
 	td := generateTraceDataNoLibraries()
 	rs0 := td.ResourceSpans().At(0)
-	rs0.InstrumentationLibrarySpans().Resize(1)
+	rs0.InstrumentationLibrarySpans().AppendEmpty()
 	return td
 }
 
@@ -462,7 +463,7 @@ func generateTraceDataNoLibraries() pdata.Traces {
 
 func generateTraceDataOneEmptyResourceSpans() pdata.Traces {
 	td := generateTraceDataEmpty()
-	td.ResourceSpans().Resize(1)
+	td.ResourceSpans().AppendEmpty()
 	return td
 }
 
@@ -487,7 +488,8 @@ func fillSpanOne(span pdata.Span) {
 	span.SetTraceID(pdata.NewTraceID([16]byte{0, 1, 2}))
 	span.SetSpanID(pdata.NewSpanID([8]byte{0, 1}))
 	evs := span.Events()
-	evs.Resize(2)
+	evs.AppendEmpty()
+	evs.AppendEmpty()
 	ev0 := evs.At(0)
 	ev0.SetTimestamp(TestSpanEventTimestamp)
 	ev0.SetName("event-with-attr")
