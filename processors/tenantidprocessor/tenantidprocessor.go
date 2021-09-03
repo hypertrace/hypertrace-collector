@@ -72,17 +72,6 @@ func (p *processor) addTenantIdToSpans(traces pdata.Traces, tenantIDHeaderValue 
 	for i := 0; i < rss.Len(); i++ {
 		rs := rss.At(i)
 		rs.Resource().Attributes().Insert(p.tenantIDAttributeKey, pdata.NewAttributeValueString(tenantIDHeaderValue))
-
-		ilss := rs.InstrumentationLibrarySpans()
-		for j := 0; j < ilss.Len(); j++ {
-			ils := ilss.At(j)
-
-			spans := ils.Spans()
-			for k := 0; k < spans.Len(); k++ {
-				span := spans.At(k)
-				span.Attributes().Insert(p.tenantIDAttributeKey, pdata.NewAttributeValueString(tenantIDHeaderValue))
-			}
-		}
 	}
 }
 
