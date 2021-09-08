@@ -200,7 +200,7 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 		tenantProcessor.tenantIDAttributeKey,
 		testTenantID,
 	)
-	assert.Equal(t, reqTraces.SpanCount(), tenantAttrsFound)
+	assert.Equal(t, reqTraces.ResourceSpans().Len(), tenantAttrsFound)
 }
 
 func createOTLPMetricsReceiver(t *testing.T, nextConsumer consumer.Metrics) (string, component.MetricsReceiver) {
@@ -336,7 +336,7 @@ func TestReceiveJaegerThriftHTTP_Traces(t *testing.T) {
 		tenantProcessor.tenantIDAttributeKey,
 		testTenantID,
 	)
-	assert.Equal(t, td.SpanCount(), tenantAttrsFound)
+	assert.Equal(t, td.ResourceSpans().Len(), tenantAttrsFound)
 }
 
 func assertTenantAttributeExists(t *testing.T, trace pdata.Traces, tenantAttrKey string, tenantID string) int {
@@ -344,21 +344,11 @@ func assertTenantAttributeExists(t *testing.T, trace pdata.Traces, tenantAttrKey
 	rss := trace.ResourceSpans()
 	for i := 0; i < rss.Len(); i++ {
 		rs := rss.At(i)
-
-		ilss := rs.InstrumentationLibrarySpans()
-		for j := 0; j < ilss.Len(); j++ {
-			ils := ilss.At(j)
-
-			spans := ils.Spans()
-			for k := 0; k < spans.Len(); k++ {
-				span := spans.At(k)
-				tenantAttr, ok := span.Attributes().Get(tenantAttrKey)
-				require.True(t, ok)
-				numOfTenantAttrs++
-				assert.Equal(t, pdata.AttributeValueTypeString, tenantAttr.Type())
-				assert.Equal(t, tenantID, tenantAttr.StringVal())
-			}
-		}
+		tenantAttr, ok := rs.Resource().Attributes().Get(tenantAttrKey)
+		require.True(t, ok)
+		numOfTenantAttrs++
+		assert.Equal(t, pdata.AttributeValueTypeString, tenantAttr.Type())
+		assert.Equal(t, tenantID, tenantAttr.StringVal())
 	}
 	return numOfTenantAttrs
 }
