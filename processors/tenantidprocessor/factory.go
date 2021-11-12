@@ -29,7 +29,7 @@ func NewFactory() component.ProcessorFactory {
 func createDefaultConfig() config.Processor {
 	return &Config{
 		ProcessorSettings: config.NewProcessorSettings(
-			config.NewID(typeStr),
+			config.NewComponentID(typeStr),
 		),
 		TenantIDHeaderName:   defaultHeaderName,
 		TenantIDAttributeKey: defaultAttributeKey,

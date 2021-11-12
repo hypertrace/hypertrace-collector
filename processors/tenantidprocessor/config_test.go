@@ -21,7 +21,7 @@ func TestLoadConfig(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 
-	tIDcfg := cfg.Processors[config.NewID(typeStr)].(*Config)
+	tIDcfg := cfg.Processors[config.NewComponentID(typeStr)].(*Config)
 	assert.Equal(t, "header-tenant", tIDcfg.TenantIDHeaderName)
 	assert.Equal(t, "attribute-tenant", tIDcfg.TenantIDAttributeKey)
 }

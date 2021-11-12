@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"testing"
 	"time"
@@ -16,6 +17,8 @@ import (
 	"github.com/jaegertracing/jaeger/model"
 	jaegerconvert "github.com/jaegertracing/jaeger/model/converter/thrift/jaeger"
 	jaegerthrift "github.com/jaegertracing/jaeger/thrift-gen/jaeger"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/jaeger"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
@@ -27,10 +30,7 @@ import (
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/exporter/otlpexporter"
 	"go.opentelemetry.io/collector/model/pdata"
-	"go.opentelemetry.io/collector/receiver/jaegerreceiver"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
-	"go.opentelemetry.io/collector/testutil"
-	"go.opentelemetry.io/collector/translator/trace/jaeger"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -131,13 +131,31 @@ func TestEmptyMetrics(t *testing.T) {
 	assert.Equal(t, metrics, gotMetrics)
 }
 
+// GetAvailableLocalAddress finds an available local port and returns an endpoint
+// describing it. The port is available for opening when this function returns
+// provided that there is no race by some other code to grab the same port
+// immediately.
+func getAvailableLocalAddress(t *testing.T) string {
+	ln, err := net.Listen("tcp", "localhost:0")
+	require.NoError(t, err, "Failed to get a free local port")
+	// There is a possible race if something else takes this same port before
+	// the test uses it, however, that is unlikely in practice.
+	defer ln.Close()
+	return ln.Addr().String()
+}
+
 func createOTLPTracesReceiver(t *testing.T, nextConsumer consumer.Traces) (string, component.MetricsReceiver) {
-	addr := testutil.GetAvailableLocalAddress(t)
+	addr := getAvailableLocalAddress(t)
 	factory := otlpreceiver.NewFactory()
 	cfg := factory.CreateDefaultConfig().(*otlpreceiver.Config)
 	cfg.GRPC.NetAddr.Endpoint = addr
 	cfg.HTTP = nil
-	params := component.ReceiverCreateSettings{Logger: zap.NewNop()}
+	params := component.ReceiverCreateSettings{
+		TelemetrySettings: component.TelemetrySettings{
+			Logger:         zap.NewNop(),
+			TracerProvider: trace.NewNoopTracerProvider(),
+		},
+	}
 	otlpTracesRec, err := factory.CreateTracesReceiver(context.Background(), params, cfg, nextConsumer)
 	require.NoError(t, err)
 
@@ -170,9 +188,14 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 	otlpExpFac := otlpexporter.NewFactory()
 	tracesExporter, err := otlpExpFac.CreateTracesExporter(
 		context.Background(),
-		component.ExporterCreateSettings{Logger: zap.NewNop(), TracerProvider: trace.NewNoopTracerProvider()},
+		component.ExporterCreateSettings{
+			TelemetrySettings: component.TelemetrySettings{
+				Logger:         zap.NewNop(),
+				TracerProvider: trace.NewNoopTracerProvider(),
+			},
+		},
 		&otlpexporter.Config{
-			ExporterSettings: config.NewExporterSettings(config.NewID("otlp")),
+			ExporterSettings: config.NewExporterSettings(config.NewComponentID("otlp")),
 			GRPCClientSettings: configgrpc.GRPCClientSettings{
 				Headers:      map[string]string{tenantProcessor.tenantIDHeaderName: testTenantID},
 				Endpoint:     addr,
@@ -204,12 +227,17 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 }
 
 func createOTLPMetricsReceiver(t *testing.T, nextConsumer consumer.Metrics) (string, component.MetricsReceiver) {
-	addr := testutil.GetAvailableLocalAddress(t)
+	addr := getAvailableLocalAddress(t)
 	factory := otlpreceiver.NewFactory()
 	cfg := factory.CreateDefaultConfig().(*otlpreceiver.Config)
 	cfg.GRPC.NetAddr.Endpoint = addr
 	cfg.HTTP = nil
-	params := component.ReceiverCreateSettings{Logger: zap.NewNop()}
+	params := component.ReceiverCreateSettings{
+		TelemetrySettings: component.TelemetrySettings{
+			Logger:         zap.NewNop(),
+			TracerProvider: trace.NewNoopTracerProvider(),
+		},
+	}
 
 	otlpMetricsRec, err := factory.CreateMetricsReceiver(
 		context.Background(),
@@ -258,9 +286,14 @@ func TestReceiveOTLPGRPC_Metrics(t *testing.T) {
 
 	metricsExporter, err := otlpexporter.NewFactory().CreateMetricsExporter(
 		context.Background(),
-		component.ExporterCreateSettings{Logger: zap.NewNop(), TracerProvider: trace.NewNoopTracerProvider()},
+		component.ExporterCreateSettings{
+			TelemetrySettings: component.TelemetrySettings{
+				Logger:         zap.NewNop(),
+				TracerProvider: trace.NewNoopTracerProvider(),
+			},
+		},
 		&otlpexporter.Config{
-			ExporterSettings: config.NewExporterSettings(config.NewID("otlp")),
+			ExporterSettings: config.NewExporterSettings(config.NewComponentID("otlp")),
 			GRPCClientSettings: configgrpc.GRPCClientSettings{
 				Headers:      map[string]string{tenantProcessor.tenantIDHeaderName: testTenantID},
 				Endpoint:     addr,
@@ -299,7 +332,7 @@ func TestReceiveJaegerThriftHTTP_Traces(t *testing.T) {
 		tenantIDAttributeKey: defaultAttributeKey,
 	}
 
-	addr := testutil.GetAvailableLocalAddress(t)
+	addr := getAvailableLocalAddress(t)
 	cfg := &jaegerreceiver.Config{
 		Protocols: jaegerreceiver.Protocols{
 			ThriftHTTP: &confighttp.HTTPServerSettings{
@@ -307,7 +340,12 @@ func TestReceiveJaegerThriftHTTP_Traces(t *testing.T) {
 			},
 		},
 	}
-	params := component.ReceiverCreateSettings{Logger: zap.NewNop()}
+	params := component.ReceiverCreateSettings{
+		TelemetrySettings: component.TelemetrySettings{
+			Logger:         zap.NewNop(),
+			TracerProvider: trace.NewNoopTracerProvider(),
+		},
+	}
 	jrf := jaegerreceiver.NewFactory()
 	rec, err := jrf.CreateTracesReceiver(context.Background(), params, cfg, tracesMultiConsumer{
 		tracesSink:        sink,
@@ -322,6 +360,7 @@ func TestReceiveJaegerThriftHTTP_Traces(t *testing.T) {
 	td := generateTraceDataOneSpan()
 	batches, err := jaeger.InternalTracesToJaegerProto(td)
 	require.NoError(t, err)
+
 	collectorAddr := fmt.Sprintf("http://%s/api/traces", addr)
 	for _, batch := range batches {
 		err := sendToJaegerHTTPThrift(collectorAddr, map[string]string{tenantProcessor.tenantIDHeaderName: testTenantID}, jaegerModelToThrift(batch))
@@ -420,12 +459,12 @@ func (f metricsMultiConsumer) Capabilities() consumer.Capabilities {
 var (
 	resourceAttributes1    = map[string]pdata.AttributeValue{"resource-attr": pdata.NewAttributeValueString("resource-attr-val-1")}
 	TestSpanStartTime      = time.Date(2020, 2, 11, 20, 26, 12, 321, time.UTC)
-	TestSpanStartTimestamp = pdata.TimestampFromTime(TestSpanStartTime)
+	TestSpanStartTimestamp = pdata.NewTimestampFromTime(TestSpanStartTime)
 	TestSpanEventTime      = time.Date(2020, 2, 11, 20, 26, 13, 123, time.UTC)
-	TestSpanEventTimestamp = pdata.TimestampFromTime(TestSpanEventTime)
+	TestSpanEventTimestamp = pdata.NewTimestampFromTime(TestSpanEventTime)
 
 	TestSpanEndTime      = time.Date(2020, 2, 11, 20, 26, 13, 789, time.UTC)
-	TestSpanEndTimestamp = pdata.TimestampFromTime(TestSpanEndTime)
+	TestSpanEndTimestamp = pdata.NewTimestampFromTime(TestSpanEndTime)
 	spanEventAttributes  = map[string]pdata.AttributeValue{"span-event-attr": pdata.NewAttributeValueString("span-event-attr-val")}
 )
 
