@@ -1,4 +1,4 @@
-FROM golang:1.16-buster as build-stage
+FROM golang:1.17-buster as build-stage
 
 RUN mkdir -p /go/src/github.com/hypertrace/collector
 WORKDIR /go/src/github.com/hypertrace/collector
@@ -20,4 +20,5 @@ COPY default-config.yml /etc/opt/hypertrace/config.yml
 EXPOSE 9411
 
 ENTRYPOINT ["/usr/local/bin/hypertrace/collector"]
+
 CMD ["--config", "/etc/opt/hypertrace/config.yml"]

@@ -7,11 +7,14 @@ on:
       - "**/*.md"
       - "LICENSE"
   pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - "LICENSE"
 jobs:
   test-and-build:
     strategy:
       matrix:
-        go-version: [1.16.x]
+        go-version: [1.17]
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
