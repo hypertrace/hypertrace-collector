@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension"
@@ -62,6 +63,9 @@ func components() (component.Factories, error) {
 
 	tidpf := tenantidprocessor.NewFactory()
 	factories.Processors[tidpf.Type()] = tidpf
+
+	fef := fileexporter.NewFactory()
+	factories.Exporters[fef.Type()] = fef
 
 	kef := kafkaexporter.NewFactory()
 	factories.Exporters[kef.Type()] = kef
