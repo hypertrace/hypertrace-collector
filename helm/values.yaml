@@ -169,6 +169,9 @@ configMap:
           level: 5 #Required only for gzip 1-9
       prometheus:
         endpoint: "0.0.0.0:8889"
+        #For converting resource attributes to metric labels
+        resource_to_telemetry_conversion:
+          enabled: true
 
     service:
       extensions: [health_check, pprof, zpages]
