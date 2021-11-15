@@ -7,6 +7,7 @@ require (
 	github.com/jaegertracing/jaeger v1.27.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter v0.38.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter v0.38.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter v0.38.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.38.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension v0.38.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/jaeger v0.38.0

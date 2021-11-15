@@ -6,6 +6,7 @@ import (
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver"
@@ -69,6 +70,9 @@ func components() (component.Factories, error) {
 
 	kef := kafkaexporter.NewFactory()
 	factories.Exporters[kef.Type()] = kef
+
+	pef := prometheusexporter.NewFactory()
+	factories.Exporters[pef.Type()] = pef
 
 	return factories, nil
 }
