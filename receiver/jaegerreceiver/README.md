@@ -1,8 +1,5 @@
 # Jaeger Receiver
 
-**IMPORTANT:** This component is copied from https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.38.0/receiver/jaegerreceiver and 
-addapted to accept metadata from headers into the processing pipeline.
-
 Receives trace data in [Jaeger](https://www.jaegertracing.io/) format.
 
 Supported pipeline types: traces
