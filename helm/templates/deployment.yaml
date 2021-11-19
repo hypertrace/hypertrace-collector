@@ -58,7 +58,6 @@ spec:
             - "/usr/local/bin/hypertrace/collector"
             - "--config=/conf/hypertrace-collector-config.yaml"
             - "--metrics-addr={{ .Values.metricsAddress }}"
-            - "--log-level={{ .Values.logLevel }}"
           ports:
           {{ range $port := .Values.containerPorts }}
             - name: {{ $port.name }}
