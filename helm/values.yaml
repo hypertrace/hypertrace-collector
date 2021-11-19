@@ -5,7 +5,6 @@
 ###########
 # Deployment and Service
 ###########
-logLevel: INFO
 metricsAddress: "0.0.0.0:8888"
 
 minReadySeconds: 5
@@ -34,40 +33,40 @@ containerPorts:
     containerPort: 14250
   - name: http-zipkin
     containerPort: 9411
-#   Port for exposing internal metrics to prometheus. Should match with {{ .Values.metricsAddress }}
+  #   Port for exposing internal metrics to prometheus. Should match with {{ .Values.metricsAddress }}
   - name: http-prom-int
     containerPort: 8888
-#   Port for exposing prometheus exporter metrics. Should match with {{ .Values.configmap.data.exporters.prometheus.endpoint }}
+  #   Port for exposing prometheus exporter metrics. Should match with {{ .Values.configmap.data.exporters.prometheus.endpoint }}
   - name: http-prom-exp
     containerPort: 8889
 
 service:
   type: LoadBalancer
   ports:
-  - name: grpc-otlp
-    port: 4317
-    targetPort: 4317
-    protocol: TCP
-  - name: http-otlp
-    port: 55681
-    targetPort: 55681
-    protocol: TCP
-  - name: grpc-opencensus
-    port: 55678
-    targetPort: 55678
-    protocol: TCP
-  - name: http-jaeger
-    port: 14268
-    targetPort: 14268
-    protocol: TCP
-  - name: grpc-jaeger
-    port: 14250
-    targetPort: 14250
-    protocol: TCP
-  - name: http-zipkin
-    port: 9411
-    targetPort: 9411
-    protocol: TCP
+    - name: grpc-otlp
+      port: 4317
+      targetPort: 4317
+      protocol: TCP
+    - name: http-otlp
+      port: 55681
+      targetPort: 55681
+      protocol: TCP
+    - name: grpc-opencensus
+      port: 55678
+      targetPort: 55678
+      protocol: TCP
+    - name: http-jaeger
+      port: 14268
+      targetPort: 14268
+      protocol: TCP
+    - name: grpc-jaeger
+      port: 14250
+      targetPort: 14250
+      protocol: TCP
+    - name: http-zipkin
+      port: 9411
+      targetPort: 9411
+      protocol: TCP
 
 livenessProbe:
   initialDelaySeconds: 5
@@ -82,12 +81,12 @@ resources:
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
   # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-   limits:
-     cpu: 1
-     memory: 2Gi
-   requests:
-     cpu: 200m
-     memory: 400Mi
+  limits:
+    cpu: 1
+    memory: 2Gi
+  requests:
+    cpu: 200m
+    memory: 400Mi
 
 deploymentLabels:
   app: hypertrace-collector
@@ -174,6 +173,9 @@ configMap:
           enabled: true
 
     service:
+      telemetry:
+        logs:
+          level: "INFO"
       extensions: [health_check, pprof, zpages]
       pipelines:
         traces:
@@ -181,9 +183,9 @@ configMap:
           processors: [batch]
           exporters: [kafka]
         metrics:
-          receivers: [ otlp ]
-          processors: [ batch ]
-          exporters: [ prometheus ]
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [prometheus]
 
 hpa:
   enabled: false
