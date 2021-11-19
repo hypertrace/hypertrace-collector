@@ -33,7 +33,7 @@ func main() {
 	info := component.BuildInfo{
 		Command:     "collector",
 		Description: "Hypertrace Collector",
-		Version:     Version,
+		Version:     BuildVersion,
 	}
 
 	if err := run(service.CollectorSettings{BuildInfo: info, Factories: factories}); err != nil {
