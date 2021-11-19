@@ -8,6 +8,9 @@ COPY . /go/src/github.com/hypertrace/collector
 ARG GIT_COMMIT
 ARG VERSION
 
+LABEL org.opencontainers.image.version=${VERSION}
+LABEL org.opencontainers.image.revision=${BUILD_COMMIT}
+
 RUN GOOS=linux make build
 
 FROM gcr.io/distroless/base
