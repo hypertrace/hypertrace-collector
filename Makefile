@@ -1,5 +1,5 @@
-VERSION ?= dev
-GIT_HASH ?=$(shell git rev-parse HEAD)
+BUILD_VERSION ?= dev
+BUILD_COMMIT_SHA ?= $(shell git rev-parse HEAD)
 IMAGE_NAME ?= "hypertrace/collector"
 CONFIG_FILE ?= ./default-config.yml
 
@@ -12,15 +12,20 @@ test: unit-test
 
 .PHONY: build
 build:
-	$(if $(GOOS),GOOS=${GOOS},) go build -ldflags "-w -X main.GitHash=${GIT_HASH} -X main.Version=${VERSION}" ./cmd/collector
+	$(if $(GOOS),GOOS=${GOOS},) go build -ldflags "-w -X main.BuildCommitSHA=${BUILD_COMMIT_SHA} -X main.BuildVersion=${BUILD_VERSION}" ./cmd/collector
 
 .PHONY: run
 run:
-	go run -ldflags "-w -X main.GitHash=${GIT_HASH} -X main.Version=${VERSION}" cmd/collector/* --config ${CONFIG_FILE}
+	go run -ldflags "-w -X main.BuildCommitSHA=${BUILD_COMMIT_SHA} -X main.BuildVersion=${BUILD_VERSION}" cmd/collector/* --config ${CONFIG_FILE}
 
 .PHONY: package
 package:
-	@docker build --build-arg VERSION=${VERSION} --build-arg GIT_COMMIT=$(GIT_COMMIT) -t $(IMAGE_NAME):${VERSION} .
+	@docker build \
+	--build-arg BUILD_VERSION=${BUILD_VERSION} \
+	--build-arg BUILD_COMMIT_SHA=$(BUILD_COMMIT_SHA) \
+	--progress=plain \
+	-t $(IMAGE_NAME):${BUILD_VERSION} .
+
 
 .PHONY: docker-push
 docker-push:
