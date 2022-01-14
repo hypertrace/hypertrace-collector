@@ -32,9 +32,9 @@ exporters:
       - ${EXPORTER_KAFKA_BROKER}
     topic: ${EXPORTER_KAFKA_TOPIC}
     encoding: jaeger_proto
-    #compression:
-    #  codec: gzip
-    #  level: 5
+    compression:
+      codec: gzip
+      level: 5
 
 service:
   pipelines:
