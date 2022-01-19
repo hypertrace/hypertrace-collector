@@ -34,6 +34,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -159,7 +160,7 @@ func createOTLPTracesReceiver(t *testing.T, nextConsumer consumer.Traces) (strin
 	otlpTracesRec, err := factory.CreateTracesReceiver(context.Background(), params, cfg, nextConsumer)
 	require.NoError(t, err)
 
-	conn, err := grpc.Dial(addr, grpc.WithInsecure())
+	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 	t.Cleanup(func() { conn.Close() })
 
@@ -247,7 +248,7 @@ func createOTLPMetricsReceiver(t *testing.T, nextConsumer consumer.Metrics) (str
 	)
 	require.NoError(t, err)
 
-	conn, err := grpc.Dial(addr, grpc.WithInsecure())
+	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 	t.Cleanup(func() { conn.Close() })
 
@@ -457,7 +458,6 @@ func (f metricsMultiConsumer) Capabilities() consumer.Capabilities {
 }
 
 var (
-	resourceAttributes1    = map[string]pdata.AttributeValue{"resource-attr": pdata.NewAttributeValueString("resource-attr-val-1")}
 	TestSpanStartTime      = time.Date(2020, 2, 11, 20, 26, 12, 321, time.UTC)
 	TestSpanStartTimestamp = pdata.NewTimestampFromTime(TestSpanStartTime)
 	TestSpanEventTime      = time.Date(2020, 2, 11, 20, 26, 13, 123, time.UTC)
@@ -465,7 +465,6 @@ var (
 
 	TestSpanEndTime      = time.Date(2020, 2, 11, 20, 26, 13, 789, time.UTC)
 	TestSpanEndTimestamp = pdata.NewTimestampFromTime(TestSpanEndTime)
-	spanEventAttributes  = map[string]pdata.AttributeValue{"span-event-attr": pdata.NewAttributeValueString("span-event-attr-val")}
 )
 
 func generateTraceDataOneSpan() pdata.Traces {
@@ -506,7 +505,7 @@ func initResource1(r pdata.Resource) {
 }
 
 func initResourceAttributes1(dest pdata.AttributeMap) {
-	dest.InitFromMap(resourceAttributes1)
+	dest.UpsertString("resource-attr", "resource-attr-val-1")
 }
 
 func fillSpanOne(span pdata.Span) {
@@ -535,7 +534,7 @@ func fillSpanOne(span pdata.Span) {
 }
 
 func initSpanEventAttributes(dest pdata.AttributeMap) {
-	dest.InitFromMap(spanEventAttributes)
+	dest.UpsertString("span-event-attr", "span-event-attr-val")
 }
 
 func jaegerModelToThrift(batch *model.Batch) *jaegerthrift.Batch {

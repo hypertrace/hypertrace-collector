@@ -1,7 +1,6 @@
 # Kafka Exporter
 
-**IMPORTANT:** This component is copied from https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.39.0/exporter/kafkaexporter and 
-addapted to accept compression settings.
+**IMPORTANT:** This component is copied from https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.42.0/exporter/kafkaexporter and adapted to accept compression settings.
 
 Kafka exporter exports traces to Kafka. This exporter uses a synchronous producer
 that blocks and does not batch messages, therefore it should be used with batch and queued retry
@@ -15,6 +14,7 @@ The following settings can be optionally configured:
 - `topic` (default = otlp_spans for traces, otlp_metrics for metrics, otlp_logs for logs): The name of the kafka topic to export to.
 - `encoding` (default = otlp_proto): The encoding of the traces sent to kafka. All available encodings:
   - `otlp_proto`: payload is Protobuf serialized from `ExportTraceServiceRequest` if set as a traces exporter or `ExportMetricsServiceRequest` for metrics or `ExportLogsServiceRequest` for logs.
+  - `otlp_json`:  ** EXPERIMENTAL ** payload is JSON serialized from `ExportTraceServiceRequest` if set as a traces exporter or `ExportMetricsServiceRequest` for metrics or `ExportLogsServiceRequest` for logs. 
   - The following encodings are valid *only* for **traces**.
     - `jaeger_proto`: the payload is serialized to a single Jaeger proto `Span`, and keyed by TraceID.
     - `jaeger_json`: the payload is serialized to a single Jaeger JSON Span using `jsonpb`, and keyed by TraceID.
@@ -64,6 +64,9 @@ The following settings can be optionally configured:
   User should calculate this as `num_seconds * requests_per_second` where:
     - `num_seconds` is the number of seconds to buffer in case of a backend outage
     - `requests_per_second` is the average number of requests per seconds.
+- `producer`
+  - `max_message_bytes` (default = 1000000) the maximum permitted size of a message in bytes
+  - `required_acks` (default = 1) controls when a message is regarded as transmitted.   https://pkg.go.dev/github.com/Shopify/sarama@v1.30.0#RequiredAcks
 
 Example configuration:
 

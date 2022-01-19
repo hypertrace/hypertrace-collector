@@ -1,7 +1,7 @@
 # Jaeger Receiver
 
-**IMPORTANT:** This component is copied from https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.39.0/receiver/jaegerreceiver and 
-addapted to accept metadata from headers into the processing pipeline.
+**IMPORTANT:** This component is copied from https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.42.0/receiver/jaegerreceiver and
+adapted to accept metadata from headers into the processing pipeline.
 
 Receives trace data in [Jaeger](https://www.jaegertracing.io/) format.
 
@@ -95,6 +95,7 @@ receivers:
       grpc:
     remote_sampling:
       strategy_file: "/etc/strategy.json"
+      strategy_file_reload_interval: 10s
 ```
 
 Note: the `grpc` protocol must be enabled for this to work as Jaeger serves its
