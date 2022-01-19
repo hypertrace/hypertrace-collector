@@ -79,5 +79,6 @@ func TestLoadConfig(t *testing.T) {
 			Codec: "gzip",
 			Level: 8,
 		},
+		DebugMode: true,
 	}, c)
 }
