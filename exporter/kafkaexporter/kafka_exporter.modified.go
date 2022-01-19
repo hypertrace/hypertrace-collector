@@ -179,7 +179,7 @@ func newTracesExporter(config Config, set component.ExporterCreateSettings, mars
 	if marshaler == nil {
 		return nil, errUnrecognizedEncoding
 	}
-	if config.DebugMode && config.Encoding == "jaeger_proto" {
+	if config.Debug && config.Encoding == "jaeger_proto" {
 		v := sarama.V2_0_0_0
 		if config.ProtocolVersion != "" {
 			version, err := sarama.ParseKafkaVersion(config.ProtocolVersion)
