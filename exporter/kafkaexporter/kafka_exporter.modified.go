@@ -172,11 +172,26 @@ func newMetricsExporter(config Config, set component.ExporterCreateSettings, mar
 
 }
 
-// newTracesExporter creates Kafka exporter.
+// newTracesExporter creates Kafka exporter. If debug mode is turned on and we are using "jaeger_proto" message encoding, we will switch out the
+// marshaler to jaegerMarshalerDebug which logs spans details for spans greater than config.Producer.MaxMessageBytes.
 func newTracesExporter(config Config, set component.ExporterCreateSettings, marshalers map[string]TracesMarshaler) (*kafkaTracesProducer, error) {
 	marshaler := marshalers[config.Encoding]
 	if marshaler == nil {
 		return nil, errUnrecognizedEncoding
+	}
+	if config.Debug && config.Encoding == "jaeger_proto" {
+		v := sarama.V2_0_0_0
+		if config.ProtocolVersion != "" {
+			version, err := sarama.ParseKafkaVersion(config.ProtocolVersion)
+			if err == nil {
+				v = version
+			}
+		}
+		marshaler = jaegerMarshalerDebug{
+			marshaler:       jaegerProtoSpanMarshaler{},
+			version:         v,
+			maxMessageBytes: config.Producer.MaxMessageBytes,
+		}
 	}
 	producer, err := newSaramaProducer(config)
 	if err != nil {

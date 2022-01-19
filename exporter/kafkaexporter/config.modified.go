@@ -53,6 +53,9 @@ type Config struct {
 
 	// Compression defines the compression method and compression level, if applicable.
 	Compression Compression `mapstructure:"compression"`
+
+	// Debug. Log info for spans that exceed Producer.MaxMessageBytes early.
+	Debug bool `mapstructure:"debug"`
 }
 
 // Metadata defines configuration for retrieving metadata from the broker.

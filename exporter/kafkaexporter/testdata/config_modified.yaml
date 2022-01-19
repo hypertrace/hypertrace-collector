@@ -28,6 +28,7 @@ exporters:
     compression:
       codec: gzip
       level: 8
+    debug: true
 
 processors:
   nop:
