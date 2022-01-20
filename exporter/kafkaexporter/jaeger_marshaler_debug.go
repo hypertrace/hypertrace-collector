@@ -24,12 +24,13 @@ const (
 )
 
 type jaegerMarshalerDebug struct {
-	marshaler       jaegerSpanMarshaler
-	version         sarama.KafkaVersion
-	maxMessageBytes int
+	marshaler          jaegerSpanMarshaler
+	version            sarama.KafkaVersion
+	maxMessageBytes    int
+	dumpSpanAttributes bool
 }
 
-var _ TracesMarshaler = (*jaegerMarshaler)(nil)
+var _ TracesMarshaler = (*jaegerMarshalerDebug)(nil)
 
 func (j jaegerMarshalerDebug) Marshal(traces pdata.Traces, topic string) ([]*sarama.ProducerMessage, error) {
 	batches, err := jaegertranslator.InternalTracesToJaegerProto(traces)
@@ -60,7 +61,7 @@ func (j jaegerMarshalerDebug) Marshal(traces pdata.Traces, topic string) ([]*sar
 				// Log span info for a span that exceeds the max message size
 				// We log instead of throwing an error since the caller for this tracesPusher() will return an error and not even
 				// send those messages that didn't exceed the max message size.
-				log.Printf("span exceeds max message size: %d vs %d. span%s\n", messageSize, j.maxMessageBytes, spanAsString(span))
+				log.Printf("span exceeds max message size: %d vs %d. span%s\n", messageSize, j.maxMessageBytes, j.spanAsString(span))
 			}
 			messages = append(messages, msg)
 		}
@@ -72,7 +73,7 @@ func (j jaegerMarshalerDebug) Encoding() string {
 	return j.marshaler.encoding()
 }
 
-func spanAsString(span *jaegerproto.Span) string {
+func (j jaegerMarshalerDebug) spanAsString(span *jaegerproto.Span) string {
 	var sb strings.Builder
 
 	sb.WriteString("{")
@@ -82,7 +83,7 @@ func spanAsString(span *jaegerproto.Span) string {
 	sb.WriteString(fmt.Sprintf("start_time: %s, ", span.StartTime.String()))
 	sb.WriteString(fmt.Sprintf("duration: %s, ", span.Duration.String()))
 	if span.Process == nil {
-		sb.WriteString("process: nil")
+		sb.WriteString("process: nil, ")
 	} else {
 		sb.WriteString("process: {")
 		sb.WriteString(fmt.Sprintf("service_name: %s, ", span.Process.ServiceName))
@@ -94,9 +95,20 @@ func spanAsString(span *jaegerproto.Span) string {
 			sb.WriteString("},")
 		}
 		sb.WriteString("]")
-		sb.WriteString("}")
+		sb.WriteString("}, ")
 	}
-	sb.WriteString("}")
+	sb.WriteString("tags: [")
+	for _, kv := range span.Tags {
+		sb.WriteString("{")
+		sb.WriteString(fmt.Sprintf("key: %s, ", kv.Key))
+		if j.dumpSpanAttributes {
+			sb.WriteString(fmt.Sprintf("value: %s", valueToString(kv)))
+		} else {
+			sb.WriteString(fmt.Sprintf("value_size: %d", valueSize(kv)))
+		}
+		sb.WriteString("},")
+	}
+	sb.WriteString("]")
 
 	return sb.String()
 }
@@ -114,6 +126,22 @@ func valueToString(kv jaegerproto.KeyValue) string {
 		return hex.EncodeToString(kv.GetVBinary())
 	} else {
 		return ""
+	}
+}
+
+func valueSize(kv jaegerproto.KeyValue) int {
+	if kv.VType == jaegerproto.ValueType_STRING {
+		return len(kv.GetVStr())
+	} else if kv.VType == jaegerproto.ValueType_BOOL {
+		return len(strconv.FormatBool(kv.GetVBool()))
+	} else if kv.VType == jaegerproto.ValueType_INT64 {
+		return len(strconv.FormatInt(kv.GetVInt64(), 10))
+	} else if kv.VType == jaegerproto.ValueType_FLOAT64 {
+		return len(fmt.Sprintf("%f", kv.GetVFloat64()))
+	} else if kv.VType == jaegerproto.ValueType_BINARY {
+		return len(kv.GetVBinary())
+	} else {
+		return 0
 	}
 }
 
