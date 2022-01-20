@@ -56,6 +56,10 @@ type Config struct {
 
 	// Debug. Log info for spans that exceed Producer.MaxMessageBytes early.
 	Debug bool `mapstructure:"debug"`
+
+	// Dump all span attributes. Works when Debug above is set to true. Will dump
+	// all the span attribute values for spans that exceed Producer.MaxMessageBytes
+	DumpSpanAttributes bool `mapstructure:"dump_span_attributes"`
 }
 
 // Metadata defines configuration for retrieving metadata from the broker.

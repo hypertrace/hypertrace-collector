@@ -28,6 +28,7 @@ func TestJaegerMarshalerDebug(t *testing.T) {
 	span.SetEndTimestamp(pdata.Timestamp(20))
 	span.SetTraceID(pdata.NewTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}))
 	span.SetSpanID(pdata.NewSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8}))
+	span.Attributes().Insert("tag1", pdata.NewAttributeValueString("tag1-val"))
 
 	// Create a string whose size is maxMessageBytes
 	var b strings.Builder
@@ -44,6 +45,7 @@ func TestJaegerMarshalerDebug(t *testing.T) {
 	span.SetEndTimestamp(pdata.Timestamp(225))
 	span.SetTraceID(pdata.NewTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}))
 	span.SetSpanID(pdata.NewSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8}))
+	span.Attributes().Insert("tag10", pdata.NewAttributeValueString("tag10-val"))
 	span.Attributes().Insert("big-tag", pdata.NewAttributeValueString(s))
 
 	batches, err := jaegertranslator.InternalTracesToJaegerProto(td)
@@ -97,6 +99,18 @@ func TestJaegerMarshalerDebug(t *testing.T) {
 				{Topic: "topic", Value: sarama.ByteEncoder(jsonByteBuffer0.Bytes()), Key: sarama.ByteEncoder(messageKey)},
 				{Topic: "topic", Value: sarama.ByteEncoder(jsonByteBuffer1.Bytes()), Key: sarama.ByteEncoder(messageKey)},
 			},
+		},
+		{
+			unmarshaler: jaegerMarshalerDebug{
+				marshaler:          jaegerProtoSpanMarshaler{},
+				version:            sarama.V2_0_0_0,
+				maxMessageBytes:    maxMessageBytes,
+				dumpSpanAttributes: true, // test setting this to true
+			},
+			encoding: "jaeger_proto",
+			messages: []*sarama.ProducerMessage{
+				{Topic: "topic", Value: sarama.ByteEncoder(jaegerProtoBytes0), Key: sarama.ByteEncoder(messageKey)},
+				{Topic: "topic", Value: sarama.ByteEncoder(jaegerProtoBytes1), Key: sarama.ByteEncoder(messageKey)}},
 		},
 	}
 	for _, test := range tests {

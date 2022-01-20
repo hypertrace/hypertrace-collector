@@ -29,6 +29,7 @@ exporters:
       codec: gzip
       level: 8
     debug: true
+    dump_span_attributes: true
 
 processors:
   nop:
