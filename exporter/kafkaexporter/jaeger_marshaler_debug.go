@@ -20,8 +20,9 @@ import (
 
 const (
 	maximumRecordOverhead        = 5*binary.MaxVarintLen32 + binary.MaxVarintLen64 + 1
-	producerMessageOverhead      = 26 // the metadata overhead of CRC, flags, etc.
-	defaultMaxAttributeValueSize = 131072
+	producerMessageOverhead      = 26     // the metadata overhead of CRC, flags, etc.
+	defaultMaxAttributeValueSize = 131072 // default maximum size of a tag value.
+	maxTruncationTries           = 5      // maximum number of times to attempt to truncate tag values.
 )
 
 type jaegerMarshalerDebug struct {
@@ -68,11 +69,12 @@ func (j jaegerMarshalerDebug) Marshal(traces pdata.Traces, topic string) ([]*sar
 				// If cure spans is configured, we will attempt to fix the large span by truncating the large tag values.
 				if j.cureSpans {
 					log.Printf("will attempt to cure span")
-					msg, err = j.cureSpan(span, topic)
+					curedSpanMsg, err := j.cureSpan(span, topic)
 					// continue to process spans if an error occured while curing the span
 					if err != nil {
-						errs = multierr.Append(errs, err)
-						continue
+						log.Printf("an error occured while curing span: %v\n", err)
+					} else {
+						msg = curedSpanMsg
 					}
 				}
 			}
@@ -127,59 +129,73 @@ func (j jaegerMarshalerDebug) spanAsString(span *jaegerproto.Span) string {
 }
 
 func (j jaegerMarshalerDebug) cureSpan(span *jaegerproto.Span, topic string) (*sarama.ProducerMessage, error) {
-	// Go through the attributes and get the indices of tags whose values exceed j.maxAttributeValueSize
-	var indices []int
-	for i, kv := range span.Tags {
-		if kv.VType == jaegerproto.ValueType_STRING {
-			if len(kv.GetVStr()) > j.maxAttributeValueSize {
-				indices = append(indices, i)
+	attributeValueSize := j.maxAttributeValueSize
+	truncatedKeysSoFar := make(map[string]bool)
+	// Go through the attributes and get the indices of tags whose values exceed attributeValueSize
+	for truncationTry := 0; truncationTry < maxTruncationTries; truncationTry++ {
+		var indices []int
+		for i, kv := range span.Tags {
+			if kv.VType == jaegerproto.ValueType_STRING {
+				if len(kv.GetVStr()) > attributeValueSize {
+					indices = append(indices, i)
+				}
+			} else if kv.VType == jaegerproto.ValueType_BINARY {
+				if len(kv.GetVBinary()) > attributeValueSize {
+					indices = append(indices, i)
+				}
 			}
-		} else if kv.VType == jaegerproto.ValueType_BINARY {
-			if len(kv.GetVBinary()) > j.maxAttributeValueSize {
-				indices = append(indices, i)
+		}
+
+		// For the attribute indices we got, look through and truncate them in the span.Tags
+		var truncatedKeys []string
+		for _, i := range indices {
+			kv := span.Tags[i]
+			if kv.VType == jaegerproto.ValueType_STRING {
+				kv.VStr = kv.VStr[:attributeValueSize]
+			} else if kv.VType == jaegerproto.ValueType_BINARY {
+				kv.VBinary = kv.VBinary[:attributeValueSize]
+			}
+			// replace the kv in the slice with one whose value is truncated.
+			span.Tags[i] = kv
+			truncatedKey := kv.Key + ".truncated"
+			// append the ".truncated" attribute to the list of truncated keys if it's not already been seen before.
+			if !truncatedKeysSoFar[truncatedKey] {
+				truncatedKeys = append(truncatedKeys, kv.Key+".truncated")
+				truncatedKeysSoFar[truncatedKey] = true
 			}
 		}
-	}
 
-	// For the attribute indices we got, look through and truncate them in the span.Tags
-	var truncatedKeys []string
-	for _, i := range indices {
-		kv := span.Tags[i]
-		if kv.VType == jaegerproto.ValueType_STRING {
-			kv.VStr = kv.VStr[:j.maxAttributeValueSize]
-		} else if kv.VType == jaegerproto.ValueType_BINARY {
-			kv.VBinary = kv.VBinary[:j.maxAttributeValueSize]
+		// append the ".truncated" attributes to the span list.
+		for _, k := range truncatedKeys {
+			kv := jaegerproto.KeyValue{
+				Key:   k,
+				VType: jaegerproto.ValueType_BOOL,
+				VBool: true,
+			}
+			span.Tags = append(span.Tags, kv)
 		}
-		// replace the kv in the slice with one whose value is truncated.
-		span.Tags[i] = kv
-		truncatedKeys = append(truncatedKeys, kv.Key+".truncated")
-	}
 
-	// append the ".truncated" attributes to the span list.
-	for _, k := range truncatedKeys {
-		kv := jaegerproto.KeyValue{
-			Key:   k,
-			VType: jaegerproto.ValueType_BOOL,
-			VBool: true,
+		bts, err := j.marshaler.marshal(span)
+		// return err if there is a problem marshaling
+		if err != nil {
+			return nil, err
 		}
-		span.Tags = append(span.Tags, kv)
+		key := []byte(span.TraceID.String())
+		msg := &sarama.ProducerMessage{
+			Topic: topic,
+			Value: sarama.ByteEncoder(bts),
+			Key:   sarama.ByteEncoder(key),
+		}
+
+		// Check if the size is less than the max and if it is return. Otherwise half attributeValueSize and try again
+		messageSize := byteSize(msg, j.version)
+		if messageSize <= j.maxMessageBytes {
+			return msg, nil
+		}
+		attributeValueSize = attributeValueSize / 2
 	}
 
-	bts, err := j.marshaler.marshal(span)
-	// return err if there is a problem marshaling
-	if err != nil {
-		return nil, err
-	}
-	key := []byte(span.TraceID.String())
-	msg := &sarama.ProducerMessage{
-		Topic: topic,
-		Value: sarama.ByteEncoder(bts),
-		Key:   sarama.ByteEncoder(key),
-	}
-	// Computed the same way as in https://github.com/Shopify/sarama/blob/a060ecaa8887587485754af088bd8a521f6d55e9/async_producer.go#L233
-	//messageSize := byteSize(msg, j.version)
-	return msg, nil
-	//return span, nil
+	return nil, fmt.Errorf("unable to cure span in %d truncation tries", maxTruncationTries)
 }
 
 func valueToString(kv jaegerproto.KeyValue) string {

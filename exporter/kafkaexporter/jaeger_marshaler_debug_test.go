@@ -2,7 +2,6 @@ package kafkaexporter
 
 import (
 	"bytes"
-	//"fmt"
 	"strings"
 	"testing"
 
@@ -31,14 +30,6 @@ func TestJaegerMarshalerDebug(t *testing.T) {
 	span.SetTraceID(pdata.NewTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}))
 	span.SetSpanID(pdata.NewSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8}))
 	span.Attributes().Insert("tag1", pdata.NewAttributeValueString("tag1-val"))
-
-	// Create a string whose size is maxMessageBytes
-	// var b strings.Builder
-	// b.Grow(maxMessageBytes)
-	// for i := 0; i < maxMessageBytes; i++ {
-	// 	b.WriteString("a")
-	// }
-	// s := b.String()
 
 	// Will log on this span that exceeds max message size.
 	span = ils.Spans().AppendEmpty()
@@ -140,140 +131,178 @@ func TestJaegerMarshalerDebug_error_covert_traceID(t *testing.T) {
 func TestCureSpans(t *testing.T) {
 	maxMessageBytes := 1024
 	maxAttributeValueSize := 256
-	// td := pdata.NewTraces()
-	// rs := td.ResourceSpans().AppendEmpty()
-	// rs.Resource().Attributes().Insert("test-key", pdata.NewAttributeValueString("test-val"))
-	// ils := rs.InstrumentationLibrarySpans().AppendEmpty()
 
-	// // Will add this span to the messages queue to export
-	// span := ils.Spans().AppendEmpty()
-	// span.SetName("foo")
-	// span.SetStartTimestamp(pdata.Timestamp(10))
-	// span.SetEndTimestamp(pdata.Timestamp(20))
-	// span.SetTraceID(pdata.NewTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}))
-	// span.SetSpanID(pdata.NewSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8}))
-	// span.Attributes().Insert("tag1", pdata.NewAttributeValueString("tag1-val"))
-
-	// // Create a string whose size is maxMessageBytes
-	// var b strings.Builder
-	// b.Grow(maxMessageBytes)
-	// for i := 0; i < maxMessageBytes; i++ {
-	// 	b.WriteString("a")
-	// }
-	// s := b.String()
-
-	// // Will log on this span that exceeds max message size.
-	// span = ils.Spans().AppendEmpty()
-	// span.SetName("bar")
-	// span.SetStartTimestamp(pdata.Timestamp(100))
-	// span.SetEndTimestamp(pdata.Timestamp(225))
-	// span.SetTraceID(pdata.NewTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}))
-	// span.SetSpanID(pdata.NewSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8}))
-	// span.Attributes().Insert("tag10", pdata.NewAttributeValueString("tag10-val"))
-	// span.Attributes().Insert("big-tag", pdata.NewAttributeValueString(s))
-
-	jaegerSpan := &jaegerproto.Span{
-		TraceID: jaegerproto.TraceID{Low: 100, High: 2000},
-		SpanID:  123,
-		Tags: []jaegerproto.KeyValue{
-			{Key: "tag-1", VType: jaegerproto.ValueType_STRING, VStr: "simple string"},
-			{Key: "tag-2", VType: jaegerproto.ValueType_STRING, VStr: createLongString(128, "fo")},
-			{Key: "tag-3", VType: jaegerproto.ValueType_BOOL, VBool: true},
-			{Key: "tag-4", VType: jaegerproto.ValueType_BINARY, VBinary: createLongByteArray(500)},
-			{Key: "tag-5", VType: jaegerproto.ValueType_STRING, VStr: createLongString(256, "ba")},
+	tests := []struct {
+		inputSpan    *jaegerproto.Span
+		expectedSpan *jaegerproto.Span
+	}{
+		{
+			inputSpan: &jaegerproto.Span{
+				TraceID: jaegerproto.TraceID{Low: 101, High: 2001},
+				SpanID:  124,
+				Tags: []jaegerproto.KeyValue{
+					{Key: "tag-1", VType: jaegerproto.ValueType_STRING, VStr: "simple string"},
+					{Key: "tag-2", VType: jaegerproto.ValueType_STRING, VStr: createLongString(32, "fo")},
+					{Key: "tag-3", VType: jaegerproto.ValueType_BOOL, VBool: true},
+					{Key: "tag-4", VType: jaegerproto.ValueType_BINARY, VBinary: createLongByteArray(50)},
+					{Key: "tag-5", VType: jaegerproto.ValueType_STRING, VStr: createLongString(70, "ba")},
+				},
+			},
+			expectedSpan: &jaegerproto.Span{
+				TraceID: jaegerproto.TraceID{Low: 101, High: 2001},
+				SpanID:  124,
+				Tags: []jaegerproto.KeyValue{
+					{Key: "tag-1", VType: jaegerproto.ValueType_STRING, VStr: "simple string"},
+					{Key: "tag-2", VType: jaegerproto.ValueType_STRING, VStr: createLongString(32, "fo")},
+					{Key: "tag-3", VType: jaegerproto.ValueType_BOOL, VBool: true},
+					{Key: "tag-4", VType: jaegerproto.ValueType_BINARY, VBinary: createLongByteArray(50)},
+					{Key: "tag-5", VType: jaegerproto.ValueType_STRING, VStr: createLongString(70, "ba")},
+				},
+			},
 		},
-	}
-
-	expectedJaegerSpan := &jaegerproto.Span{
-		TraceID: jaegerproto.TraceID{Low: 100, High: 2000},
-		SpanID:  123,
-		Tags: []jaegerproto.KeyValue{
-			{Key: "tag-1", VType: jaegerproto.ValueType_STRING, VStr: "simple string"},
-			{Key: "tag-2", VType: jaegerproto.ValueType_STRING, VStr: createLongString(128, "fo")},
-			{Key: "tag-3", VType: jaegerproto.ValueType_BOOL, VBool: true},
-			{Key: "tag-4", VType: jaegerproto.ValueType_BINARY, VBinary: createLongByteArray(256)},
-			{Key: "tag-5", VType: jaegerproto.ValueType_STRING, VStr: createLongString(128, "ba")},
-			{Key: "tag-4.truncated", VType: jaegerproto.ValueType_BOOL, VBool: true},
-			{Key: "tag-5.truncated", VType: jaegerproto.ValueType_BOOL, VBool: true},
+		{
+			inputSpan: &jaegerproto.Span{
+				TraceID: jaegerproto.TraceID{Low: 100, High: 2000},
+				SpanID:  123,
+				Tags: []jaegerproto.KeyValue{
+					{Key: "tag-1", VType: jaegerproto.ValueType_STRING, VStr: "simple string"},
+					{Key: "tag-2", VType: jaegerproto.ValueType_STRING, VStr: createLongString(128, "fo")},
+					{Key: "tag-3", VType: jaegerproto.ValueType_BOOL, VBool: true},
+					{Key: "tag-4", VType: jaegerproto.ValueType_BINARY, VBinary: createLongByteArray(500)},
+					{Key: "tag-5", VType: jaegerproto.ValueType_STRING, VStr: createLongString(256, "ba")},
+				},
+			},
+			expectedSpan: &jaegerproto.Span{
+				TraceID: jaegerproto.TraceID{Low: 100, High: 2000},
+				SpanID:  123,
+				Tags: []jaegerproto.KeyValue{
+					{Key: "tag-1", VType: jaegerproto.ValueType_STRING, VStr: "simple string"},
+					{Key: "tag-2", VType: jaegerproto.ValueType_STRING, VStr: createLongString(128, "fo")},
+					{Key: "tag-3", VType: jaegerproto.ValueType_BOOL, VBool: true},
+					{Key: "tag-4", VType: jaegerproto.ValueType_BINARY, VBinary: createLongByteArray(256)},
+					{Key: "tag-5", VType: jaegerproto.ValueType_STRING, VStr: createLongString(128, "ba")},
+					{Key: "tag-4.truncated", VType: jaegerproto.ValueType_BOOL, VBool: true},
+					{Key: "tag-5.truncated", VType: jaegerproto.ValueType_BOOL, VBool: true},
+				},
+			},
+		},
+		{
+			inputSpan: &jaegerproto.Span{
+				TraceID: jaegerproto.TraceID{Low: 102, High: 2002},
+				SpanID:  125,
+				Tags: []jaegerproto.KeyValue{
+					{Key: "tag-1", VType: jaegerproto.ValueType_STRING, VStr: "simple string"},
+					{Key: "tag-2", VType: jaegerproto.ValueType_STRING, VStr: createLongString(128, "fo")},
+					{Key: "tag-3", VType: jaegerproto.ValueType_INT64, VInt64: 68},
+					{Key: "tag-4", VType: jaegerproto.ValueType_BINARY, VBinary: createLongByteArray(500)},
+					{Key: "tag-5", VType: jaegerproto.ValueType_STRING, VStr: createLongString(256, "ba")},
+					{Key: "tag-6", VType: jaegerproto.ValueType_STRING, VStr: createLongString(256, "wx")},
+				},
+			},
+			expectedSpan: &jaegerproto.Span{
+				TraceID: jaegerproto.TraceID{Low: 102, High: 2002},
+				SpanID:  125,
+				Tags: []jaegerproto.KeyValue{
+					{Key: "tag-1", VType: jaegerproto.ValueType_STRING, VStr: "simple string"},
+					{Key: "tag-2", VType: jaegerproto.ValueType_STRING, VStr: createLongString(64, "fo")},
+					{Key: "tag-3", VType: jaegerproto.ValueType_INT64, VInt64: 68},
+					{Key: "tag-4", VType: jaegerproto.ValueType_BINARY, VBinary: createLongByteArray(128)},
+					{Key: "tag-5", VType: jaegerproto.ValueType_STRING, VStr: createLongString(64, "ba")},
+					{Key: "tag-6", VType: jaegerproto.ValueType_STRING, VStr: createLongString(64, "wx")},
+					{Key: "tag-4.truncated", VType: jaegerproto.ValueType_BOOL, VBool: true},
+					{Key: "tag-5.truncated", VType: jaegerproto.ValueType_BOOL, VBool: true},
+					{Key: "tag-6.truncated", VType: jaegerproto.ValueType_BOOL, VBool: true},
+					{Key: "tag-2.truncated", VType: jaegerproto.ValueType_BOOL, VBool: true},
+				},
+			},
+		},
+		{
+			inputSpan: &jaegerproto.Span{
+				TraceID: jaegerproto.TraceID{Low: 103, High: 2003},
+				SpanID:  126,
+				Tags: []jaegerproto.KeyValue{
+					{Key: "tag-1", VType: jaegerproto.ValueType_STRING, VStr: "simple string"},
+					{Key: "tag-2", VType: jaegerproto.ValueType_STRING, VStr: createLongString(128, "fo")},
+					{Key: "tag-3", VType: jaegerproto.ValueType_INT64, VInt64: 68},
+					{Key: "tag-4", VType: jaegerproto.ValueType_BINARY, VBinary: createLongByteArray(500)},
+					{Key: "tag-5", VType: jaegerproto.ValueType_STRING, VStr: createLongString(256, "ba")},
+					{Key: "tag-6", VType: jaegerproto.ValueType_STRING, VStr: createLongString(256, "wx")},
+				},
+			},
+			expectedSpan: &jaegerproto.Span{
+				TraceID: jaegerproto.TraceID{Low: 103, High: 2003},
+				SpanID:  126,
+				Tags: []jaegerproto.KeyValue{
+					{Key: "tag-1", VType: jaegerproto.ValueType_STRING, VStr: "simple string"},
+					{Key: "tag-2", VType: jaegerproto.ValueType_STRING, VStr: createLongString(64, "fo")},
+					{Key: "tag-3", VType: jaegerproto.ValueType_INT64, VInt64: 68},
+					{Key: "tag-4", VType: jaegerproto.ValueType_BINARY, VBinary: createLongByteArray(128)},
+					{Key: "tag-5", VType: jaegerproto.ValueType_STRING, VStr: createLongString(64, "ba")},
+					{Key: "tag-6", VType: jaegerproto.ValueType_STRING, VStr: createLongString(64, "wx")},
+					{Key: "tag-4.truncated", VType: jaegerproto.ValueType_BOOL, VBool: true},
+					{Key: "tag-5.truncated", VType: jaegerproto.ValueType_BOOL, VBool: true},
+					{Key: "tag-6.truncated", VType: jaegerproto.ValueType_BOOL, VBool: true},
+					{Key: "tag-2.truncated", VType: jaegerproto.ValueType_BOOL, VBool: true},
+				},
+			},
 		},
 	}
 
 	marshaler := jaegerProtoSpanMarshaler{}
-	expectedMsgBytes, err := marshaler.marshal(expectedJaegerSpan)
-	require.NoError(t, err)
-	expectedMsgBytesEncoder := sarama.ByteEncoder(expectedMsgBytes)
 
 	j := jaegerMarshalerDebug{
-		marshaler:             marshaler,
+		marshaler:             jaegerProtoSpanMarshaler{},
 		version:               sarama.V2_0_0_0,
 		maxMessageBytes:       maxMessageBytes,
 		maxAttributeValueSize: maxAttributeValueSize,
 		cureSpans:             true,
 	}
 
-	msg, err := j.cureSpan(jaegerSpan, "test-topic")
-	require.NoError(t, err)
-	assert.Equal(t, expectedMsgBytesEncoder, msg.Value)
+	for _, test := range tests {
+		msg, err := j.cureSpan(test.inputSpan, "test-topic")
+		require.NoError(t, err)
 
-	// batches, err := jaegertranslator.InternalTracesToJaegerProto(td)
-	// require.NoError(t, err)
+		expectedMsgBytes, err := marshaler.marshal(test.expectedSpan)
+		require.NoError(t, err)
+		expectedMsgBytesEncoder := sarama.ByteEncoder(expectedMsgBytes)
+		assert.Equal(t, expectedMsgBytesEncoder, msg.Value)
+	}
+}
 
-	// //jsonMarshaler := &jsonpb.Marshaler{}
+func TestJaegerMarshalerDebugCureSpansFail(t *testing.T) {
+	maxMessageBytes := 1024
+	maxAttributeValueSize := 256
 
-	// batches[0].Spans[0].Process = batches[0].Process
-	// jaegerProtoBytes0, err := batches[0].Spans[0].Marshal()
-	// messageKey := []byte(batches[0].Spans[0].TraceID.String())
-	// require.NoError(t, err)
-	// require.NotNil(t, jaegerProtoBytes0)
+	span := &jaegerproto.Span{
+		TraceID: jaegerproto.TraceID{Low: 113, High: 2103},
+		SpanID:  1270,
+	}
 
-	// batches[0].Spans[1].Process = batches[0].Process
-	// // jaegerProtoBytes1, err := batches[0].Spans[1].Marshal()
-	// // require.NoError(t, err)
-	// // require.NotNil(t, jaegerProtoBytes1)
+	var tags []jaegerproto.KeyValue
+	for i := 0; i < 64; i++ {
+		kv := jaegerproto.KeyValue{Key: "tag-2", VType: jaegerproto.ValueType_STRING, VStr: createLongString(256, "fo")}
+		tags = append(tags, kv)
+	}
+	span.Tags = tags
 
-	// j := jaegerMarshalerDebug{
-	// 	marshaler:             jaegerProtoSpanMarshaler{},
-	// 	version:               sarama.V2_0_0_0,
-	// 	maxMessageBytes:       maxMessageBytes,
-	// 	maxAttributeValueSize: maxAttributeValueSize,
-	// 	dumpSpanAttributes:    true,
-	// }
+	j := jaegerMarshalerDebug{
+		marshaler:             jaegerProtoSpanMarshaler{},
+		version:               sarama.V2_0_0_0,
+		maxMessageBytes:       maxMessageBytes,
+		maxAttributeValueSize: maxAttributeValueSize,
+		cureSpans:             true,
+	}
 
-	// fmt.Printf("span 0: %s\n", j.spanAsString(batches[0].Spans[0]))
-	// fmt.Printf("span 1: %s\n", j.spanAsString(batches[0].Spans[1]))
-	// fmt.Println("curing")
-	// curedSpan0, err := j.cureSpan(batches[0].Spans[0], "foo")
-	// require.NoError(t, err)
-	// curedSpan1, err := j.cureSpan(batches[0].Spans[1], "foo")
-	// require.NoError(t, err)
-
-	// fmt.Printf("cured span 0: %s\n", j.spanAsString(curedSpan0))
-	// fmt.Printf("cured span 1: %s\n", j.spanAsString(curedSpan1))
-	// fmt.Println("done")
-
-	// tests := []struct {
-	// 	unmarshaler TracesMarshaler
-	// 	encoding    string
-	// 	messages    []*sarama.ProducerMessage
-	// }{
-	// 	{
-	// 		unmarshaler: jaegerMarshalerDebug{
-	// 			marshaler:       jaegerProtoSpanMarshaler{},
-	// 			version:         sarama.V2_0_0_0,
-	// 			maxMessageBytes: maxMessageBytes,
-	// 		},
-	// 		encoding: "jaeger_proto",
-	// 		messages: []*sarama.ProducerMessage{
-	// 			{Topic: "topic", Value: sarama.ByteEncoder(jaegerProtoBytes0), Key: sarama.ByteEncoder(messageKey)},
-	// 			{Topic: "topic", Value: sarama.ByteEncoder(jaegerProtoBytes1), Key: sarama.ByteEncoder(messageKey)}},
-	// 	},
-	// 	{}
-	// }
+	msg, err := j.cureSpan(span, "test-topic-2")
+	require.Error(t, err)
+	assert.Nil(t, msg)
 }
 
 func TestJaegerMarshalerDebugCureSpans(t *testing.T) {
 	maxMessageBytes := 1024
 	maxAttributeValueSize := 256
+	jsonMarshaler := &jsonpb.Marshaler{}
+
 	td := pdata.NewTraces()
 	rs := td.ResourceSpans().AppendEmpty()
 	rs.Resource().Attributes().Insert("test-key", pdata.NewAttributeValueString("test-val"))
@@ -288,14 +317,6 @@ func TestJaegerMarshalerDebugCureSpans(t *testing.T) {
 	span.SetSpanID(pdata.NewSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8}))
 	span.Attributes().Insert("tag1", pdata.NewAttributeValueString("tag1-val"))
 
-	// Create a string whose size is maxMessageBytes
-	// var b strings.Builder
-	// b.Grow(maxMessageBytes)
-	// for i := 0; i < maxMessageBytes; i++ {
-	// 	b.WriteString("a")
-	// }
-	// s := b.String()
-
 	// Will log on this span that exceeds max message size.
 	span = ils.Spans().AppendEmpty()
 	span.SetName("bar")
@@ -306,19 +327,24 @@ func TestJaegerMarshalerDebugCureSpans(t *testing.T) {
 	span.Attributes().Insert("tag10", pdata.NewAttributeValueString("tag10-val"))
 	span.Attributes().Insert("big-tag", pdata.NewAttributeValueString(createLongString(maxMessageBytes, "a")))
 
-	// cured spans
+	batches, err := jaegertranslator.InternalTracesToJaegerProto(td)
+	require.NoError(t, err)
+
+	batches[0].Spans[0].Process = batches[0].Process
+	jaegerProtoBytes0, err := batches[0].Spans[0].Marshal()
+	messageKey := []byte(batches[0].Spans[0].TraceID.String())
+	require.NoError(t, err)
+	require.NotNil(t, jaegerProtoBytes0)
+
+	jsonByteBuffer0 := new(bytes.Buffer)
+	require.NoError(t, jsonMarshaler.Marshal(jsonByteBuffer0, batches[0].Spans[0]))
+
+	// expected cured spans should be similar to spans that came in as if they were already cured.
+	// batches[0].Spans[1] when cured will be the same as curedBatches[0].Spans[0]
 	curedTd := pdata.NewTraces()
 	curedRs := curedTd.ResourceSpans().AppendEmpty()
 	curedRs.Resource().Attributes().Insert("test-key", pdata.NewAttributeValueString("test-val"))
 	curedIls := curedRs.InstrumentationLibrarySpans().AppendEmpty()
-
-	// Create a string whose size is maxAttributeValueSize
-	// var b1 strings.Builder
-	// b1.Grow(maxAttributeValueSize)
-	// for i := 0; i < maxAttributeValueSize; i++ {
-	// 	b1.WriteString("a")
-	// }
-	//s1 := b1.String()
 
 	curedSpan := curedIls.Spans().AppendEmpty()
 	curedSpan.SetName("bar")
@@ -330,30 +356,8 @@ func TestJaegerMarshalerDebugCureSpans(t *testing.T) {
 	curedSpan.Attributes().Insert("big-tag", pdata.NewAttributeValueString(createLongString(maxAttributeValueSize, "a")))
 	curedSpan.Attributes().Insert("big-tag.truncated", pdata.NewAttributeValueBool(true))
 
-	batches, err := jaegertranslator.InternalTracesToJaegerProto(td)
-	require.NoError(t, err)
-
 	curedBatches, err := jaegertranslator.InternalTracesToJaegerProto(curedTd)
 	require.NoError(t, err)
-
-	jsonMarshaler := &jsonpb.Marshaler{}
-
-	batches[0].Spans[0].Process = batches[0].Process
-	jaegerProtoBytes0, err := batches[0].Spans[0].Marshal()
-	messageKey := []byte(batches[0].Spans[0].TraceID.String())
-	require.NoError(t, err)
-	require.NotNil(t, jaegerProtoBytes0)
-
-	jsonByteBuffer0 := new(bytes.Buffer)
-	require.NoError(t, jsonMarshaler.Marshal(jsonByteBuffer0, batches[0].Spans[0]))
-
-	batches[0].Spans[1].Process = batches[0].Process
-	jaegerProtoBytes1, err := batches[0].Spans[1].Marshal()
-	require.NoError(t, err)
-	require.NotNil(t, jaegerProtoBytes1)
-
-	jsonByteBuffer1 := new(bytes.Buffer)
-	require.NoError(t, jsonMarshaler.Marshal(jsonByteBuffer1, batches[0].Spans[1]))
 
 	curedBatches[0].Spans[0].Process = curedBatches[0].Process
 	curedJaegerProtoBytes1, err := curedBatches[0].Spans[0].Marshal()
@@ -432,7 +436,7 @@ func createLongString(n int, s string) string {
 }
 
 func createLongByteArray(n int) []byte {
-	arr := make([]byte, n, n)
+	arr := make([]byte, n)
 	for i := 0; i < n; i++ {
 		arr[i] = byte(i % 10)
 	}
