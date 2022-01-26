@@ -81,5 +81,6 @@ func TestLoadConfig(t *testing.T) {
 		},
 		Debug:              true,
 		DumpSpanAttributes: true,
+		CureSpans:          true,
 	}, c)
 }

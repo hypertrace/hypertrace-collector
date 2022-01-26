@@ -60,6 +60,10 @@ type Config struct {
 	// Dump all span attributes. Works when Debug above is set to true. Will dump
 	// all the span attribute values for spans that exceed Producer.MaxMessageBytes
 	DumpSpanAttributes bool `mapstructure:"dump_span_attributes"`
+
+	// Cure spans. This means that when Debug above is turned on, if a span exceeds Producer.MaxMessageBytes
+	// we will loop through its tags and truncate the values whose values are large to 128KiB
+	CureSpans bool `mapstructure:"cure_spans"`
 }
 
 // Metadata defines configuration for retrieving metadata from the broker.

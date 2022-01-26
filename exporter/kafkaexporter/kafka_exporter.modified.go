@@ -188,10 +188,12 @@ func newTracesExporter(config Config, set component.ExporterCreateSettings, mars
 			}
 		}
 		marshaler = jaegerMarshalerDebug{
-			marshaler:          jaegerProtoSpanMarshaler{},
-			version:            v,
-			maxMessageBytes:    config.Producer.MaxMessageBytes,
-			dumpSpanAttributes: config.DumpSpanAttributes,
+			marshaler:             jaegerProtoSpanMarshaler{},
+			version:               v,
+			maxMessageBytes:       config.Producer.MaxMessageBytes,
+			dumpSpanAttributes:    config.DumpSpanAttributes,
+			maxAttributeValueSize: defaultMaxAttributeValueSize,
+			cureSpans:             config.CureSpans,
 		}
 	}
 	producer, err := newSaramaProducer(config)

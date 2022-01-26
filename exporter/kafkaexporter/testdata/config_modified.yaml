@@ -30,6 +30,7 @@ exporters:
       level: 8
     debug: true
     dump_span_attributes: true
+    cure_spans: true
 
 processors:
   nop:
