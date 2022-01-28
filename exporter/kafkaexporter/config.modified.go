@@ -55,10 +55,12 @@ type Config struct {
 	Compression Compression `mapstructure:"compression"`
 
 	// Debug. Log info for spans that exceed Producer.MaxMessageBytes early.
+	// [Deprecated]
 	Debug bool `mapstructure:"debug"`
 
 	// Dump all span attributes. Works when Debug above is set to true. Will dump
 	// all the span attribute values for spans that exceed Producer.MaxMessageBytes
+	// [Deprecated]
 	DumpSpanAttributes bool `mapstructure:"dump_span_attributes"`
 
 	// SpanCuring defines config to "cure" large spans that exceed Producer.MaxMessageBytes so that

@@ -28,7 +28,7 @@ const (
 	truncationTagSuffix = ".htcollector.truncated"
 )
 
-type jaegerMarshalerDebug struct {
+type jaegerMarshalerCurer struct {
 	marshaler             jaegerSpanMarshaler
 	version               sarama.KafkaVersion
 	maxMessageBytes       int
@@ -37,9 +37,9 @@ type jaegerMarshalerDebug struct {
 	dropSpans             bool
 }
 
-var _ TracesMarshaler = (*jaegerMarshalerDebug)(nil)
+var _ TracesMarshaler = (*jaegerMarshalerCurer)(nil)
 
-func (j jaegerMarshalerDebug) Marshal(traces pdata.Traces, topic string) ([]*sarama.ProducerMessage, error) {
+func (j jaegerMarshalerCurer) Marshal(traces pdata.Traces, topic string) ([]*sarama.ProducerMessage, error) {
 	batches, err := jaegertranslator.InternalTracesToJaegerProto(traces)
 	if err != nil {
 		return nil, err
@@ -88,11 +88,11 @@ func (j jaegerMarshalerDebug) Marshal(traces pdata.Traces, topic string) ([]*sar
 	return messages, errs
 }
 
-func (j jaegerMarshalerDebug) Encoding() string {
+func (j jaegerMarshalerCurer) Encoding() string {
 	return j.marshaler.encoding()
 }
 
-func (j jaegerMarshalerDebug) spanAsString(span *jaegerproto.Span) string {
+func (j jaegerMarshalerCurer) spanAsString(span *jaegerproto.Span) string {
 	var sb strings.Builder
 
 	sb.WriteString("{")
@@ -132,7 +132,7 @@ func (j jaegerMarshalerDebug) spanAsString(span *jaegerproto.Span) string {
 	return sb.String()
 }
 
-func (j jaegerMarshalerDebug) cureSpan(span *jaegerproto.Span, topic string) (*sarama.ProducerMessage, error) {
+func (j jaegerMarshalerCurer) cureSpan(span *jaegerproto.Span, topic string) (*sarama.ProducerMessage, error) {
 	attributeValueSize := j.maxAttributeValueSize
 	truncatedKeysSoFar := make(map[string]bool)
 	// Go through the attributes and get the indices of tags whose values exceed attributeValueSize

@@ -172,8 +172,8 @@ func newMetricsExporter(config Config, set component.ExporterCreateSettings, mar
 
 }
 
-// newTracesExporter creates Kafka exporter. If debug mode is turned on and we are using "jaeger_proto" message encoding, we will switch out the
-// marshaler to jaegerMarshalerDebug which logs spans details for spans greater than config.Producer.MaxMessageBytes.
+// newTracesExporter creates Kafka exporter. If SpanCuring.Enbaled is true and we are using "jaeger_proto" message encoding, we will switch out the
+// marshaler to jaegerMarshalerCurer which logs spans details for spans greater than config.Producer.MaxMessageBytes.
 func newTracesExporter(config Config, set component.ExporterCreateSettings, marshalers map[string]TracesMarshaler) (*kafkaTracesProducer, error) {
 	marshaler := marshalers[config.Encoding]
 	if marshaler == nil {
@@ -191,7 +191,7 @@ func newTracesExporter(config Config, set component.ExporterCreateSettings, mars
 		if config.SpanCuring.MaxAttributeValueSize != 0 {
 			maxAttributeValueSize = config.SpanCuring.MaxAttributeValueSize
 		}
-		marshaler = jaegerMarshalerDebug{
+		marshaler = jaegerMarshalerCurer{
 			marshaler:             jaegerProtoSpanMarshaler{},
 			version:               v,
 			maxMessageBytes:       config.Producer.MaxMessageBytes,

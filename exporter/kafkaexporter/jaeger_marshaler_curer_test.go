@@ -16,7 +16,7 @@ import (
 	jaegertranslator "github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/jaeger"
 )
 
-func TestJaegerMarshalerDebugCureSpans(t *testing.T) {
+func TestJaegerMarshalerCurer(t *testing.T) {
 	maxMessageBytes := 1024
 	maxAttributeValueSize := 256
 	jsonMarshaler := &jsonpb.Marshaler{}
@@ -114,7 +114,7 @@ func TestJaegerMarshalerDebugCureSpans(t *testing.T) {
 		messages    []*sarama.ProducerMessage
 	}{
 		{
-			unmarshaler: jaegerMarshalerDebug{
+			unmarshaler: jaegerMarshalerCurer{
 				marshaler:             jaegerProtoSpanMarshaler{},
 				version:               sarama.V2_0_0_0,
 				maxMessageBytes:       maxMessageBytes,
@@ -128,7 +128,7 @@ func TestJaegerMarshalerDebugCureSpans(t *testing.T) {
 			},
 		},
 		{
-			unmarshaler: jaegerMarshalerDebug{
+			unmarshaler: jaegerMarshalerCurer{
 				marshaler: jaegerJSONSpanMarshaler{
 					pbMarshaler: &jsonpb.Marshaler{},
 				},
@@ -144,7 +144,7 @@ func TestJaegerMarshalerDebugCureSpans(t *testing.T) {
 			},
 		},
 		{
-			unmarshaler: jaegerMarshalerDebug{
+			unmarshaler: jaegerMarshalerCurer{
 				marshaler:             jaegerProtoSpanMarshaler{},
 				version:               sarama.V2_0_0_0,
 				maxMessageBytes:       maxMessageBytes,
@@ -159,7 +159,7 @@ func TestJaegerMarshalerDebugCureSpans(t *testing.T) {
 			},
 		},
 		{
-			unmarshaler: jaegerMarshalerDebug{
+			unmarshaler: jaegerMarshalerCurer{
 				marshaler:             jaegerProtoSpanMarshaler{},
 				version:               sarama.V2_0_0_0,
 				maxMessageBytes:       maxMessageBytes,
@@ -183,8 +183,8 @@ func TestJaegerMarshalerDebugCureSpans(t *testing.T) {
 	}
 }
 
-func TestJaegerMarshalerDebug_error_covert_traceID(t *testing.T) {
-	marshaler := jaegerMarshalerDebug{
+func TestJaegerMarshalerCurer_error_covert_traceID(t *testing.T) {
+	marshaler := jaegerMarshalerCurer{
 		marshaler: jaegerProtoSpanMarshaler{},
 	}
 	td := pdata.NewTraces()
@@ -314,7 +314,7 @@ func TestCureSpans(t *testing.T) {
 
 	marshaler := jaegerProtoSpanMarshaler{}
 
-	j := jaegerMarshalerDebug{
+	j := jaegerMarshalerCurer{
 		marshaler:             jaegerProtoSpanMarshaler{},
 		version:               sarama.V2_0_0_0,
 		maxMessageBytes:       maxMessageBytes,
@@ -334,7 +334,7 @@ func TestCureSpans(t *testing.T) {
 	}
 }
 
-func TestJaegerMarshalerDebugCureSpansFail(t *testing.T) {
+func TestJaegerMarshalerCurerCureSpansFail(t *testing.T) {
 	maxMessageBytes := 1024
 	maxAttributeValueSize := 256
 
@@ -350,7 +350,7 @@ func TestJaegerMarshalerDebugCureSpansFail(t *testing.T) {
 	}
 	span.Tags = tags
 
-	j := jaegerMarshalerDebug{
+	j := jaegerMarshalerCurer{
 		marshaler:             jaegerProtoSpanMarshaler{},
 		version:               sarama.V2_0_0_0,
 		maxMessageBytes:       maxMessageBytes,
