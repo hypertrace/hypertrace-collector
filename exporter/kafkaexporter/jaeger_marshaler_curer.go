@@ -162,14 +162,14 @@ func (j jaegerMarshalerCurer) cureSpan(span *jaegerproto.Span, topic string) (*s
 			// replace the kv in the slice with one whose value is truncated.
 			span.Tags[i] = kv
 			truncatedKey := kv.Key + truncationTagSuffix
-			// append the ".truncated" attribute to the list of truncated keys if it's not already been seen before.
+			// append the ".htcollector.truncated" attribute to the list of truncated keys if it has not already been seen before.
 			if !truncatedKeysSoFar[truncatedKey] {
 				truncatedKeys = append(truncatedKeys, kv.Key+truncationTagSuffix)
 				truncatedKeysSoFar[truncatedKey] = true
 			}
 		}
 
-		// append the ".truncated" attributes to the span list.
+		// append the ".htcollector.truncated" attributes to the span list.
 		for _, k := range truncatedKeys {
 			kv := jaegerproto.KeyValue{
 				Key:   k,
