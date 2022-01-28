@@ -166,6 +166,11 @@ configMap:
         compression:
           codec: gzip #[none,gzip,snappy,lz4]
           level: 5 #Required only for gzip 1-9
+        span_curing:
+          enabled: true
+          # Drop spans that cannot be cured and will eventually end up being dropped anyway
+          # after multiple retries.
+          drop_spans: true
       prometheus:
         endpoint: "0.0.0.0:8889"
         #For converting resource attributes to metric labels

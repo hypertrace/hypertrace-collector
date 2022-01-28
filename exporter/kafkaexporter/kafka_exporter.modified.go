@@ -179,7 +179,7 @@ func newTracesExporter(config Config, set component.ExporterCreateSettings, mars
 	if marshaler == nil {
 		return nil, errUnrecognizedEncoding
 	}
-	if config.Debug && config.Encoding == "jaeger_proto" {
+	if config.SpanCuring.Enabled && config.Encoding == "jaeger_proto" {
 		v := sarama.V2_0_0_0
 		if config.ProtocolVersion != "" {
 			version, err := sarama.ParseKafkaVersion(config.ProtocolVersion)
@@ -187,13 +187,17 @@ func newTracesExporter(config Config, set component.ExporterCreateSettings, mars
 				v = version
 			}
 		}
+		maxAttributeValueSize := defaultMaxAttributeValueSize
+		if config.SpanCuring.MaxAttributeValueSize != 0 {
+			maxAttributeValueSize = config.SpanCuring.MaxAttributeValueSize
+		}
 		marshaler = jaegerMarshalerDebug{
 			marshaler:             jaegerProtoSpanMarshaler{},
 			version:               v,
 			maxMessageBytes:       config.Producer.MaxMessageBytes,
-			dumpSpanAttributes:    config.DumpSpanAttributes,
-			maxAttributeValueSize: defaultMaxAttributeValueSize,
-			cureSpans:             config.CureSpans,
+			dumpSpanAttributes:    config.SpanCuring.DumpSpanAttributes,
+			maxAttributeValueSize: maxAttributeValueSize,
+			dropSpans:             config.SpanCuring.DropSpans,
 		}
 	}
 	producer, err := newSaramaProducer(config)

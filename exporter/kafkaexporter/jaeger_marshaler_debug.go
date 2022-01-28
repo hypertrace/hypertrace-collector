@@ -23,6 +23,9 @@ const (
 	producerMessageOverhead      = 26     // the metadata overhead of CRC, flags, etc.
 	defaultMaxAttributeValueSize = 131072 // default maximum size of a tag value.
 	maxTruncationTries           = 5      // maximum number of times to attempt to truncate tag values.
+	// suffix used for new attributes created for those whose values have been truncated
+	// while curing the spans
+	truncationTagSuffix = ".htcollector.truncated"
 )
 
 type jaegerMarshalerDebug struct {
@@ -31,7 +34,7 @@ type jaegerMarshalerDebug struct {
 	maxMessageBytes       int
 	dumpSpanAttributes    bool
 	maxAttributeValueSize int
-	cureSpans             bool
+	dropSpans             bool
 }
 
 var _ TracesMarshaler = (*jaegerMarshalerDebug)(nil)
@@ -63,19 +66,20 @@ func (j jaegerMarshalerDebug) Marshal(traces pdata.Traces, topic string) ([]*sar
 			messageSize := byteSize(msg, j.version)
 			if messageSize > j.maxMessageBytes {
 				// Log span info for a span that exceeds the max message size
-				// We log instead of throwing an error since the caller for this tracesPusher() will return an error and not even
 				// send those messages that didn't exceed the max message size.
-				log.Printf("span exceeds max message size: %d vs %d. span%s\n", messageSize, j.maxMessageBytes, j.spanAsString(span))
-				// If cure spans is configured, we will attempt to fix the large span by truncating the large tag values.
-				if j.cureSpans {
-					log.Printf("will attempt to cure span")
-					curedSpanMsg, err := j.cureSpan(span, topic)
-					// continue to process spans if an error occured while curing the span
-					if err != nil {
-						log.Printf("an error occured while curing span: %v\n", err)
-					} else {
-						msg = curedSpanMsg
+				log.Printf("span exceeds max message size: %d vs %d. will attempt to cure span. span: %s\n", messageSize, j.maxMessageBytes, j.spanAsString(span))
+				// We will attempt to fix the large span by truncating the large tag values.
+				curedSpanMsg, err := j.cureSpan(span, topic)
+				// continue to process spans if an error occured while curing the span
+				if err != nil {
+					log.Printf("an error occured while curing span: %v\n", err)
+					if j.dropSpans {
+						log.Printf("dropping the span since it cannot be cured\n")
+						// continue with the loop and drop this span
+						continue
 					}
+				} else {
+					msg = curedSpanMsg
 				}
 			}
 			messages = append(messages, msg)
@@ -157,10 +161,10 @@ func (j jaegerMarshalerDebug) cureSpan(span *jaegerproto.Span, topic string) (*s
 			}
 			// replace the kv in the slice with one whose value is truncated.
 			span.Tags[i] = kv
-			truncatedKey := kv.Key + ".truncated"
+			truncatedKey := kv.Key + truncationTagSuffix
 			// append the ".truncated" attribute to the list of truncated keys if it's not already been seen before.
 			if !truncatedKeysSoFar[truncatedKey] {
-				truncatedKeys = append(truncatedKeys, kv.Key+".truncated")
+				truncatedKeys = append(truncatedKeys, kv.Key+truncationTagSuffix)
 				truncatedKeysSoFar[truncatedKey] = true
 			}
 		}
