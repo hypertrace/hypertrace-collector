@@ -55,11 +55,17 @@ type Config struct {
 	Compression Compression `mapstructure:"compression"`
 
 	// Debug. Log info for spans that exceed Producer.MaxMessageBytes early.
+	// [Deprecated]
 	Debug bool `mapstructure:"debug"`
 
 	// Dump all span attributes. Works when Debug above is set to true. Will dump
 	// all the span attribute values for spans that exceed Producer.MaxMessageBytes
+	// [Deprecated]
 	DumpSpanAttributes bool `mapstructure:"dump_span_attributes"`
+
+	// SpanCuring defines config to "cure" large spans that exceed Producer.MaxMessageBytes so that
+	// they are able to be exported
+	SpanCuring SpanCuring `mapstructure:"span_curing"`
 }
 
 // Metadata defines configuration for retrieving metadata from the broker.
@@ -98,6 +104,21 @@ type MetadataRetry struct {
 	// How long to wait for leader election to occur before retrying
 	// (default 250ms). Similar to the JVM's `retry.backoff.ms`.
 	Backoff time.Duration `mapstructure:"backoff"`
+}
+
+// SpanCuring defines config to be applied to large spans that exceed Producer.MaxMessageBytes.
+// If we realize that the span about to be exported is larger than Producer.MaxMessageBytes we
+// attempt to cure it by truncating the attribute values that exceed MaxAttributeValueSize size.
+type SpanCuring struct {
+	Enabled bool `mapstructure:"enabled"`
+	// Drop spans that cannot be cured. A good idea since these spans will never be exported and will
+	// end up on the retry queue.
+	DropSpans bool `mapstructure:"drop_spans"`
+	// Max size in bytes for attribute values. Affects string and byte array value types.
+	MaxAttributeValueSize int `mapstructure:"max_attribute_value_size"`
+	// Dump all span attributes. Will dump all the span attribute values for
+	// spans that exceed Producer.MaxMessageBytes
+	DumpSpanAttributes bool `mapstructure:"dump_span_attributes"`
 }
 
 var _ config.Exporter = (*Config)(nil)

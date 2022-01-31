@@ -172,14 +172,15 @@ func newMetricsExporter(config Config, set component.ExporterCreateSettings, mar
 
 }
 
-// newTracesExporter creates Kafka exporter. If debug mode is turned on and we are using "jaeger_proto" message encoding, we will switch out the
-// marshaler to jaegerMarshalerDebug which logs spans details for spans greater than config.Producer.MaxMessageBytes.
+// newTracesExporter creates Kafka exporter. If SpanCuring.Enbaled is true and we are using "jaeger_proto" message encoding, we will switch out the
+// marshaler to jaegerMarshalerCurer which logs spans details for spans greater than config.Producer.MaxMessageBytes and "cures" them by
+// truncating large attribute string and byte array values.
 func newTracesExporter(config Config, set component.ExporterCreateSettings, marshalers map[string]TracesMarshaler) (*kafkaTracesProducer, error) {
 	marshaler := marshalers[config.Encoding]
 	if marshaler == nil {
 		return nil, errUnrecognizedEncoding
 	}
-	if config.Debug && config.Encoding == "jaeger_proto" {
+	if config.SpanCuring.Enabled && config.Encoding == "jaeger_proto" {
 		v := sarama.V2_0_0_0
 		if config.ProtocolVersion != "" {
 			version, err := sarama.ParseKafkaVersion(config.ProtocolVersion)
@@ -187,11 +188,17 @@ func newTracesExporter(config Config, set component.ExporterCreateSettings, mars
 				v = version
 			}
 		}
-		marshaler = jaegerMarshalerDebug{
-			marshaler:          jaegerProtoSpanMarshaler{},
-			version:            v,
-			maxMessageBytes:    config.Producer.MaxMessageBytes,
-			dumpSpanAttributes: config.DumpSpanAttributes,
+		maxAttributeValueSize := defaultMaxAttributeValueSize
+		if config.SpanCuring.MaxAttributeValueSize != 0 {
+			maxAttributeValueSize = config.SpanCuring.MaxAttributeValueSize
+		}
+		marshaler = jaegerMarshalerCurer{
+			marshaler:             jaegerProtoSpanMarshaler{},
+			version:               v,
+			maxMessageBytes:       config.Producer.MaxMessageBytes,
+			dumpSpanAttributes:    config.SpanCuring.DumpSpanAttributes,
+			maxAttributeValueSize: maxAttributeValueSize,
+			dropSpans:             config.SpanCuring.DropSpans,
 		}
 	}
 	producer, err := newSaramaProducer(config)

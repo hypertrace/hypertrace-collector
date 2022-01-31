@@ -19,20 +19,27 @@ import (
 )
 
 const (
-	maximumRecordOverhead   = 5*binary.MaxVarintLen32 + binary.MaxVarintLen64 + 1
-	producerMessageOverhead = 26 // the metadata overhead of CRC, flags, etc.
+	maximumRecordOverhead        = 5*binary.MaxVarintLen32 + binary.MaxVarintLen64 + 1
+	producerMessageOverhead      = 26     // the metadata overhead of CRC, flags, etc.
+	defaultMaxAttributeValueSize = 131072 // default maximum size of a tag value.
+	maxTruncationTries           = 5      // maximum number of times to attempt to truncate tag values.
+	// suffix used for new attributes created for those whose values have been truncated
+	// while curing the spans
+	truncationTagSuffix = ".htcollector.truncated"
 )
 
-type jaegerMarshalerDebug struct {
-	marshaler          jaegerSpanMarshaler
-	version            sarama.KafkaVersion
-	maxMessageBytes    int
-	dumpSpanAttributes bool
+type jaegerMarshalerCurer struct {
+	marshaler             jaegerSpanMarshaler
+	version               sarama.KafkaVersion
+	maxMessageBytes       int
+	dumpSpanAttributes    bool
+	maxAttributeValueSize int
+	dropSpans             bool
 }
 
-var _ TracesMarshaler = (*jaegerMarshalerDebug)(nil)
+var _ TracesMarshaler = (*jaegerMarshalerCurer)(nil)
 
-func (j jaegerMarshalerDebug) Marshal(traces pdata.Traces, topic string) ([]*sarama.ProducerMessage, error) {
+func (j jaegerMarshalerCurer) Marshal(traces pdata.Traces, topic string) ([]*sarama.ProducerMessage, error) {
 	batches, err := jaegertranslator.InternalTracesToJaegerProto(traces)
 	if err != nil {
 		return nil, err
@@ -59,9 +66,21 @@ func (j jaegerMarshalerDebug) Marshal(traces pdata.Traces, topic string) ([]*sar
 			messageSize := byteSize(msg, j.version)
 			if messageSize > j.maxMessageBytes {
 				// Log span info for a span that exceeds the max message size
-				// We log instead of throwing an error since the caller for this tracesPusher() will return an error and not even
 				// send those messages that didn't exceed the max message size.
-				log.Printf("span exceeds max message size: %d vs %d. span%s\n", messageSize, j.maxMessageBytes, j.spanAsString(span))
+				log.Printf("span exceeds max message size: %d vs %d. will attempt to cure span. span: %s\n", messageSize, j.maxMessageBytes, j.spanAsString(span))
+				// We will attempt to fix the large span by truncating the large tag values.
+				curedSpanMsg, err := j.cureSpan(span, topic)
+				// continue to process spans if an error occured while curing the span
+				if err != nil {
+					log.Printf("an error occured while curing span: %v\n", err)
+					if j.dropSpans {
+						log.Printf("dropping the span since it cannot be cured\n")
+						// continue with the loop and drop this span
+						continue
+					}
+				} else {
+					msg = curedSpanMsg
+				}
 			}
 			messages = append(messages, msg)
 		}
@@ -69,11 +88,11 @@ func (j jaegerMarshalerDebug) Marshal(traces pdata.Traces, topic string) ([]*sar
 	return messages, errs
 }
 
-func (j jaegerMarshalerDebug) Encoding() string {
+func (j jaegerMarshalerCurer) Encoding() string {
 	return j.marshaler.encoding()
 }
 
-func (j jaegerMarshalerDebug) spanAsString(span *jaegerproto.Span) string {
+func (j jaegerMarshalerCurer) spanAsString(span *jaegerproto.Span) string {
 	var sb strings.Builder
 
 	sb.WriteString("{")
@@ -113,6 +132,76 @@ func (j jaegerMarshalerDebug) spanAsString(span *jaegerproto.Span) string {
 	return sb.String()
 }
 
+func (j jaegerMarshalerCurer) cureSpan(span *jaegerproto.Span, topic string) (*sarama.ProducerMessage, error) {
+	attributeValueSize := j.maxAttributeValueSize
+	truncatedKeysSoFar := make(map[string]bool)
+	// Go through the attributes and get the indices of tags whose values exceed attributeValueSize
+	for truncationTry := 0; truncationTry < maxTruncationTries; truncationTry++ {
+		var indices []int
+		for i, kv := range span.Tags {
+			if kv.VType == jaegerproto.ValueType_STRING {
+				if len(kv.GetVStr()) > attributeValueSize {
+					indices = append(indices, i)
+				}
+			} else if kv.VType == jaegerproto.ValueType_BINARY {
+				if len(kv.GetVBinary()) > attributeValueSize {
+					indices = append(indices, i)
+				}
+			}
+		}
+
+		// For the attribute indices we got, look through and truncate them in the span.Tags
+		var truncatedKeys []string
+		for _, i := range indices {
+			kv := span.Tags[i]
+			if kv.VType == jaegerproto.ValueType_STRING {
+				kv.VStr = kv.VStr[:attributeValueSize]
+			} else if kv.VType == jaegerproto.ValueType_BINARY {
+				kv.VBinary = kv.VBinary[:attributeValueSize]
+			}
+			// replace the kv in the slice with one whose value is truncated.
+			span.Tags[i] = kv
+			truncatedKey := kv.Key + truncationTagSuffix
+			// append the ".htcollector.truncated" attribute to the list of truncated keys if it has not already been seen before.
+			if !truncatedKeysSoFar[truncatedKey] {
+				truncatedKeys = append(truncatedKeys, kv.Key+truncationTagSuffix)
+				truncatedKeysSoFar[truncatedKey] = true
+			}
+		}
+
+		// append the ".htcollector.truncated" attributes to the span list.
+		for _, k := range truncatedKeys {
+			kv := jaegerproto.KeyValue{
+				Key:   k,
+				VType: jaegerproto.ValueType_BOOL,
+				VBool: true,
+			}
+			span.Tags = append(span.Tags, kv)
+		}
+
+		bts, err := j.marshaler.marshal(span)
+		// return err if there is a problem marshaling
+		if err != nil {
+			return nil, err
+		}
+		key := []byte(span.TraceID.String())
+		msg := &sarama.ProducerMessage{
+			Topic: topic,
+			Value: sarama.ByteEncoder(bts),
+			Key:   sarama.ByteEncoder(key),
+		}
+
+		// Check if the size is less than the max and if it is return. Otherwise half attributeValueSize and try again
+		messageSize := byteSize(msg, j.version)
+		if messageSize <= j.maxMessageBytes {
+			return msg, nil
+		}
+		attributeValueSize = attributeValueSize / 2
+	}
+
+	return nil, fmt.Errorf("unable to cure span in %d truncation tries", maxTruncationTries)
+}
+
 func valueToString(kv jaegerproto.KeyValue) string {
 	if kv.VType == jaegerproto.ValueType_STRING {
 		return kv.GetVStr()
@@ -145,6 +234,9 @@ func valueSize(kv jaegerproto.KeyValue) int {
 	}
 }
 
+// byteSize computes the kafka message size.
+// Computed the same way as in https://github.com/Shopify/sarama/blob/a060ecaa8887587485754af088bd8a521f6d55e9/async_producer.go#L233
+// For updates check the function in the sarama package whenever it changes.
 func byteSize(m *sarama.ProducerMessage, v sarama.KafkaVersion) int {
 	var size int
 	if v.IsAtLeast(sarama.V0_11_0_0) {

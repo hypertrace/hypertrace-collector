@@ -30,6 +30,11 @@ exporters:
       level: 8
     debug: true
     dump_span_attributes: true
+    span_curing:
+      enabled: true
+      drop_spans: true
+      max_attribute_value_size: 131072
+      dump_span_attributes: true
 
 processors:
   nop:

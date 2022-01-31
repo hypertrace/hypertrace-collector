@@ -81,5 +81,11 @@ func TestLoadConfig(t *testing.T) {
 		},
 		Debug:              true,
 		DumpSpanAttributes: true,
+		SpanCuring: SpanCuring{
+			Enabled:               true,
+			DropSpans:             true,
+			MaxAttributeValueSize: 131072,
+			DumpSpanAttributes:    true,
+		},
 	}, c)
 }
