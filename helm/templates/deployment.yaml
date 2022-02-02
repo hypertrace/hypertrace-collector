@@ -57,7 +57,7 @@ spec:
           command:
             - "/usr/local/bin/hypertrace/collector"
             - "--config=/conf/hypertrace-collector-config.yaml"
-            - "--metrics-addr={{ .Values.metricsAddress }}"
+            - "--set=service.telemetry.metrics.address={{ .Values.metricsAddress }}"
           ports:
           {{ range $port := .Values.containerPorts }}
             - name: {{ $port.name }}
