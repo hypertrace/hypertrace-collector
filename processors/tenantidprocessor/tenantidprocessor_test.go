@@ -11,8 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/collector/config"
-
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/jaegertracing/jaeger/model"
 	jaegerconvert "github.com/jaegertracing/jaeger/model/converter/thrift/jaeger"
@@ -23,6 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
+	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/config/configgrpc"
 	"go.opentelemetry.io/collector/config/confighttp"
 	"go.opentelemetry.io/collector/config/configtls"

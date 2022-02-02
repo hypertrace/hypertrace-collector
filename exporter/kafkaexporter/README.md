@@ -1,6 +1,7 @@
 # Kafka Exporter
 
-**IMPORTANT:** This component is copied from https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.42.0/exporter/kafkaexporter and adapted to accept compression settings.
+**IMPORTANT:** This component is copied from https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.43.0/exporter/kafkaexporter and
+adapted to accept compression settings and also do span curing on large spans.
 
 Kafka exporter exports traces to Kafka. This exporter uses a synchronous producer
 that blocks and does not batch messages, therefore it should be used with batch and queued retry
