@@ -189,8 +189,8 @@ func newTracesExporter(config Config, set component.ExporterCreateSettings, mars
 			}
 		}
 		maxAttributeValueSize := defaultMaxAttributeValueSize
-		if config.SpanCuring.MaxAttributeValueSize != 0 {
-			maxAttributeValueSize = config.SpanCuring.MaxAttributeValueSize
+		if config.SpanCuring.MaxAttributeValueSizeBytes != 0 {
+			maxAttributeValueSize = config.SpanCuring.MaxAttributeValueSizeBytes
 		}
 		marshaler = jaegerMarshalerCurer{
 			marshaler:             jaegerProtoSpanMarshaler{},

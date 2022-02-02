@@ -115,7 +115,7 @@ type SpanCuring struct {
 	// end up on the retry queue.
 	DropSpans bool `mapstructure:"drop_spans"`
 	// Max size in bytes for attribute values. Affects string and byte array value types.
-	MaxAttributeValueSize int `mapstructure:"max_attribute_value_size"`
+	MaxAttributeValueSizeBytes int `mapstructure:"max_attribute_value_size_bytes"`
 	// Dump all span attributes. Will dump all the span attribute values for
 	// spans that exceed Producer.MaxMessageBytes
 	DumpSpanAttributes bool `mapstructure:"dump_span_attributes"`
