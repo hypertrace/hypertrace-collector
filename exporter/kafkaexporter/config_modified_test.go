@@ -79,8 +79,6 @@ func TestLoadConfig(t *testing.T) {
 			Codec: "gzip",
 			Level: 8,
 		},
-		Debug:              true,
-		DumpSpanAttributes: true,
 		SpanCuring: SpanCuring{
 			Enabled:                    true,
 			DropSpans:                  true,

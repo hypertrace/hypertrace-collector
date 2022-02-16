@@ -28,8 +28,6 @@ exporters:
     compression:
       codec: gzip
       level: 8
-    debug: true
-    dump_span_attributes: true
     span_curing:
       enabled: true
       drop_spans: true
