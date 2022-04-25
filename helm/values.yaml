@@ -171,6 +171,8 @@ configMap:
           # Drop spans that cannot be cured and will eventually end up being dropped anyway
           # after multiple retries.
           drop_spans: true
+        producer:
+          compression: gzip
       prometheus:
         endpoint: "0.0.0.0:8889"
         #For converting resource attributes to metric labels

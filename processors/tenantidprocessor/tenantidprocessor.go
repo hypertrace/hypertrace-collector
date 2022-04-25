@@ -7,7 +7,9 @@ import (
 
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
-	"go.opentelemetry.io/collector/model/pdata"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/pmetric"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/metadata"
 )
@@ -19,7 +21,7 @@ type processor struct {
 }
 
 // ProcessMetrics implements processorhelper.ProcessMetricsFunc
-func (p *processor) ProcessMetrics(ctx context.Context, metrics pdata.Metrics) (pdata.Metrics, error) {
+func (p *processor) ProcessMetrics(ctx context.Context, metrics pmetric.Metrics) (pmetric.Metrics, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return metrics, fmt.Errorf("could not extract headers from context. Number of metrics: %d", metrics.MetricCount())
@@ -44,7 +46,7 @@ func (p *processor) ProcessMetrics(ctx context.Context, metrics pdata.Metrics) (
 }
 
 // ProcessTraces implements processorhelper.ProcessTracesFunc
-func (p *processor) ProcessTraces(ctx context.Context, traces pdata.Traces) (pdata.Traces, error) {
+func (p *processor) ProcessTraces(ctx context.Context, traces ptrace.Traces) (ptrace.Traces, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return traces, fmt.Errorf("could not extract headers from context. Number of spans: %d", traces.SpanCount())
@@ -67,19 +69,19 @@ func (p *processor) ProcessTraces(ctx context.Context, traces pdata.Traces) (pda
 	return traces, nil
 }
 
-func (p *processor) addTenantIdToSpans(traces pdata.Traces, tenantIDHeaderValue string) {
+func (p *processor) addTenantIdToSpans(traces ptrace.Traces, tenantIDHeaderValue string) {
 	rss := traces.ResourceSpans()
 	for i := 0; i < rss.Len(); i++ {
 		rs := rss.At(i)
-		rs.Resource().Attributes().Insert(p.tenantIDAttributeKey, pdata.NewAttributeValueString(tenantIDHeaderValue))
+		rs.Resource().Attributes().Insert(p.tenantIDAttributeKey, pcommon.NewValueString(tenantIDHeaderValue))
 	}
 }
 
-func (p *processor) addTenantIdToMetrics(metrics pdata.Metrics, tenantIDHeaderValue string) {
+func (p *processor) addTenantIdToMetrics(metrics pmetric.Metrics, tenantIDHeaderValue string) {
 	rms := metrics.ResourceMetrics()
 	for i := 0; i < rms.Len(); i++ {
 		rm := rms.At(i)
-		rm.Resource().Attributes().Insert(p.tenantIDAttributeKey, pdata.NewAttributeValueString(tenantIDHeaderValue))
+		rm.Resource().Attributes().Insert(p.tenantIDAttributeKey, pcommon.NewValueString(tenantIDHeaderValue))
 		ilms := rm.InstrumentationLibraryMetrics()
 		for j := 0; j < ilms.Len(); j++ {
 			ilm := ilms.At(j)
@@ -93,22 +95,22 @@ func (p *processor) addTenantIdToMetrics(metrics pdata.Metrics, tenantIDHeaderVa
 				case "Gauge":
 					metricData := metric.Gauge().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
-						metricData.At(l).Attributes().Insert(p.tenantIDAttributeKey, pdata.NewAttributeValueString(tenantIDHeaderValue))
+						metricData.At(l).Attributes().Insert(p.tenantIDAttributeKey, pcommon.NewValueString(tenantIDHeaderValue))
 					}
 				case "Sum":
 					metricData := metric.Sum().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
-						metricData.At(l).Attributes().Insert(p.tenantIDAttributeKey, pdata.NewAttributeValueString(tenantIDHeaderValue))
+						metricData.At(l).Attributes().Insert(p.tenantIDAttributeKey, pcommon.NewValueString(tenantIDHeaderValue))
 					}
 				case "Histogram":
 					metricData := metric.Histogram().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
-						metricData.At(l).Attributes().Insert(p.tenantIDAttributeKey, pdata.NewAttributeValueString(tenantIDHeaderValue))
+						metricData.At(l).Attributes().Insert(p.tenantIDAttributeKey, pcommon.NewValueString(tenantIDHeaderValue))
 					}
 				case "Summary":
 					metricData := metric.Summary().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
-						metricData.At(l).Attributes().Insert(p.tenantIDAttributeKey, pdata.NewAttributeValueString(tenantIDHeaderValue))
+						metricData.At(l).Attributes().Insert(p.tenantIDAttributeKey, pcommon.NewValueString(tenantIDHeaderValue))
 					}
 				}
 			}

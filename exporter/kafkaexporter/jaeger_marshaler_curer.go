@@ -1,7 +1,7 @@
 package kafkaexporter // import "github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter"
 
 // Similar to jaegerMarshaler except we log details of spans greater than producer maxMessageBytes. When doing otel
-// upgrades pull in updates from jaeger_mashaler.go:Marshal function
+// upgrades pull in updates from jaeger_marshaler.go:Marshal function
 import (
 	"encoding/binary"
 	"encoding/hex"
@@ -12,10 +12,10 @@ import (
 
 	"github.com/Shopify/sarama"
 	jaegerproto "github.com/jaegertracing/jaeger/model"
-	"go.opentelemetry.io/collector/model/pdata"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.uber.org/multierr"
 
-	jaegertranslator "github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/jaeger"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/jaeger"
 )
 
 const (
@@ -39,8 +39,8 @@ type jaegerMarshalerCurer struct {
 
 var _ TracesMarshaler = (*jaegerMarshalerCurer)(nil)
 
-func (j jaegerMarshalerCurer) Marshal(traces pdata.Traces, topic string) ([]*sarama.ProducerMessage, error) {
-	batches, err := jaegertranslator.InternalTracesToJaegerProto(traces)
+func (j jaegerMarshalerCurer) Marshal(traces ptrace.Traces, topic string) ([]*sarama.ProducerMessage, error) {
+	batches, err := jaeger.ProtoFromTraces(traces)
 	if err != nil {
 		return nil, err
 	}

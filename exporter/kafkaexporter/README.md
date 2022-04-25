@@ -1,12 +1,14 @@
 # Kafka Exporter
 
-**IMPORTANT:** This component is copied from https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.44.0/exporter/kafkaexporter and
+**IMPORTANT:** This component is copied from https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.49.0/exporter/kafkaexporter and
 adapted to accept compression settings and also do span curing on large spans.
 
-Kafka exporter exports traces to Kafka. This exporter uses a synchronous producer
+Kafka exporter exports logs, metrics, and traces to Kafka. This exporter uses a synchronous producer
 that blocks and does not batch messages, therefore it should be used with batch and queued retry
 processors for higher throughput and resiliency. Message payload encoding is configurable.
- 
+
+Supported pipeline types: logs, metrics, traces
+
 The following settings are required:
 - `protocol_version` (no default): Kafka protocol version e.g. 2.0.0
 
@@ -68,6 +70,8 @@ The following settings can be optionally configured:
 - `producer`
   - `max_message_bytes` (default = 1000000) the maximum permitted size of a message in bytes
   - `required_acks` (default = 1) controls when a message is regarded as transmitted.   https://pkg.go.dev/github.com/Shopify/sarama@v1.30.0#RequiredAcks
+  - `compression` (default = 'none') the compression used when producing messages to kafka. The options are: `none`, `gzip`, `snappy`, `lz4`, and `zstd` https://pkg.go.dev/github.com/Shopify/sarama@v1.30.0#CompressionCodec
+  - `flush_max_messages` (default = 0) The maximum number of messages the producer will send in a single broker request.
 
 Example configuration:
 
