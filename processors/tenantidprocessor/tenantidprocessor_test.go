@@ -28,7 +28,9 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/exporter/otlpexporter"
-	"go.opentelemetry.io/collector/model/pdata"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/pmetric"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
@@ -45,11 +47,11 @@ func TestMissingMetadataInContext(t *testing.T) {
 		tenantIDHeaderName:   defaultHeaderName,
 		tenantIDAttributeKey: defaultHeaderName,
 	}
-	_, err := p.ProcessTraces(context.Background(), pdata.NewTraces())
+	_, err := p.ProcessTraces(context.Background(), ptrace.NewTraces())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "could not extract headers")
 
-	_, err = p.ProcessMetrics(context.Background(), pdata.NewMetrics())
+	_, err = p.ProcessMetrics(context.Background(), pmetric.NewMetrics())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "could not extract headers")
 }
@@ -66,11 +68,11 @@ func TestMissingTenantHeader(t *testing.T) {
 		context.Background(),
 		md,
 	)
-	_, err := p.ProcessTraces(ctx, pdata.NewTraces())
+	_, err := p.ProcessTraces(ctx, ptrace.NewTraces())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "missing header")
 
-	_, err = p.ProcessMetrics(ctx, pdata.NewMetrics())
+	_, err = p.ProcessMetrics(ctx, pmetric.NewMetrics())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "missing header")
 }
@@ -88,11 +90,11 @@ func TestMultipleTenantHeaders(t *testing.T) {
 		context.Background(),
 		md,
 	)
-	_, err := p.ProcessTraces(ctx, pdata.NewTraces())
+	_, err := p.ProcessTraces(ctx, ptrace.NewTraces())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "multiple tenant ID headers")
 
-	_, err = p.ProcessMetrics(ctx, pdata.NewMetrics())
+	_, err = p.ProcessMetrics(ctx, pmetric.NewMetrics())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "multiple tenant ID headers")
 }
@@ -103,7 +105,7 @@ func TestEmptyTraces(t *testing.T) {
 		tenantIDHeaderName:   defaultHeaderName,
 		tenantIDAttributeKey: defaultHeaderName,
 	}
-	traces := pdata.NewTraces()
+	traces := ptrace.NewTraces()
 	md := metadata.New(map[string]string{p.tenantIDHeaderName: testTenantID})
 	ctx := metadata.NewIncomingContext(
 		context.Background(),
@@ -120,7 +122,7 @@ func TestEmptyMetrics(t *testing.T) {
 		tenantIDHeaderName:   defaultHeaderName,
 		tenantIDAttributeKey: defaultHeaderName,
 	}
-	metrics := pdata.NewMetrics()
+	metrics := pmetric.NewMetrics()
 	md := metadata.New(map[string]string{p.tenantIDHeaderName: testTenantID})
 	ctx := metadata.NewIncomingContext(
 		context.Background(),
@@ -254,13 +256,13 @@ func createOTLPMetricsReceiver(t *testing.T, nextConsumer consumer.Metrics) (str
 	return addr, otlpMetricsRec
 }
 
-func generateMetricData() pdata.Metrics {
-	md := pdata.NewMetrics()
+func generateMetricData() pmetric.Metrics {
+	md := pmetric.NewMetrics()
 	md.ResourceMetrics().AppendEmpty()
-	md.ResourceMetrics().At(0).InstrumentationLibraryMetrics().AppendEmpty()
-	md.ResourceMetrics().At(0).InstrumentationLibraryMetrics().At(0).Metrics().AppendEmpty()
-	metric := md.ResourceMetrics().At(0).InstrumentationLibraryMetrics().At(0).Metrics().At(0)
-	metric.SetDataType(pdata.MetricDataTypeSum)
+	md.ResourceMetrics().At(0).ScopeMetrics().AppendEmpty()
+	md.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().AppendEmpty()
+	metric := md.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0)
+	metric.SetDataType(pmetric.MetricDataTypeSum)
 	metric.Sum().DataPoints().AppendEmpty()
 	return md
 }
@@ -358,7 +360,7 @@ func TestReceiveJaegerThriftHTTP_Traces(t *testing.T) {
 	defer rec.Shutdown(context.Background())
 
 	td := generateTraceDataOneSpan()
-	batches, err := jaeger.InternalTracesToJaegerProto(td)
+	batches, err := jaeger.ProtoFromTraces(td)
 	require.NoError(t, err)
 
 	collectorAddr := fmt.Sprintf("http://%s/api/traces", addr)
@@ -378,7 +380,7 @@ func TestReceiveJaegerThriftHTTP_Traces(t *testing.T) {
 	assert.Equal(t, td.ResourceSpans().Len(), tenantAttrsFound)
 }
 
-func assertTenantAttributeExists(t *testing.T, trace pdata.Traces, tenantAttrKey string, tenantID string) int {
+func assertTenantAttributeExists(t *testing.T, trace ptrace.Traces, tenantAttrKey string, tenantID string) int {
 	numOfTenantAttrs := 0
 	rss := trace.ResourceSpans()
 	for i := 0; i < rss.Len(); i++ {
@@ -386,19 +388,19 @@ func assertTenantAttributeExists(t *testing.T, trace pdata.Traces, tenantAttrKey
 		tenantAttr, ok := rs.Resource().Attributes().Get(tenantAttrKey)
 		require.True(t, ok)
 		numOfTenantAttrs++
-		assert.Equal(t, pdata.AttributeValueTypeString, tenantAttr.Type())
+		assert.Equal(t, pcommon.ValueTypeString, tenantAttr.Type())
 		assert.Equal(t, tenantID, tenantAttr.StringVal())
 	}
 	return numOfTenantAttrs
 }
 
-func assertTenantTagExists(t *testing.T, metricData pdata.Metrics, tenantAttrKey string, tenantID string) int {
+func assertTenantTagExists(t *testing.T, metricData pmetric.Metrics, tenantAttrKey string, tenantID string) int {
 	numOfTenantAttrs := 0
 	rms := metricData.ResourceMetrics()
 	for i := 0; i < rms.Len(); i++ {
 		rm := rms.At(i)
 
-		ilms := rm.InstrumentationLibraryMetrics()
+		ilms := rm.ScopeMetrics()
 		for j := 0; j < ilms.Len(); j++ {
 			ilm := ilms.At(j)
 
@@ -410,7 +412,7 @@ func assertTenantTagExists(t *testing.T, metricData pdata.Metrics, tenantAttrKey
 					tenantAttr, ok := metricDataPoints.At(l).Attributes().Get(tenantAttrKey)
 					require.True(t, ok)
 					numOfTenantAttrs++
-					assert.Equal(t, pdata.NewAttributeValueString(tenantID), tenantAttr)
+					assert.Equal(t, pcommon.NewValueString(tenantID), tenantAttr)
 				}
 			}
 		}
@@ -425,7 +427,7 @@ type tracesMultiConsumer struct {
 
 var _ consumer.Traces = (*tracesMultiConsumer)(nil)
 
-func (f tracesMultiConsumer) ConsumeTraces(ctx context.Context, td pdata.Traces) error {
+func (f tracesMultiConsumer) ConsumeTraces(ctx context.Context, td ptrace.Traces) error {
 	traces, err := f.tenantIDprocessor.ProcessTraces(ctx, td)
 	if err != nil {
 		return err
@@ -444,7 +446,7 @@ type metricsMultiConsumer struct {
 
 var _ consumer.Metrics = (*metricsMultiConsumer)(nil)
 
-func (f metricsMultiConsumer) ConsumeMetrics(ctx context.Context, md pdata.Metrics) error {
+func (f metricsMultiConsumer) ConsumeMetrics(ctx context.Context, md pmetric.Metrics) error {
 	metrics, err := f.tenantIDprocessor.ProcessMetrics(ctx, md)
 	if err != nil {
 		return err
@@ -458,62 +460,62 @@ func (f metricsMultiConsumer) Capabilities() consumer.Capabilities {
 
 var (
 	TestSpanStartTime      = time.Date(2020, 2, 11, 20, 26, 12, 321, time.UTC)
-	TestSpanStartTimestamp = pdata.NewTimestampFromTime(TestSpanStartTime)
+	TestSpanStartTimestamp = pcommon.NewTimestampFromTime(TestSpanStartTime)
 	TestSpanEventTime      = time.Date(2020, 2, 11, 20, 26, 13, 123, time.UTC)
-	TestSpanEventTimestamp = pdata.NewTimestampFromTime(TestSpanEventTime)
+	TestSpanEventTimestamp = pcommon.NewTimestampFromTime(TestSpanEventTime)
 
 	TestSpanEndTime      = time.Date(2020, 2, 11, 20, 26, 13, 789, time.UTC)
-	TestSpanEndTimestamp = pdata.NewTimestampFromTime(TestSpanEndTime)
+	TestSpanEndTimestamp = pcommon.NewTimestampFromTime(TestSpanEndTime)
 )
 
-func generateTraceDataOneSpan() pdata.Traces {
-	td := generateTraceDataOneEmptyInstrumentationLibrary()
-	rs0ils0 := td.ResourceSpans().At(0).InstrumentationLibrarySpans().At(0)
+func generateTraceDataOneSpan() ptrace.Traces {
+	td := generateTraceDataOneEmptyScope()
+	rs0ils0 := td.ResourceSpans().At(0).ScopeSpans().At(0)
 	rs0ils0.Spans().AppendEmpty()
 	fillSpanOne(rs0ils0.Spans().At(0))
 	return td
 }
 
-func generateTraceDataOneEmptyInstrumentationLibrary() pdata.Traces {
-	td := generateTraceDataNoLibraries()
+func generateTraceDataOneEmptyScope() ptrace.Traces {
+	td := generateTraceDataNoScope()
 	rs0 := td.ResourceSpans().At(0)
-	rs0.InstrumentationLibrarySpans().AppendEmpty()
+	rs0.ScopeSpans().AppendEmpty()
 	return td
 }
 
-func generateTraceDataNoLibraries() pdata.Traces {
+func generateTraceDataNoScope() ptrace.Traces {
 	td := generateTraceDataOneEmptyResourceSpans()
 	rs0 := td.ResourceSpans().At(0)
 	initResource1(rs0.Resource())
 	return td
 }
 
-func generateTraceDataOneEmptyResourceSpans() pdata.Traces {
+func generateTraceDataOneEmptyResourceSpans() ptrace.Traces {
 	td := generateTraceDataEmpty()
 	td.ResourceSpans().AppendEmpty()
 	return td
 }
 
-func generateTraceDataEmpty() pdata.Traces {
-	td := pdata.NewTraces()
+func generateTraceDataEmpty() ptrace.Traces {
+	td := ptrace.NewTraces()
 	return td
 }
 
-func initResource1(r pdata.Resource) {
+func initResource1(r pcommon.Resource) {
 	initResourceAttributes1(r.Attributes())
 }
 
-func initResourceAttributes1(dest pdata.AttributeMap) {
+func initResourceAttributes1(dest pcommon.Map) {
 	dest.UpsertString("resource-attr", "resource-attr-val-1")
 }
 
-func fillSpanOne(span pdata.Span) {
+func fillSpanOne(span ptrace.Span) {
 	span.SetName("operationA")
 	span.SetStartTimestamp(TestSpanStartTimestamp)
 	span.SetEndTimestamp(TestSpanEndTimestamp)
 	span.SetDroppedAttributesCount(1)
-	span.SetTraceID(pdata.NewTraceID([16]byte{0, 1, 2}))
-	span.SetSpanID(pdata.NewSpanID([8]byte{0, 1}))
+	span.SetTraceID(pcommon.NewTraceID([16]byte{0, 1, 2}))
+	span.SetSpanID(pcommon.NewSpanID([8]byte{0, 1}))
 	evs := span.Events()
 	evs.AppendEmpty()
 	evs.AppendEmpty()
@@ -528,11 +530,11 @@ func fillSpanOne(span pdata.Span) {
 	ev1.SetDroppedAttributesCount(2)
 	span.SetDroppedEventsCount(1)
 	status := span.Status()
-	status.SetCode(pdata.StatusCodeError)
+	status.SetCode(ptrace.StatusCodeError)
 	status.SetMessage("status-cancelled")
 }
 
-func initSpanEventAttributes(dest pdata.AttributeMap) {
+func initSpanEventAttributes(dest pcommon.Map) {
 	dest.UpsertString("span-event-attr", "span-event-attr-val")
 }
 

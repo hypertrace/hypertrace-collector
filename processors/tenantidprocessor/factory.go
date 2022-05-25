@@ -3,9 +3,8 @@ package tenantidprocessor
 import (
 	"context"
 
-	"go.opentelemetry.io/collector/config"
-
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/processor/processorhelper"
 )
@@ -18,11 +17,11 @@ const (
 
 // NewFactory creates a factory for the tenant ID processor.
 func NewFactory() component.ProcessorFactory {
-	return processorhelper.NewFactory(
+	return component.NewProcessorFactory(
 		typeStr,
 		createDefaultConfig,
-		processorhelper.WithTraces(createTraceProcessor),
-		processorhelper.WithMetrics(createMetricsProcessor),
+		component.WithTracesProcessor(createTraceProcessor),
+		component.WithMetricsProcessor(createMetricsProcessor),
 	)
 }
 

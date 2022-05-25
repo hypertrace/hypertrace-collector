@@ -11,9 +11,10 @@ import (
 	jaegerproto "github.com/jaegertracing/jaeger/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/model/pdata"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 
-	jaegertranslator "github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/jaeger"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/jaeger"
 )
 
 func TestJaegerMarshalerCurer(t *testing.T) {
@@ -21,44 +22,44 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 	maxAttributeValueSize := 256
 	jsonMarshaler := &jsonpb.Marshaler{}
 
-	td := pdata.NewTraces()
+	td := ptrace.NewTraces()
 	rs := td.ResourceSpans().AppendEmpty()
-	rs.Resource().Attributes().Insert("test-key", pdata.NewAttributeValueString("test-val"))
-	ils := rs.InstrumentationLibrarySpans().AppendEmpty()
+	rs.Resource().Attributes().Insert("test-key", pcommon.NewValueString("test-val"))
+	ils := rs.ScopeSpans().AppendEmpty()
 
 	// Will add this span to the messages queue to export
 	span := ils.Spans().AppendEmpty()
 	span.SetName("foo")
-	span.SetStartTimestamp(pdata.Timestamp(10))
-	span.SetEndTimestamp(pdata.Timestamp(20))
-	span.SetTraceID(pdata.NewTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}))
-	span.SetSpanID(pdata.NewSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8}))
-	span.Attributes().Insert("tag1", pdata.NewAttributeValueString("tag1-val"))
+	span.SetStartTimestamp(pcommon.Timestamp(10))
+	span.SetEndTimestamp(pcommon.Timestamp(20))
+	span.SetTraceID(pcommon.NewTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}))
+	span.SetSpanID(pcommon.NewSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8}))
+	span.Attributes().Insert("tag1", pcommon.NewValueString("tag1-val"))
 
 	// Will cure this span
 	span = ils.Spans().AppendEmpty()
 	span.SetName("bar")
-	span.SetStartTimestamp(pdata.Timestamp(100))
-	span.SetEndTimestamp(pdata.Timestamp(225))
-	span.SetTraceID(pdata.NewTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}))
-	span.SetSpanID(pdata.NewSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8}))
-	span.Attributes().Insert("tag10", pdata.NewAttributeValueString("tag10-val"))
-	span.Attributes().Insert("big-tag", pdata.NewAttributeValueString(createLongString(maxMessageBytes, "a")))
+	span.SetStartTimestamp(pcommon.Timestamp(100))
+	span.SetEndTimestamp(pcommon.Timestamp(225))
+	span.SetTraceID(pcommon.NewTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}))
+	span.SetSpanID(pcommon.NewSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8}))
+	span.Attributes().Insert("tag10", pcommon.NewValueString("tag10-val"))
+	span.Attributes().Insert("big-tag", pcommon.NewValueString(createLongString(maxMessageBytes, "a")))
 
 	// Will be unable to cure this span. Depending on the test config, will drop it or not.
 	span = ils.Spans().AppendEmpty()
 	span.SetName("buzz")
-	span.SetStartTimestamp(pdata.Timestamp(100))
-	span.SetEndTimestamp(pdata.Timestamp(225))
-	span.SetTraceID(pdata.NewTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}))
-	span.SetSpanID(pdata.NewSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8}))
-	span.Attributes().Insert("tag10", pdata.NewAttributeValueString("tag10-val"))
+	span.SetStartTimestamp(pcommon.Timestamp(100))
+	span.SetEndTimestamp(pcommon.Timestamp(225))
+	span.SetTraceID(pcommon.NewTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}))
+	span.SetSpanID(pcommon.NewSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8}))
+	span.Attributes().Insert("tag10", pcommon.NewValueString("tag10-val"))
 	for i := 0; i < 64; i++ {
-		span.Attributes().Insert(fmt.Sprintf("big-tag-%d", i), pdata.NewAttributeValueString(createLongString(maxMessageBytes, "a")))
+		span.Attributes().Insert(fmt.Sprintf("big-tag-%d", i), pcommon.NewValueString(createLongString(maxMessageBytes, "a")))
 	}
-	span.Attributes().Insert("big-tag", pdata.NewAttributeValueString(createLongString(maxMessageBytes, "a")))
+	span.Attributes().Insert("big-tag", pcommon.NewValueString(createLongString(maxMessageBytes, "a")))
 
-	batches, err := jaegertranslator.InternalTracesToJaegerProto(td)
+	batches, err := jaeger.ProtoFromTraces(td)
 	require.NoError(t, err)
 
 	batches[0].Spans[0].Process = batches[0].Process
@@ -82,22 +83,22 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 
 	// expected cured spans should be similar to spans that came in as if they were already cured.
 	// batches[0].Spans[1] when cured will be the same as curedBatches[0].Spans[0]
-	curedTd := pdata.NewTraces()
+	curedTd := ptrace.NewTraces()
 	curedRs := curedTd.ResourceSpans().AppendEmpty()
-	curedRs.Resource().Attributes().Insert("test-key", pdata.NewAttributeValueString("test-val"))
-	curedIls := curedRs.InstrumentationLibrarySpans().AppendEmpty()
+	curedRs.Resource().Attributes().Insert("test-key", pcommon.NewValueString("test-val"))
+	curedIls := curedRs.ScopeSpans().AppendEmpty()
 
 	curedSpan := curedIls.Spans().AppendEmpty()
 	curedSpan.SetName("bar")
-	curedSpan.SetStartTimestamp(pdata.Timestamp(100))
-	curedSpan.SetEndTimestamp(pdata.Timestamp(225))
-	curedSpan.SetTraceID(pdata.NewTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}))
-	curedSpan.SetSpanID(pdata.NewSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8}))
-	curedSpan.Attributes().Insert("tag10", pdata.NewAttributeValueString("tag10-val"))
-	curedSpan.Attributes().Insert("big-tag", pdata.NewAttributeValueString(createLongString(maxAttributeValueSize, "a")))
-	curedSpan.Attributes().Insert("big-tag"+truncationTagSuffix, pdata.NewAttributeValueBool(true))
+	curedSpan.SetStartTimestamp(pcommon.Timestamp(100))
+	curedSpan.SetEndTimestamp(pcommon.Timestamp(225))
+	curedSpan.SetTraceID(pcommon.NewTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}))
+	curedSpan.SetSpanID(pcommon.NewSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8}))
+	curedSpan.Attributes().Insert("tag10", pcommon.NewValueString("tag10-val"))
+	curedSpan.Attributes().Insert("big-tag", pcommon.NewValueString(createLongString(maxAttributeValueSize, "a")))
+	curedSpan.Attributes().Insert("big-tag"+truncationTagSuffix, pcommon.NewValueBool(true))
 
-	curedBatches, err := jaegertranslator.InternalTracesToJaegerProto(curedTd)
+	curedBatches, err := jaeger.ProtoFromTraces(curedTd)
 	require.NoError(t, err)
 
 	curedBatches[0].Spans[0].Process = curedBatches[0].Process
@@ -181,18 +182,6 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 			assert.Equal(t, test.encoding, test.unmarshaler.Encoding())
 		})
 	}
-}
-
-func TestJaegerMarshalerCurer_error_covert_traceID(t *testing.T) {
-	marshaler := jaegerMarshalerCurer{
-		marshaler: jaegerProtoSpanMarshaler{},
-	}
-	td := pdata.NewTraces()
-	td.ResourceSpans().AppendEmpty().InstrumentationLibrarySpans().AppendEmpty().Spans().AppendEmpty()
-	// fails in zero traceID
-	messages, err := marshaler.Marshal(td, "topic")
-	require.Error(t, err)
-	assert.Nil(t, messages)
 }
 
 func TestCureSpans(t *testing.T) {

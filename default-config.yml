@@ -35,6 +35,8 @@ exporters:
     compression:
       codec: gzip
       level: 5
+    producer:
+      compression: gzip
 
 service:
   pipelines:
