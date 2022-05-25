@@ -82,32 +82,37 @@ func (p *processor) addTenantIdToMetrics(metrics pmetric.Metrics, tenantIDHeader
 	for i := 0; i < rms.Len(); i++ {
 		rm := rms.At(i)
 		rm.Resource().Attributes().Insert(p.tenantIDAttributeKey, pcommon.NewValueString(tenantIDHeaderValue))
-		ilms := rm.InstrumentationLibraryMetrics()
-		for j := 0; j < ilms.Len(); j++ {
-			ilm := ilms.At(j)
-			metrics := ilm.Metrics()
+		sms := rm.ScopeMetrics()
+		for j := 0; j < sms.Len(); j++ {
+			sm := sms.At(j)
+			metrics := sm.Metrics()
 			for k := 0; k < metrics.Len(); k++ {
 				metric := metrics.At(k)
-				metricDataType := metric.DataType().String()
+				metricDataType := metric.DataType()
 				switch metricDataType {
-				case "None":
+				case pmetric.MetricDataTypeNone:
 					p.logger.Error("Cannot add tenantId to metric. Metric Data type not present for metric: " + metric.Name())
-				case "Gauge":
+				case pmetric.MetricDataTypeGauge:
 					metricData := metric.Gauge().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
 						metricData.At(l).Attributes().Insert(p.tenantIDAttributeKey, pcommon.NewValueString(tenantIDHeaderValue))
 					}
-				case "Sum":
+				case pmetric.MetricDataTypeSum:
 					metricData := metric.Sum().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
 						metricData.At(l).Attributes().Insert(p.tenantIDAttributeKey, pcommon.NewValueString(tenantIDHeaderValue))
 					}
-				case "Histogram":
+				case pmetric.MetricDataTypeHistogram:
 					metricData := metric.Histogram().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
 						metricData.At(l).Attributes().Insert(p.tenantIDAttributeKey, pcommon.NewValueString(tenantIDHeaderValue))
 					}
-				case "Summary":
+				case pmetric.MetricDataTypeExponentialHistogram:
+					metricData := metric.ExponentialHistogram().DataPoints()
+					for l := 0; l < metricData.Len(); l++ {
+						metricData.At(l).Attributes().Insert(p.tenantIDAttributeKey, pcommon.NewValueString(tenantIDHeaderValue))
+					}
+				case pmetric.MetricDataTypeSummary:
 					metricData := metric.Summary().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
 						metricData.At(l).Attributes().Insert(p.tenantIDAttributeKey, pcommon.NewValueString(tenantIDHeaderValue))

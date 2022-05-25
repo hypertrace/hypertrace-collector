@@ -259,9 +259,9 @@ func createOTLPMetricsReceiver(t *testing.T, nextConsumer consumer.Metrics) (str
 func generateMetricData() pmetric.Metrics {
 	md := pmetric.NewMetrics()
 	md.ResourceMetrics().AppendEmpty()
-	md.ResourceMetrics().At(0).InstrumentationLibraryMetrics().AppendEmpty()
-	md.ResourceMetrics().At(0).InstrumentationLibraryMetrics().At(0).Metrics().AppendEmpty()
-	metric := md.ResourceMetrics().At(0).InstrumentationLibraryMetrics().At(0).Metrics().At(0)
+	md.ResourceMetrics().At(0).ScopeMetrics().AppendEmpty()
+	md.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().AppendEmpty()
+	metric := md.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0)
 	metric.SetDataType(pmetric.MetricDataTypeSum)
 	metric.Sum().DataPoints().AppendEmpty()
 	return md
@@ -400,7 +400,7 @@ func assertTenantTagExists(t *testing.T, metricData pmetric.Metrics, tenantAttrK
 	for i := 0; i < rms.Len(); i++ {
 		rm := rms.At(i)
 
-		ilms := rm.InstrumentationLibraryMetrics()
+		ilms := rm.ScopeMetrics()
 		for j := 0; j < ilms.Len(); j++ {
 			ilm := ilms.At(j)
 
@@ -469,21 +469,21 @@ var (
 )
 
 func generateTraceDataOneSpan() ptrace.Traces {
-	td := generateTraceDataOneEmptyInstrumentationLibrary()
-	rs0ils0 := td.ResourceSpans().At(0).InstrumentationLibrarySpans().At(0)
+	td := generateTraceDataOneEmptyScope()
+	rs0ils0 := td.ResourceSpans().At(0).ScopeSpans().At(0)
 	rs0ils0.Spans().AppendEmpty()
 	fillSpanOne(rs0ils0.Spans().At(0))
 	return td
 }
 
-func generateTraceDataOneEmptyInstrumentationLibrary() ptrace.Traces {
-	td := generateTraceDataNoLibraries()
+func generateTraceDataOneEmptyScope() ptrace.Traces {
+	td := generateTraceDataNoScope()
 	rs0 := td.ResourceSpans().At(0)
-	rs0.InstrumentationLibrarySpans().AppendEmpty()
+	rs0.ScopeSpans().AppendEmpty()
 	return td
 }
 
-func generateTraceDataNoLibraries() ptrace.Traces {
+func generateTraceDataNoScope() ptrace.Traces {
 	td := generateTraceDataOneEmptyResourceSpans()
 	rs0 := td.ResourceSpans().At(0)
 	initResource1(rs0.Resource())
