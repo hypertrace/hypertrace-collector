@@ -155,6 +155,7 @@ configMap:
             endpoint: "0.0.0.0:14268"
     processors:
       batch: {}
+      hypertrace_metrics_resource_attrs_to_attrs:
 
     exporters:
       kafka:
@@ -175,9 +176,13 @@ configMap:
           compression: gzip
       prometheus:
         endpoint: "0.0.0.0:8889"
-        #For converting resource attributes to metric labels
+        # For converting resource attributes to metric labels we will use the hypertrace_metrics_resource_attrs_to_attrs
+        # processor so that we avoid adding job and instance labels as the prometheus exporter will add them.
+        # See https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/12cc610f93429fbd9dec71c5f486d266844f11c2/exporter/prometheusexporter/collector.go#L96
+        # Once this is fixed we can re-enable this.
+        # Filed issue https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/10374
         resource_to_telemetry_conversion:
-          enabled: true
+          enabled: false
 
     service:
       telemetry:
@@ -191,7 +196,7 @@ configMap:
           exporters: [kafka]
         metrics:
           receivers: [otlp]
-          processors: [batch]
+          processors: [batch, hypertrace_metrics_resource_attrs_to_attrs]
           exporters: [prometheus]
 
 hpa:

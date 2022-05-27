@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/collector/service"
 	"go.uber.org/multierr"
 
+	"github.com/hypertrace/collector/processors/metricresourceattrstoattrs"
 	"github.com/hypertrace/collector/processors/tenantidprocessor"
 )
 
@@ -72,6 +73,9 @@ func components() (component.Factories, error) {
 
 	tidpf := tenantidprocessor.NewFactory()
 	factories.Processors[tidpf.Type()] = tidpf
+
+	mrata := metricresourceattrstoattrs.NewFactory()
+	factories.Processors[mrata.Type()] = mrata
 
 	fef := fileexporter.NewFactory()
 	factories.Exporters[fef.Type()] = fef
