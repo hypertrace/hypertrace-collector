@@ -12,3 +12,5 @@ prometheus:
   resource_to_telemetry_conversion:
     enabled: true
 ```
+
+Filed an issue with otel collector contrib: https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/10374

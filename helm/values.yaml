@@ -155,7 +155,7 @@ configMap:
             endpoint: "0.0.0.0:14268"
     processors:
       batch: {}
-      hypertrace_metrics_resource_attrs_to_attrs:
+      hypertrace_metrics_resource_attrs_to_attrs: {}
 
     exporters:
       kafka:

@@ -23,7 +23,7 @@ receivers:
   zipkin:
 
 processors:
-  batch:
+  batch: {}
 
 exporters:
   kafka:
