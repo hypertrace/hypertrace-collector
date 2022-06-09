@@ -40,8 +40,7 @@ func (p *processor) ProcessMetrics(ctx context.Context, metrics pmetric.Metrics)
 						(key == model.InstanceLabel && hasResourceServiceInstanceIDAttr) {
 						return true
 					}
-					addResourceAttributeToMetricAttributes(metric, hasResourceServiceNameAttr, hasResourceServiceInstanceIDAttr,
-						key, v)
+					addResourceAttributeToMetricAttributes(metric, key, v)
 					return true
 				})
 				removeJobAndInstanceLabels(metric, hasResourceServiceNameAttr, hasResourceServiceInstanceIDAttr)
@@ -52,8 +51,7 @@ func (p *processor) ProcessMetrics(ctx context.Context, metrics pmetric.Metrics)
 }
 
 // addResourceAttributeToMetricAttributes is the workhorse to add resource attributes to metric attributes
-func addResourceAttributeToMetricAttributes(metric pmetric.Metric, hasResourceServiceNameAttr bool, hasResourceServiceInstanceIDAttr bool,
-	key string, v pcommon.Value) {
+func addResourceAttributeToMetricAttributes(metric pmetric.Metric, key string, v pcommon.Value) {
 	metricDataType := metric.DataType()
 	switch metricDataType {
 	case pmetric.MetricDataTypeGauge:
