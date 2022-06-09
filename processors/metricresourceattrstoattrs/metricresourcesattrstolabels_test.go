@@ -41,8 +41,10 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 				"scheme":                               "http",
 			},
 			inputMetricAttributes: map[string]string{
-				"foo10": "baz10",
-				"foo11": "baz11",
+				"foo10":             "baz10",
+				"foo11":             "baz11",
+				model.JobLabel:      "test-metric-job-name",
+				model.InstanceLabel: "test-metric-instance",
 			},
 			expectedMetricAttributes: map[string]string{
 				"foo10":                                "baz10",
@@ -75,6 +77,29 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 			},
 			dt: pmetric.MetricDataTypeSum,
 		},
+		"service name and instance id resource attrs not present for sum metric. job and instance labels already present: job and instance labels are not added": {
+			inputResourceAttributes: map[string]string{
+				model.JobLabel:      "test-job-name",
+				model.InstanceLabel: "test-instance",
+				"port":              "8888",
+				"scheme":            "http",
+			},
+			inputMetricAttributes: map[string]string{
+				"foo10":             "baz10",
+				"foo11":             "baz11",
+				model.JobLabel:      "test-metric-job-name",
+				model.InstanceLabel: "test-metric-instance",
+			},
+			expectedMetricAttributes: map[string]string{
+				"foo10":             "baz10",
+				"foo11":             "baz11",
+				model.JobLabel:      "test-metric-job-name",
+				model.InstanceLabel: "test-metric-instance",
+				"port":              "8888",
+				"scheme":            "http",
+			},
+			dt: pmetric.MetricDataTypeSum,
+		},
 		"all concerned resource attrs present for gauge metric: job and instance labels not added": {
 			inputResourceAttributes: map[string]string{
 				conventions.AttributeServiceName:       "test-service",
@@ -84,7 +109,9 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 				"port":                                 "8888",
 			},
 			inputMetricAttributes: map[string]string{
-				"foo10": "baz10",
+				"foo10":             "baz10",
+				model.JobLabel:      "test-metric-job-name",
+				model.InstanceLabel: "test-metric-instance",
 			},
 			expectedMetricAttributes: map[string]string{
 				"foo10":                                "baz10",
@@ -103,7 +130,9 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 				"port":                                 "8888",
 			},
 			inputMetricAttributes: map[string]string{
-				"foo10": "baz10",
+				"foo10":             "baz10",
+				model.JobLabel:      "test-metric-job-name",
+				model.InstanceLabel: "test-metric-instance",
 			},
 			expectedMetricAttributes: map[string]string{
 				"foo10":                                "baz10",
@@ -122,7 +151,9 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 				"port":                                 "8888",
 			},
 			inputMetricAttributes: map[string]string{
-				"foo10": "baz10",
+				"foo10":             "baz10",
+				model.JobLabel:      "test-metric-job-name",
+				model.InstanceLabel: "test-metric-instance",
 			},
 			expectedMetricAttributes: map[string]string{
 				"foo10":                                "baz10",
@@ -141,7 +172,9 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 				"port":                                 "8888",
 			},
 			inputMetricAttributes: map[string]string{
-				"foo10": "baz10",
+				"foo10":             "baz10",
+				model.JobLabel:      "test-metric-job-name",
+				model.InstanceLabel: "test-metric-instance",
 			},
 			expectedMetricAttributes: map[string]string{
 				"foo10":                                "baz10",

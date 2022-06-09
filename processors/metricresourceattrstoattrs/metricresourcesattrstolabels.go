@@ -40,38 +40,105 @@ func (p *processor) ProcessMetrics(ctx context.Context, metrics pmetric.Metrics)
 						(key == model.InstanceLabel && hasResourceServiceInstanceIDAttr) {
 						return true
 					}
-					metricDataType := metric.DataType()
-					switch metricDataType {
-					case pmetric.MetricDataTypeGauge:
-						metricData := metric.Gauge().DataPoints()
-						for l := 0; l < metricData.Len(); l++ {
-							metricData.At(l).Attributes().Insert(key, v)
-						}
-					case pmetric.MetricDataTypeSum:
-						metricData := metric.Sum().DataPoints()
-						for l := 0; l < metricData.Len(); l++ {
-							metricData.At(l).Attributes().Insert(key, v)
-						}
-					case pmetric.MetricDataTypeHistogram:
-						metricData := metric.Histogram().DataPoints()
-						for l := 0; l < metricData.Len(); l++ {
-							metricData.At(l).Attributes().Insert(key, v)
-						}
-					case pmetric.MetricDataTypeExponentialHistogram:
-						metricData := metric.ExponentialHistogram().DataPoints()
-						for l := 0; l < metricData.Len(); l++ {
-							metricData.At(l).Attributes().Insert(key, v)
-						}
-					case pmetric.MetricDataTypeSummary:
-						metricData := metric.Summary().DataPoints()
-						for l := 0; l < metricData.Len(); l++ {
-							metricData.At(l).Attributes().Insert(key, v)
-						}
-					}
+					addResourceAttributeToMetricAttributes(metric, hasResourceServiceNameAttr, hasResourceServiceInstanceIDAttr,
+						key, v)
 					return true
 				})
+				removeJobAndInstanceLabels(metric, hasResourceServiceNameAttr, hasResourceServiceInstanceIDAttr)
 			}
 		}
 	}
 	return metrics, nil
+}
+
+// addResourceAttributeToMetricAttributes is the workhorse to add resource attributes to metric attributes
+func addResourceAttributeToMetricAttributes(metric pmetric.Metric, hasResourceServiceNameAttr bool, hasResourceServiceInstanceIDAttr bool,
+	key string, v pcommon.Value) {
+	metricDataType := metric.DataType()
+	switch metricDataType {
+	case pmetric.MetricDataTypeGauge:
+		metricData := metric.Gauge().DataPoints()
+		for l := 0; l < metricData.Len(); l++ {
+			metricData.At(l).Attributes().Insert(key, v)
+		}
+	case pmetric.MetricDataTypeSum:
+		metricData := metric.Sum().DataPoints()
+		for l := 0; l < metricData.Len(); l++ {
+			metricData.At(l).Attributes().Insert(key, v)
+		}
+	case pmetric.MetricDataTypeHistogram:
+		metricData := metric.Histogram().DataPoints()
+		for l := 0; l < metricData.Len(); l++ {
+			metricData.At(l).Attributes().Insert(key, v)
+		}
+	case pmetric.MetricDataTypeExponentialHistogram:
+		metricData := metric.ExponentialHistogram().DataPoints()
+		for l := 0; l < metricData.Len(); l++ {
+			metricData.At(l).Attributes().Insert(key, v)
+		}
+	case pmetric.MetricDataTypeSummary:
+		metricData := metric.Summary().DataPoints()
+		for l := 0; l < metricData.Len(); l++ {
+			metricData.At(l).Attributes().Insert(key, v)
+		}
+	}
+}
+
+// removeJobAndInstanceLabels removes model.JobLabel if hasResourceServiceNameAttr and model.InstanceLabel if hasResourceServiceInstanceIDAttr,
+// from the metric attributes. This is because they will be added by the prometheus exporter based on serviceName and serviceInstanceId
+// and if already present they will be duplicate and will cause an error while processing metrics.
+func removeJobAndInstanceLabels(metric pmetric.Metric, hasResourceServiceNameAttr bool, hasResourceServiceInstanceIDAttr bool) {
+	metricDataType := metric.DataType()
+	switch metricDataType {
+	case pmetric.MetricDataTypeGauge:
+		metricData := metric.Gauge().DataPoints()
+		for l := 0; l < metricData.Len(); l++ {
+			if hasResourceServiceNameAttr {
+				metricData.At(l).Attributes().Remove(model.JobLabel)
+			}
+			if hasResourceServiceInstanceIDAttr {
+				metricData.At(l).Attributes().Remove(model.InstanceLabel)
+			}
+		}
+	case pmetric.MetricDataTypeSum:
+		metricData := metric.Sum().DataPoints()
+		for l := 0; l < metricData.Len(); l++ {
+			if hasResourceServiceNameAttr {
+				metricData.At(l).Attributes().Remove(model.JobLabel)
+			}
+			if hasResourceServiceInstanceIDAttr {
+				metricData.At(l).Attributes().Remove(model.InstanceLabel)
+			}
+		}
+	case pmetric.MetricDataTypeHistogram:
+		metricData := metric.Histogram().DataPoints()
+		for l := 0; l < metricData.Len(); l++ {
+			if hasResourceServiceNameAttr {
+				metricData.At(l).Attributes().Remove(model.JobLabel)
+			}
+			if hasResourceServiceInstanceIDAttr {
+				metricData.At(l).Attributes().Remove(model.InstanceLabel)
+			}
+		}
+	case pmetric.MetricDataTypeExponentialHistogram:
+		metricData := metric.ExponentialHistogram().DataPoints()
+		for l := 0; l < metricData.Len(); l++ {
+			if hasResourceServiceNameAttr {
+				metricData.At(l).Attributes().Remove(model.JobLabel)
+			}
+			if hasResourceServiceInstanceIDAttr {
+				metricData.At(l).Attributes().Remove(model.InstanceLabel)
+			}
+		}
+	case pmetric.MetricDataTypeSummary:
+		metricData := metric.Summary().DataPoints()
+		for l := 0; l < metricData.Len(); l++ {
+			if hasResourceServiceNameAttr {
+				metricData.At(l).Attributes().Remove(model.JobLabel)
+			}
+			if hasResourceServiceInstanceIDAttr {
+				metricData.At(l).Attributes().Remove(model.InstanceLabel)
+			}
+		}
+	}
 }
