@@ -40,38 +40,59 @@ func (p *processor) ProcessMetrics(ctx context.Context, metrics pmetric.Metrics)
 						(key == model.InstanceLabel && hasResourceServiceInstanceIDAttr) {
 						return true
 					}
-					metricDataType := metric.DataType()
-					switch metricDataType {
-					case pmetric.MetricDataTypeGauge:
-						metricData := metric.Gauge().DataPoints()
-						for l := 0; l < metricData.Len(); l++ {
-							metricData.At(l).Attributes().Insert(key, v)
-						}
-					case pmetric.MetricDataTypeSum:
-						metricData := metric.Sum().DataPoints()
-						for l := 0; l < metricData.Len(); l++ {
-							metricData.At(l).Attributes().Insert(key, v)
-						}
-					case pmetric.MetricDataTypeHistogram:
-						metricData := metric.Histogram().DataPoints()
-						for l := 0; l < metricData.Len(); l++ {
-							metricData.At(l).Attributes().Insert(key, v)
-						}
-					case pmetric.MetricDataTypeExponentialHistogram:
-						metricData := metric.ExponentialHistogram().DataPoints()
-						for l := 0; l < metricData.Len(); l++ {
-							metricData.At(l).Attributes().Insert(key, v)
-						}
-					case pmetric.MetricDataTypeSummary:
-						metricData := metric.Summary().DataPoints()
-						for l := 0; l < metricData.Len(); l++ {
-							metricData.At(l).Attributes().Insert(key, v)
-						}
-					}
+					applyToMetricAttributes(metric, func(am pcommon.Map) {
+						am.Insert(key, v)
+					})
 					return true
 				})
+				// Remove job and instance labels from the metric attributes if hasResourceServiceNameAttr OR hasResourceServiceInstanceIDAttr is true.
+				// This is because they will be added by the prometheus exporter based on serviceName and serviceInstanceId
+				// and if already present they will be duplicated and will cause an error while processing metrics.
+				if hasResourceServiceNameAttr || hasResourceServiceInstanceIDAttr {
+					applyToMetricAttributes(metric, func(am pcommon.Map) {
+						if hasResourceServiceNameAttr {
+							am.Remove(model.JobLabel)
+						}
+						if hasResourceServiceInstanceIDAttr {
+							am.Remove(model.InstanceLabel)
+						}
+					})
+				}
 			}
 		}
 	}
 	return metrics, nil
+}
+
+// applyToMetricAttributes casts out the correct struct type for the metric so that it can access the attributes map and apply a function
+// to it.
+func applyToMetricAttributes(metric pmetric.Metric, fn func(pcommon.Map)) {
+	metricDataType := metric.DataType()
+	switch metricDataType {
+	case pmetric.MetricDataTypeGauge:
+		metricData := metric.Gauge().DataPoints()
+		for l := 0; l < metricData.Len(); l++ {
+			fn(metricData.At(l).Attributes())
+		}
+	case pmetric.MetricDataTypeSum:
+		metricData := metric.Sum().DataPoints()
+		for l := 0; l < metricData.Len(); l++ {
+			fn(metricData.At(l).Attributes())
+		}
+	case pmetric.MetricDataTypeHistogram:
+		metricData := metric.Histogram().DataPoints()
+		for l := 0; l < metricData.Len(); l++ {
+			fn(metricData.At(l).Attributes())
+		}
+	case pmetric.MetricDataTypeExponentialHistogram:
+		metricData := metric.ExponentialHistogram().DataPoints()
+		for l := 0; l < metricData.Len(); l++ {
+			fn(metricData.At(l).Attributes())
+		}
+	case pmetric.MetricDataTypeSummary:
+		metricData := metric.Summary().DataPoints()
+		for l := 0; l < metricData.Len(); l++ {
+			fn(metricData.At(l).Attributes())
+		}
+	}
 }
