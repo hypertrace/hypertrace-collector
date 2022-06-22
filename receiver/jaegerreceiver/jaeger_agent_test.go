@@ -36,9 +36,9 @@ import (
 	"go.opentelemetry.io/collector/config/configgrpc"
 	"go.opentelemetry.io/collector/config/configtls"
 	"go.opentelemetry.io/collector/consumer/consumertest"
-	conventions "go.opentelemetry.io/collector/model/semconv/v1.6.1"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
+	conventions "go.opentelemetry.io/collector/semconv/v1.6.1"
 	"google.golang.org/grpc"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/common/testutil"
@@ -47,7 +47,12 @@ import (
 
 var jaegerAgent = config.NewComponentIDWithName(typeStr, "agent_test")
 
+var skip = func(t *testing.T, why string) {
+	t.Skip(why)
+}
+
 func TestJaegerAgentUDP_ThriftCompact(t *testing.T) {
+	skip(t, "Flaky Test - See https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/10368")
 	port := testutil.GetAvailablePort(t)
 	addrForClient := fmt.Sprintf(":%d", port)
 	testJaegerAgent(t, addrForClient, &configuration{
@@ -71,6 +76,7 @@ func TestJaegerAgentUDP_ThriftCompact_InvalidPort(t *testing.T) {
 }
 
 func TestJaegerAgentUDP_ThriftBinary(t *testing.T) {
+	skip(t, "Flaky Test - See https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/10369")
 	port := testutil.GetAvailablePort(t)
 	addrForClient := fmt.Sprintf(":%d", port)
 	testJaegerAgent(t, addrForClient, &configuration{
@@ -80,6 +86,7 @@ func TestJaegerAgentUDP_ThriftBinary(t *testing.T) {
 }
 
 func TestJaegerAgentUDP_ThriftBinary_PortInUse(t *testing.T) {
+	skip(t, "Flaky Test - See https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/10370")
 	// This test confirms that the thrift binary port is opened correctly.  This is all we can test at the moment.  See above.
 	port := testutil.GetAvailablePort(t)
 
