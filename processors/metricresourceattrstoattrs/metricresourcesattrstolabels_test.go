@@ -228,6 +228,41 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 			},
 			dt: pmetric.MetricDataTypeSummary,
 		},
+		"service_instance_id attribute exists for gauge metric: service.instance.id resource attr not added": {
+			inputResourceAttributes: map[string]string{
+				conventions.AttributeServiceName:       "test-service",
+				conventions.AttributeServiceInstanceID: "test-instance-id",
+				"port":                                 "8888",
+			},
+			inputMetricAttributes: map[string]string{
+				"foo10":                    "baz10",
+				ocServiceInstanceIdAttrKey: "test-metric-instance-id",
+			},
+			expectedMetricAttributes: map[string]string{
+				"foo10":                          "baz10",
+				ocServiceInstanceIdAttrKey:       "test-metric-instance-id",
+				conventions.AttributeServiceName: "test-service",
+				"port":                           "8888",
+			},
+			dt: pmetric.MetricDataTypeGauge,
+		},
+		"service_instance_id does not attribute exists for gauge metric: service.instance.id resource attr added": {
+			inputResourceAttributes: map[string]string{
+				conventions.AttributeServiceName:       "test-service",
+				conventions.AttributeServiceInstanceID: "test-instance-id",
+				"port":                                 "8888",
+			},
+			inputMetricAttributes: map[string]string{
+				"foo10": "baz10",
+			},
+			expectedMetricAttributes: map[string]string{
+				"foo10":                                "baz10",
+				conventions.AttributeServiceName:       "test-service",
+				conventions.AttributeServiceInstanceID: "test-instance-id",
+				"port":                                 "8888",
+			},
+			dt: pmetric.MetricDataTypeGauge,
+		},
 	}
 
 	for name, testCase := range testCases {
