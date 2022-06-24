@@ -10,6 +10,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const ocServiceInstanceIdAttrKey = "service_instance_id"
+
 type processor struct {
 	logger *zap.Logger
 }
@@ -34,6 +36,8 @@ func (p *processor) ProcessMetrics(ctx context.Context, metrics pmetric.Metrics)
 				// Add all resource attributes to labels except for:
 				// - model.JobLabel if hasResourceServiceNameAttr is true
 				// - model.InstanceLabel if hasResourceServiceInstanceIDAttr is true
+				// - service.instance.id(conventions.AttributeServiceInstanceID) if the metric attributes already has
+				//   "service_instance_id"
 				// These will be added by the prometheus exporter.
 				resourceAttrs.Range(func(key string, v pcommon.Value) bool {
 					if (key == model.JobLabel && hasResourceServiceNameAttr) ||
@@ -41,7 +45,14 @@ func (p *processor) ProcessMetrics(ctx context.Context, metrics pmetric.Metrics)
 						return true
 					}
 					applyToMetricAttributes(metric, func(am pcommon.Map) {
-						am.Insert(key, v)
+						// Copy service.instance.id if "service_instance_id" does not exist
+						if key == conventions.AttributeServiceInstanceID {
+							if _, ok := am.Get(ocServiceInstanceIdAttrKey); !ok {
+								am.Insert(key, v)
+							}
+						} else {
+							am.Insert(key, v)
+						}
 					})
 					return true
 				})
