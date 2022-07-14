@@ -138,3 +138,5 @@ require (
 replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver v0.54.0 => ./receiver/jaegerreceiver
 
 replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter v0.54.0 => ./exporter/kafkaexporter
+
+replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter v0.54.0 => ./exporter/prometheusexporter
