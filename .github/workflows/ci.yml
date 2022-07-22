@@ -62,3 +62,10 @@ jobs:
           build-args: |
             VERSION=latest
             GIT_COMMIT=${GITHUB_SHA}
+      - name: Scan docker image
+        uses: azure/container-scan@v0.1
+        with:
+          image-name: hypertrace/hypertrace-collector:latest
+        env:
+          DOCKLE_HOST: "unix:///var/run/docker.sock"
+        continue-on-error: true
