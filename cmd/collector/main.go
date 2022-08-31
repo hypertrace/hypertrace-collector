@@ -11,6 +11,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/opencensusreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/zipkinreceiver"
 	"go.opencensus.io/stats/view"
 	"go.opentelemetry.io/collector/component"
@@ -70,6 +71,9 @@ func components() (component.Factories, error) {
 
 	jrf := jaegerreceiver.NewFactory()
 	factories.Receivers[jrf.Type()] = jrf
+
+	prf := prometheusreceiver.NewFactory()
+	factories.Receivers[prf.Type()] = prf
 
 	tidpf := tenantidprocessor.NewFactory()
 	factories.Processors[tidpf.Type()] = tidpf
