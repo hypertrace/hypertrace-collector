@@ -25,7 +25,8 @@ const (
 	maxTruncationTries           = 5      // maximum number of times to attempt to truncate tag values.
 	// suffix used for new attributes created for those whose values have been truncated
 	// while curing the spans
-	truncationTagSuffix = ".htcollector.truncated"
+	truncationTagSuffix       = ".htcollector.truncated"
+	spanLogsTruncationTagName = "htcollector.spanlogstruncated"
 )
 
 type jaegerMarshalerCurer struct {
@@ -127,7 +128,9 @@ func (j jaegerMarshalerCurer) spanAsString(span *jaegerproto.Span) string {
 		}
 		sb.WriteString("},")
 	}
-	sb.WriteString("]")
+	sb.WriteString("],")
+	sb.WriteString(fmt.Sprintf("logs count: %d", len(span.Logs)))
+	sb.WriteString("}")
 
 	return sb.String()
 }
@@ -199,7 +202,54 @@ func (j jaegerMarshalerCurer) cureSpan(span *jaegerproto.Span, topic string) (*s
 		attributeValueSize = attributeValueSize / 2
 	}
 
+	// truncating span attributes did not work. try truncating span logs if they are available.
+	// attempt to truncate only if the number of span logs is greater than 2 ^ maxTruncationTries
+	if len(span.Logs) >= intPow(2, maxTruncationTries) {
+		return j.cureSpanLogs(span, topic)
+	}
+
 	return nil, fmt.Errorf("unable to cure span in %d truncation tries", maxTruncationTries)
+}
+
+// if log events are causing the span to be over 1MiB, then this is because there's a
+// whole bunch of them and most probably they are repeated. I don't think logs going over 1MiB
+// could be caused by the size of the log messages themselves.
+// we cut the log events by half every time we make a pass.
+func (j jaegerMarshalerCurer) cureSpanLogs(span *jaegerproto.Span, topic string) (*sarama.ProducerMessage, error) {
+	var appendedTruncationTag bool
+	for truncationTry := 0; truncationTry < maxTruncationTries; truncationTry++ {
+		span.Logs = cutSpanLogsByHalf(span.Logs)
+
+		// append the "htcollector.spanlogstruncated" attribute to the span tags if it's not been added.
+		if !appendedTruncationTag {
+			span.Tags = append(span.Tags, jaegerproto.KeyValue{
+				Key:   spanLogsTruncationTagName,
+				VType: jaegerproto.ValueType_BOOL,
+				VBool: true,
+			})
+			appendedTruncationTag = true
+		}
+
+		bts, err := j.marshaler.marshal(span)
+		// return err if there is a problem marshaling
+		if err != nil {
+			return nil, err
+		}
+		key := []byte(span.TraceID.String())
+		msg := &sarama.ProducerMessage{
+			Topic: topic,
+			Value: sarama.ByteEncoder(bts),
+			Key:   sarama.ByteEncoder(key),
+		}
+
+		// Check if the size is less than the max and if it is return. Otherwise do another pass and cut the logs by half
+		messageSize := byteSize(msg, j.version)
+		if messageSize <= j.maxMessageBytes {
+			return msg, nil
+		}
+	}
+
+	return nil, fmt.Errorf("unable to cure span logs in %d truncation tries", maxTruncationTries)
 }
 
 func valueToString(kv jaegerproto.KeyValue) string {
@@ -254,4 +304,31 @@ func byteSize(m *sarama.ProducerMessage, v sarama.KafkaVersion) int {
 		size += m.Value.Length()
 	}
 	return size
+}
+
+// intPow calculates n to the mth power. Since the result is an int
+// it is assumed that m is a positive power
+func intPow(n, m int) int {
+	if m == 0 {
+		return 1
+	}
+	result := n
+	for i := 2; i <= m; i++ {
+		result *= n
+	}
+	return result
+}
+
+// cutSpanLogsByHalf returns the spanLogs with an even-numbered index in the span
+// logs array effectively returning half of the span logs in the array.
+func cutSpanLogsByHalf(origArr []jaegerproto.Log) []jaegerproto.Log {
+	newSize := len(origArr) / 2
+	if len(origArr)%2 != 0 {
+		newSize = newSize + 1
+	}
+	truncatedSpanLogs := make([]jaegerproto.Log, newSize)
+	for i := 0; i < newSize; i++ {
+		truncatedSpanLogs[i] = origArr[i*2]
+	}
+	return truncatedSpanLogs
 }

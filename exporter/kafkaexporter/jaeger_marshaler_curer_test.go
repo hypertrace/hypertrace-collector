@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/gogo/protobuf/jsonpb"
@@ -21,6 +22,7 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 	maxMessageBytes := 1024
 	maxAttributeValueSize := 256
 	jsonMarshaler := &jsonpb.Marshaler{}
+	ts := pcommon.NewTimestampFromTime(time.Now())
 
 	td := ptrace.NewTraces()
 	rs := td.ResourceSpans().AppendEmpty()
@@ -59,6 +61,38 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 	}
 	span.Attributes().Insert("big-tag", pcommon.NewValueString(createLongString(maxMessageBytes, "a")))
 
+	// Will cure this span by curing the span logs
+	span = ils.Spans().AppendEmpty()
+	span.SetName("bar")
+	span.SetStartTimestamp(pcommon.Timestamp(101))
+	span.SetEndTimestamp(pcommon.Timestamp(226))
+	span.SetTraceID(pcommon.NewTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}))
+	span.SetSpanID(pcommon.NewSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8}))
+	span.Attributes().Insert("tag10", pcommon.NewValueString("tag10-val"))
+	span.Attributes().Insert("tag11", pcommon.NewValueString("tag11-val"))
+	// Add events to span
+	for i := 0; i < 128; i++ {
+		se := span.Events().AppendEmpty()
+		se.SetName(createLongString(1, "a"))
+		se.SetTimestamp(ts)
+	}
+
+	// Will be unable to cure this span
+	span = ils.Spans().AppendEmpty()
+	span.SetName("bar")
+	span.SetStartTimestamp(pcommon.Timestamp(102))
+	span.SetEndTimestamp(pcommon.Timestamp(227))
+	span.SetTraceID(pcommon.NewTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}))
+	span.SetSpanID(pcommon.NewSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8}))
+	span.Attributes().Insert("tag10", pcommon.NewValueString("tag10-val"))
+	span.Attributes().Insert("tag11", pcommon.NewValueString("tag11-val"))
+	// Add events to span
+	for i := 0; i < 1024; i++ {
+		se := span.Events().AppendEmpty()
+		se.SetName(createLongString(1, "a"))
+		se.SetTimestamp(ts)
+	}
+
 	batches, err := jaeger.ProtoFromTraces(td)
 	require.NoError(t, err)
 
@@ -71,7 +105,7 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 	jsonByteBuffer0 := new(bytes.Buffer)
 	require.NoError(t, jsonMarshaler.Marshal(jsonByteBuffer0, batches[0].Spans[0]))
 
-	// Get the marshalled bytes of the 2nd span that cannot be cured. Will be the needed for expected value of the tests
+	// Get the marshalled bytes of the 3rd span that cannot be cured. Will be the needed for expected value of the tests
 	// depending on whether dropSpans is turned on or not.
 	batches[0].Spans[2].Process = batches[0].Process
 	jaegerProtoBytes2, err := batches[0].Spans[2].Marshal()
@@ -81,8 +115,19 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 	jsonByteBuffer2 := new(bytes.Buffer)
 	require.NoError(t, jsonMarshaler.Marshal(jsonByteBuffer2, batches[0].Spans[2]))
 
+	// Get the marshalled bytes of the 5th span that cannot be cured. Will be the needed for expected value of the tests
+	// depending on whether dropSpans is turned on or not.
+	batches[0].Spans[4].Process = batches[0].Process
+	jaegerProtoBytes4, err := batches[0].Spans[4].Marshal()
+	require.NoError(t, err)
+	require.NotNil(t, jaegerProtoBytes4)
+
+	jsonByteBuffer4 := new(bytes.Buffer)
+	require.NoError(t, jsonMarshaler.Marshal(jsonByteBuffer4, batches[0].Spans[4]))
+
 	// expected cured spans should be similar to spans that came in as if they were already cured.
-	// batches[0].Spans[1] when cured will be the same as curedBatches[0].Spans[0]
+	// batches[0].Spans[1] when cured will be the same as curedBatches[0].Spans[0] except for the
+	// cured attribute.
 	curedTd := ptrace.NewTraces()
 	curedRs := curedTd.ResourceSpans().AppendEmpty()
 	curedRs.Resource().Attributes().Insert("test-key", pcommon.NewValueString("test-val"))
@@ -98,6 +143,42 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 	curedSpan.Attributes().Insert("big-tag", pcommon.NewValueString(createLongString(maxAttributeValueSize, "a")))
 	curedSpan.Attributes().Insert("big-tag"+truncationTagSuffix, pcommon.NewValueBool(true))
 
+	// batches[0].Spans[3] when cured will be the same as curedBatches[0].Spans[1] except for the truncated log events.
+	curedSpan = curedIls.Spans().AppendEmpty()
+	curedSpan.SetName("bar")
+	curedSpan.SetStartTimestamp(pcommon.Timestamp(101))
+	curedSpan.SetEndTimestamp(pcommon.Timestamp(226))
+	curedSpan.SetTraceID(pcommon.NewTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}))
+	curedSpan.SetSpanID(pcommon.NewSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8}))
+	curedSpan.Attributes().Insert("tag10", pcommon.NewValueString("tag10-val"))
+	curedSpan.Attributes().Insert("tag11", pcommon.NewValueString("tag11-val"))
+	curedSpan.Attributes().Insert(spanLogsTruncationTagName, pcommon.NewValueBool(true))
+	// Add events to span
+	for i := 0; i < 16; i++ {
+		se := curedSpan.Events().AppendEmpty()
+		se.SetName(createLongString(1, "a"))
+		se.SetTimestamp(ts)
+	}
+
+	// For the jaegerJSONSpanMarshaler{ pbMarshaler: &jsonpb.Marshaler{}}, the marshaled log events
+	// are large even for small log messages. So still the same as batches[0].Spans[3] except for the
+	// truncated log events.
+	curedSpan = curedIls.Spans().AppendEmpty()
+	curedSpan.SetName("bar")
+	curedSpan.SetStartTimestamp(pcommon.Timestamp(101))
+	curedSpan.SetEndTimestamp(pcommon.Timestamp(226))
+	curedSpan.SetTraceID(pcommon.NewTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}))
+	curedSpan.SetSpanID(pcommon.NewSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8}))
+	curedSpan.Attributes().Insert("tag10", pcommon.NewValueString("tag10-val"))
+	curedSpan.Attributes().Insert("tag11", pcommon.NewValueString("tag11-val"))
+	curedSpan.Attributes().Insert(spanLogsTruncationTagName, pcommon.NewValueBool(true))
+	// Add events to span
+	for i := 0; i < 4; i++ {
+		se := curedSpan.Events().AppendEmpty()
+		se.SetName(createLongString(1, "a"))
+		se.SetTimestamp(ts)
+	}
+
 	curedBatches, err := jaeger.ProtoFromTraces(curedTd)
 	require.NoError(t, err)
 
@@ -108,6 +189,22 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 
 	curedJsonByteBuffer1 := new(bytes.Buffer)
 	require.NoError(t, jsonMarshaler.Marshal(curedJsonByteBuffer1, curedBatches[0].Spans[0]))
+
+	curedBatches[0].Spans[1].Process = curedBatches[0].Process
+	curedJaegerProtoBytes2, err := curedBatches[0].Spans[1].Marshal()
+	require.NoError(t, err)
+	require.NotNil(t, curedJaegerProtoBytes2)
+
+	curedJsonByteBuffer2 := new(bytes.Buffer)
+	require.NoError(t, jsonMarshaler.Marshal(curedJsonByteBuffer2, curedBatches[0].Spans[1]))
+
+	curedBatches[0].Spans[2].Process = curedBatches[0].Process
+	curedJaegerProtoBytes3, err := curedBatches[0].Spans[2].Marshal()
+	require.NoError(t, err)
+	require.NotNil(t, curedJaegerProtoBytes3)
+
+	curedJsonByteBuffer3 := new(bytes.Buffer)
+	require.NoError(t, jsonMarshaler.Marshal(curedJsonByteBuffer3, curedBatches[0].Spans[2]))
 
 	tests := []struct {
 		unmarshaler TracesMarshaler
@@ -126,6 +223,8 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 				{Topic: "topic", Value: sarama.ByteEncoder(jaegerProtoBytes0), Key: sarama.ByteEncoder(messageKey)},
 				{Topic: "topic", Value: sarama.ByteEncoder(curedJaegerProtoBytes1), Key: sarama.ByteEncoder(messageKey)},
 				{Topic: "topic", Value: sarama.ByteEncoder(jaegerProtoBytes2), Key: sarama.ByteEncoder(messageKey)},
+				{Topic: "topic", Value: sarama.ByteEncoder(curedJaegerProtoBytes2), Key: sarama.ByteEncoder(messageKey)},
+				{Topic: "topic", Value: sarama.ByteEncoder(jaegerProtoBytes4), Key: sarama.ByteEncoder(messageKey)},
 			},
 		},
 		{
@@ -142,6 +241,8 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 				{Topic: "topic", Value: sarama.ByteEncoder(jsonByteBuffer0.Bytes()), Key: sarama.ByteEncoder(messageKey)},
 				{Topic: "topic", Value: sarama.ByteEncoder(curedJsonByteBuffer1.Bytes()), Key: sarama.ByteEncoder(messageKey)},
 				{Topic: "topic", Value: sarama.ByteEncoder(jsonByteBuffer2.Bytes()), Key: sarama.ByteEncoder(messageKey)},
+				{Topic: "topic", Value: sarama.ByteEncoder(curedJsonByteBuffer3.Bytes()), Key: sarama.ByteEncoder(messageKey)},
+				{Topic: "topic", Value: sarama.ByteEncoder(jsonByteBuffer4.Bytes()), Key: sarama.ByteEncoder(messageKey)},
 			},
 		},
 		{
@@ -157,6 +258,8 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 				{Topic: "topic", Value: sarama.ByteEncoder(jaegerProtoBytes0), Key: sarama.ByteEncoder(messageKey)},
 				{Topic: "topic", Value: sarama.ByteEncoder(curedJaegerProtoBytes1), Key: sarama.ByteEncoder(messageKey)},
 				{Topic: "topic", Value: sarama.ByteEncoder(jaegerProtoBytes2), Key: sarama.ByteEncoder(messageKey)},
+				{Topic: "topic", Value: sarama.ByteEncoder(curedJaegerProtoBytes2), Key: sarama.ByteEncoder(messageKey)},
+				{Topic: "topic", Value: sarama.ByteEncoder(jaegerProtoBytes4), Key: sarama.ByteEncoder(messageKey)},
 			},
 		},
 		{
@@ -171,6 +274,7 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 			messages: []*sarama.ProducerMessage{
 				{Topic: "topic", Value: sarama.ByteEncoder(jaegerProtoBytes0), Key: sarama.ByteEncoder(messageKey)},
 				{Topic: "topic", Value: sarama.ByteEncoder(curedJaegerProtoBytes1), Key: sarama.ByteEncoder(messageKey)},
+				{Topic: "topic", Value: sarama.ByteEncoder(curedJaegerProtoBytes2), Key: sarama.ByteEncoder(messageKey)},
 			},
 		},
 	}
@@ -349,6 +453,43 @@ func TestJaegerMarshalerCurerCureSpansFail(t *testing.T) {
 	msg, err := j.cureSpan(span, "test-topic-2")
 	require.Error(t, err)
 	assert.Nil(t, msg)
+}
+
+func TestCutSpanLogsByHalf(t *testing.T) {
+	now := time.Now()
+	jpl1 := jaegerproto.Log{Timestamp: now}
+	jpl2 := jaegerproto.Log{Timestamp: now.Add(time.Minute * 2)}
+	jpl3 := jaegerproto.Log{Timestamp: now.Add(time.Minute * 4)}
+	jpl4 := jaegerproto.Log{Timestamp: now.Add(time.Minute * 6)}
+	jpl5 := jaegerproto.Log{Timestamp: now.Add(time.Minute * 8)}
+	jpl6 := jaegerproto.Log{Timestamp: now.Add(time.Minute * 10)}
+	assert.Equal(t,
+		[]jaegerproto.Log{jpl1},
+		cutSpanLogsByHalf([]jaegerproto.Log{jpl1}))
+	assert.Equal(t,
+		[]jaegerproto.Log{jpl1},
+		cutSpanLogsByHalf([]jaegerproto.Log{jpl1, jpl2}))
+	assert.Equal(t,
+		[]jaegerproto.Log{jpl1, jpl3},
+		cutSpanLogsByHalf([]jaegerproto.Log{jpl1, jpl2, jpl3}))
+	assert.Equal(t,
+		[]jaegerproto.Log{jpl1, jpl3},
+		cutSpanLogsByHalf([]jaegerproto.Log{jpl1, jpl2, jpl3, jpl4}))
+	assert.Equal(t,
+		[]jaegerproto.Log{jpl1, jpl3, jpl5},
+		cutSpanLogsByHalf([]jaegerproto.Log{jpl1, jpl2, jpl3, jpl4, jpl5}))
+	assert.Equal(t,
+		[]jaegerproto.Log{jpl1, jpl3, jpl5},
+		cutSpanLogsByHalf([]jaegerproto.Log{jpl1, jpl2, jpl3, jpl4, jpl5, jpl6}))
+}
+
+func TestIntPow(t *testing.T) {
+	assert.Equal(t, 1, intPow(2, 0))
+	assert.Equal(t, 1, intPow(3, 0))
+	assert.Equal(t, 2, intPow(2, 1))
+	assert.Equal(t, 3, intPow(3, 1))
+	assert.Equal(t, 32, intPow(2, 5))
+	assert.Equal(t, 27, intPow(3, 3))
 }
 
 func createLongString(n int, s string) string {
