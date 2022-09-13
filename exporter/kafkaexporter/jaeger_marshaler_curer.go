@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"math"
 	"strconv"
 	"strings"
 
@@ -28,6 +29,9 @@ const (
 	truncationTagSuffix       = ".htcollector.truncated"
 	spanLogsTruncationTagName = "htcollector.spanlogstruncated"
 )
+
+// We will attempt to truncate span logs only if the number is greater than 2 ^ maxTruncationTries
+var minSpanLogsArrSize = int(math.Pow(float64(2), float64(maxTruncationTries)))
 
 type jaegerMarshalerCurer struct {
 	marshaler             jaegerSpanMarshaler
@@ -204,7 +208,7 @@ func (j jaegerMarshalerCurer) cureSpan(span *jaegerproto.Span, topic string) (*s
 
 	// truncating span attributes did not work. try truncating span logs if they are available.
 	// attempt to truncate only if the number of span logs is greater than 2 ^ maxTruncationTries
-	if len(span.Logs) >= intPow(2, maxTruncationTries) {
+	if len(span.Logs) >= minSpanLogsArrSize {
 		return j.cureSpanLogs(span, topic)
 	}
 
@@ -304,19 +308,6 @@ func byteSize(m *sarama.ProducerMessage, v sarama.KafkaVersion) int {
 		size += m.Value.Length()
 	}
 	return size
-}
-
-// intPow calculates n to the mth power. Since the result is an int
-// it is assumed that m is a positive power
-func intPow(n, m int) int {
-	if m == 0 {
-		return 1
-	}
-	result := n
-	for i := 2; i <= m; i++ {
-		result *= n
-	}
-	return result
 }
 
 // cutSpanLogsByHalf returns the spanLogs with an even-numbered index in the span

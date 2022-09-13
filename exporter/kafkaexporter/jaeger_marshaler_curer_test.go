@@ -483,15 +483,6 @@ func TestCutSpanLogsByHalf(t *testing.T) {
 		cutSpanLogsByHalf([]jaegerproto.Log{jpl1, jpl2, jpl3, jpl4, jpl5, jpl6}))
 }
 
-func TestIntPow(t *testing.T) {
-	assert.Equal(t, 1, intPow(2, 0))
-	assert.Equal(t, 1, intPow(3, 0))
-	assert.Equal(t, 2, intPow(2, 1))
-	assert.Equal(t, 3, intPow(3, 1))
-	assert.Equal(t, 32, intPow(2, 5))
-	assert.Equal(t, 27, intPow(3, 3))
-}
-
 func createLongString(n int, s string) string {
 	var b strings.Builder
 	b.Grow(n * len(s))
