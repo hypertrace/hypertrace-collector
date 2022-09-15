@@ -20,8 +20,8 @@ func NewFactory() component.ProcessorFactory {
 	return component.NewProcessorFactory(
 		typeStr,
 		createDefaultConfig,
-		component.WithTracesProcessor(createTraceProcessor),
-		component.WithMetricsProcessor(createMetricsProcessor),
+		component.WithTracesProcessor(createTraceProcessor, component.StabilityLevelStable),
+		component.WithMetricsProcessor(createMetricsProcessor, component.StabilityLevelStable),
 	)
 }
 
@@ -36,7 +36,7 @@ func createDefaultConfig() config.Processor {
 }
 
 func createTraceProcessor(
-	_ context.Context,
+	ctx context.Context,
 	params component.ProcessorCreateSettings,
 	cfg config.Processor,
 	nextConsumer consumer.Traces,
@@ -48,13 +48,15 @@ func createTraceProcessor(
 		logger:               params.Logger,
 	}
 	return processorhelper.NewTracesProcessor(
+		ctx,
+		params,
 		cfg,
 		nextConsumer,
 		processor.ProcessTraces)
 }
 
 func createMetricsProcessor(
-	_ context.Context,
+	ctx context.Context,
 	params component.ProcessorCreateSettings,
 	cfg config.Processor,
 	nextConsumer consumer.Metrics,
@@ -66,7 +68,10 @@ func createMetricsProcessor(
 		logger:               params.Logger,
 	}
 	return processorhelper.NewMetricsProcessor(
+		ctx,
+		params,
 		cfg,
 		nextConsumer,
-		processor.ProcessMetrics)
+		processor.ProcessMetrics,
+	)
 }
