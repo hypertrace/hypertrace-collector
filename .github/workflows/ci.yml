@@ -62,13 +62,10 @@ jobs:
           build-args: |
             VERSION=latest
             GIT_COMMIT=${GITHUB_SHA}
-      - name: Scan image
-        uses: anchore/scan-action@v3
-        id: scan
+      - name: Scan docker image
+        uses: azure/container-scan@v0.1
         with:
-          image: "hypertrace/hypertrace-collector:latest"
+          image-name: hypertrace/hypertrace-collector:latest
         env:
           DOCKLE_HOST: "unix:///var/run/docker.sock"
         continue-on-error: true
-      - name: Inspect action SARIF report
-        run: cat ${{ steps.scan.outputs.sarif }}
