@@ -1,4 +1,4 @@
-FROM golang:1.17-buster as build-stage
+FROM golang:1.18.6-buster as build-stage
 
 RUN mkdir -p /go/src/github.com/hypertrace/collector
 WORKDIR /go/src/github.com/hypertrace/collector
