@@ -18,6 +18,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"html"
+	"io"
+	"mime"
+	"net/http"
+	"sync"
+
 	apacheThrift "github.com/apache/thrift/lib/go/thrift"
 	"github.com/gorilla/mux"
 	"github.com/jaegertracing/jaeger/cmd/agent/app/configmanager"
@@ -34,6 +40,7 @@ import (
 	"github.com/jaegertracing/jaeger/thrift-gen/jaeger"
 	"github.com/jaegertracing/jaeger/thrift-gen/sampling"
 	"github.com/jaegertracing/jaeger/thrift-gen/zipkincore"
+	jaegertranslator "github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/jaeger"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/config/configgrpc"
@@ -43,13 +50,6 @@ import (
 	"go.uber.org/multierr"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"html"
-	"io"
-	"mime"
-	"net/http"
-	"sync"
-
-	jaegertranslator "github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/jaeger"
 )
 
 // configuration defines the behavior and the ports that
@@ -180,6 +180,13 @@ var errNotImplemented = fmt.Errorf("not implemented")
 
 type notImplementedConfigManager struct{}
 
+func (notImplementedConfigManager) GetSamplingStrategy(ctx context.Context, serviceName string) (*sampling.SamplingStrategyResponse, error) {
+	return nil, errNotImplemented
+}
+func (notImplementedConfigManager) GetBaggageRestrictions(ctx context.Context, serviceName string) ([]*baggage.BaggageRestriction, error) {
+	return nil, errNotImplemented
+}
+
 type agentHandler struct {
 	nextConsumer consumer.Traces
 	obsrecv      *obsreport.Receiver
@@ -197,13 +204,6 @@ func (h *agentHandler) EmitBatch(ctx context.Context, batch *jaeger.Batch) error
 	numSpans, err := consumeTraces(ctx, batch, h.nextConsumer)
 	h.obsrecv.EndTracesOp(ctx, thriftFormat, numSpans, err)
 	return err
-}
-
-func (notImplementedConfigManager) GetSamplingStrategy(ctx context.Context, serviceName string) (*sampling.SamplingStrategyResponse, error) {
-	return nil, errNotImplemented
-}
-func (notImplementedConfigManager) GetBaggageRestrictions(ctx context.Context, serviceName string) ([]*baggage.BaggageRestriction, error) {
-	return nil, errNotImplemented
 }
 
 func (jr *jReceiver) PostSpans(ctx context.Context, r *api_v2.PostSpansRequest) (*api_v2.PostSpansResponse, error) {
