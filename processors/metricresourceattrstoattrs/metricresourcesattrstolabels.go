@@ -48,10 +48,12 @@ func (p *processor) ProcessMetrics(ctx context.Context, metrics pmetric.Metrics)
 						// Copy service.instance.id if "service_instance_id" does not exist
 						if key == conventions.AttributeServiceInstanceID {
 							if _, ok := am.Get(ocServiceInstanceIdAttrKey); !ok {
-								am.Insert(key, v)
+								am.PutString(key, v.AsString())
 							}
 						} else {
-							am.Insert(key, v)
+							if _, ok := am.Get(key); !ok {
+								am.PutString(key, v.AsString())
+							}
 						}
 					})
 					return true

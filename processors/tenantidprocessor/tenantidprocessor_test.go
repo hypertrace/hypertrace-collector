@@ -262,7 +262,7 @@ func generateMetricData() pmetric.Metrics {
 	md.ResourceMetrics().At(0).ScopeMetrics().AppendEmpty()
 	md.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().AppendEmpty()
 	metric := md.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0)
-	metric.SetDataType(pmetric.MetricDataTypeSum)
+	metric.SetEmptySum()
 	metric.Sum().DataPoints().AppendEmpty()
 	return md
 }
@@ -506,7 +506,7 @@ func initResource1(r pcommon.Resource) {
 }
 
 func initResourceAttributes1(dest pcommon.Map) {
-	dest.UpsertString("resource-attr", "resource-attr-val-1")
+	dest.PutString("resource-attr", "resource-attr-val-1")
 }
 
 func fillSpanOne(span ptrace.Span) {
@@ -514,8 +514,8 @@ func fillSpanOne(span ptrace.Span) {
 	span.SetStartTimestamp(TestSpanStartTimestamp)
 	span.SetEndTimestamp(TestSpanEndTimestamp)
 	span.SetDroppedAttributesCount(1)
-	span.SetTraceID(pcommon.NewTraceID([16]byte{0, 1, 2}))
-	span.SetSpanID(pcommon.NewSpanID([8]byte{0, 1}))
+	span.SetTraceID([16]byte{0, 1, 2})
+	span.SetSpanID([8]byte{0, 1})
 	evs := span.Events()
 	evs.AppendEmpty()
 	evs.AppendEmpty()
@@ -535,7 +535,7 @@ func fillSpanOne(span ptrace.Span) {
 }
 
 func initSpanEventAttributes(dest pcommon.Map) {
-	dest.UpsertString("span-event-attr", "span-event-attr-val")
+	dest.PutString("span-event-attr", "span-event-attr-val")
 }
 
 func jaegerModelToThrift(batch *model.Batch) *jaegerthrift.Batch {

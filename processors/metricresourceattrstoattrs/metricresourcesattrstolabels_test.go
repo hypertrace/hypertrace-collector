@@ -29,7 +29,7 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 		inputResourceAttributes  map[string]string
 		inputMetricAttributes    map[string]string
 		expectedMetricAttributes map[string]string
-		dt                       pmetric.MetricDataType
+		dt                       pmetric.MetricType
 	}{
 		"all concerned resource attrs present for sum metric: job and instance labels not added. existing job and instance labels are removed": {
 			inputResourceAttributes: map[string]string{
@@ -300,41 +300,46 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 	}
 }
 
-func generateMetricData(resourceAttrs map[string]string, attrs map[string]string, dt pmetric.MetricDataType) pmetric.Metrics {
+func generateMetricData(resourceAttrs map[string]string, attrs map[string]string, dt pmetric.MetricType) pmetric.Metrics {
 	md := pmetric.NewMetrics()
 	md.ResourceMetrics().AppendEmpty()
 	for k, v := range resourceAttrs {
-		md.ResourceMetrics().At(0).Resource().Attributes().Insert(k, pcommon.NewValueString(v))
+		md.ResourceMetrics().At(0).Resource().Attributes().PutString(k, v)
 	}
 	md.ResourceMetrics().At(0).ScopeMetrics().AppendEmpty()
 	md.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().AppendEmpty()
 	metric := md.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0)
-	metric.SetDataType(dt)
+
 	switch dt {
-	case pmetric.MetricDataTypeSum:
+	case pmetric.MetricTypeSum:
+		metric.SetEmptySum()
 		metric.Sum().DataPoints().AppendEmpty()
 		for k, v := range attrs {
-			metric.Sum().DataPoints().At(0).Attributes().Insert(k, pcommon.NewValueString(v))
+			metric.Sum().DataPoints().At(0).Attributes().PutString(k, v)
 		}
 	case pmetric.MetricDataTypeGauge:
+		metric.SetEmptyGauge()
 		metric.Gauge().DataPoints().AppendEmpty()
 		for k, v := range attrs {
-			metric.Gauge().DataPoints().At(0).Attributes().Insert(k, pcommon.NewValueString(v))
+			metric.Gauge().DataPoints().At(0).Attributes().PutString(k, v)
 		}
 	case pmetric.MetricDataTypeHistogram:
+		metric.SetEmptyHistogram()
 		metric.Histogram().DataPoints().AppendEmpty()
 		for k, v := range attrs {
-			metric.Histogram().DataPoints().At(0).Attributes().Insert(k, pcommon.NewValueString(v))
+			metric.Histogram().DataPoints().At(0).Attributes().PutString(k, v)
 		}
 	case pmetric.MetricDataTypeExponentialHistogram:
+		metric.SetEmptyExponentialHistogram()
 		metric.ExponentialHistogram().DataPoints().AppendEmpty()
 		for k, v := range attrs {
-			metric.ExponentialHistogram().DataPoints().At(0).Attributes().Insert(k, pcommon.NewValueString(v))
+			metric.ExponentialHistogram().DataPoints().At(0).Attributes().PutString(k, v)
 		}
 	case pmetric.MetricDataTypeSummary:
+		metric.SetEmptySummary()
 		metric.Summary().DataPoints().AppendEmpty()
 		for k, v := range attrs {
-			metric.Summary().DataPoints().At(0).Attributes().Insert(k, pcommon.NewValueString(v))
+			metric.Summary().DataPoints().At(0).Attributes().PutString(k, v)
 		}
 	}
 	return md
@@ -362,7 +367,7 @@ func verifyAttributesEquality(t *testing.T, m1 pcommon.Map, m2 pcommon.Map) {
 	m1.Range(func(k string, v pcommon.Value) bool {
 		v2, ok := m2.Get(k)
 		assert.Truef(t, ok, "m2 does not have key %s found in m1", k)
-		assert.Equalf(t, v, v2, "m2 has a different value for key %s. val: %v", k, v2)
+		assert.Equalf(t, v, v2, "m2 has a different value for key %s. val: %v", k, v2.AsString())
 		return true
 	})
 }

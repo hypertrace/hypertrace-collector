@@ -7,7 +7,6 @@ import (
 
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
-	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.uber.org/zap"
@@ -73,7 +72,7 @@ func (p *processor) addTenantIdToSpans(traces ptrace.Traces, tenantIDHeaderValue
 	rss := traces.ResourceSpans()
 	for i := 0; i < rss.Len(); i++ {
 		rs := rss.At(i)
-		rs.Resource().Attributes().Insert(p.tenantIDAttributeKey, pcommon.NewValueString(tenantIDHeaderValue))
+		rs.Resource().Attributes().PutString(p.tenantIDAttributeKey, tenantIDHeaderValue)
 	}
 }
 
@@ -81,7 +80,7 @@ func (p *processor) addTenantIdToMetrics(metrics pmetric.Metrics, tenantIDHeader
 	rms := metrics.ResourceMetrics()
 	for i := 0; i < rms.Len(); i++ {
 		rm := rms.At(i)
-		rm.Resource().Attributes().Insert(p.tenantIDAttributeKey, pcommon.NewValueString(tenantIDHeaderValue))
+		rm.Resource().Attributes().PutString(p.tenantIDAttributeKey, tenantIDHeaderValue)
 		sms := rm.ScopeMetrics()
 		for j := 0; j < sms.Len(); j++ {
 			sm := sms.At(j)
@@ -95,27 +94,27 @@ func (p *processor) addTenantIdToMetrics(metrics pmetric.Metrics, tenantIDHeader
 				case pmetric.MetricDataTypeGauge:
 					metricData := metric.Gauge().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
-						metricData.At(l).Attributes().Insert(p.tenantIDAttributeKey, pcommon.NewValueString(tenantIDHeaderValue))
+						metricData.At(l).Attributes().PutString(p.tenantIDAttributeKey, tenantIDHeaderValue)
 					}
 				case pmetric.MetricDataTypeSum:
 					metricData := metric.Sum().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
-						metricData.At(l).Attributes().Insert(p.tenantIDAttributeKey, pcommon.NewValueString(tenantIDHeaderValue))
+						metricData.At(l).Attributes().PutString(p.tenantIDAttributeKey, tenantIDHeaderValue)
 					}
 				case pmetric.MetricDataTypeHistogram:
 					metricData := metric.Histogram().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
-						metricData.At(l).Attributes().Insert(p.tenantIDAttributeKey, pcommon.NewValueString(tenantIDHeaderValue))
+						metricData.At(l).Attributes().PutString(p.tenantIDAttributeKey, tenantIDHeaderValue)
 					}
 				case pmetric.MetricDataTypeExponentialHistogram:
 					metricData := metric.ExponentialHistogram().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
-						metricData.At(l).Attributes().Insert(p.tenantIDAttributeKey, pcommon.NewValueString(tenantIDHeaderValue))
+						metricData.At(l).Attributes().PutString(p.tenantIDAttributeKey, tenantIDHeaderValue)
 					}
 				case pmetric.MetricDataTypeSummary:
 					metricData := metric.Summary().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
-						metricData.At(l).Attributes().Insert(p.tenantIDAttributeKey, pcommon.NewValueString(tenantIDHeaderValue))
+						metricData.At(l).Attributes().PutString(p.tenantIDAttributeKey, tenantIDHeaderValue)
 					}
 				}
 			}
