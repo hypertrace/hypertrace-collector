@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/routingprocessor"
 	"log"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter"
@@ -80,6 +81,9 @@ func components() (component.Factories, error) {
 
 	mrata := metricresourceattrstoattrs.NewFactory()
 	factories.Processors[mrata.Type()] = mrata
+
+	routingProcessor := routingprocessor.NewFactory()
+	factories.Processors[routingProcessor.Type()] = routingProcessor
 
 	fef := fileexporter.NewFactory()
 	factories.Exporters[fef.Type()] = fef
