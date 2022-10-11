@@ -100,6 +100,10 @@ github.com/Shopify/toxiproxy/v2 v2.4.0 h1:O1e4Jfvr/hefNTNu+8VtdEG5lSeamJRo4aKhMO
 github.com/Shopify/toxiproxy/v2 v2.4.0/go.mod h1:3ilnjng821bkozDRxNoo64oI/DKqM+rOyJzb564+bvg=
 github.com/VividCortex/gohistogram v1.0.0 h1:6+hBz+qvs0JOrrNhhmR7lFxo5sINxBCGXrdtl/UvroE=
 github.com/VividCortex/gohistogram v1.0.0/go.mod h1:Pf5mBqqDxYaXu3hDrrU+w6nw50o/4+TcAqDqk/vUH7g=
+github.com/alecthomas/assert/v2 v2.0.3 h1:WKqJODfOiQG0nEJKFKzDIG3E29CN2/4zR9XGJzKIkbg=
+github.com/alecthomas/participle/v2 v2.0.0-beta.5 h1:y6dsSYVb1G5eK6mgmy+BgI3Mw35a3WghArZ/Hbebrjo=
+github.com/alecthomas/participle/v2 v2.0.0-beta.5/go.mod h1:RC764t6n4L8D8ITAJv0qdokritYSNR3wV5cVwmIEaMM=
+github.com/alecthomas/repr v0.1.0 h1:ENn2e1+J3k09gyj2shc0dHr/yjaWSHRlrJ4DPMevDqE=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
@@ -268,6 +272,8 @@ github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0/go.mod h1:fyg78
 github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31/go.mod h1:wGDj63lr65AM2AQyKZd/NYHGb0R+1RLqB8NKt3aSFNA=
 github.com/go-zookeeper/zk v1.0.3 h1:7M2kwOsc//9VeeFiPtf+uSJlVpU66x9Ba5+8XK7/TDg=
 github.com/go-zookeeper/zk v1.0.3/go.mod h1:nOB03cncLtlp4t+UAkGSV+9beXP/akpekBwL+UX1Qcw=
+github.com/gobwas/glob v0.2.3 h1:A4xDbljILXROh+kObIiy5kIaPYD8e96x1tgBhUI5J+Y=
+github.com/gobwas/glob v0.2.3/go.mod h1:d3Ez4x06l9bZtSvzIay5+Yzi0fmZzPgnTbPcKjJAkT8=
 github.com/godbus/dbus/v5 v5.0.4/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
 github.com/gogo/googleapis v1.4.1 h1:1Yx4Myt7BxzvUr5ldGSbwYiZG6t9wGBZ+8/fX3Wvtq0=
 github.com/gogo/googleapis v1.4.1/go.mod h1:2lpHqI5OcWCtVElxXnPt+s8oJvMpySlOyM6xDCrzib4=
@@ -470,6 +476,7 @@ github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb/go.mod h1:+NfK9FKe
 github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d/go.mod h1:+NfK9FKeTrX5uv1uIXGdwYDTeHna2qgaIlx54MXqjAM=
 github.com/hetznercloud/hcloud-go v1.35.2 h1:eEDtmDiI2plZ2UQmj4YpiYse5XbtpXOUBpAdIOLxzgE=
 github.com/hetznercloud/hcloud-go v1.35.2/go.mod h1:mepQwR6va27S3UQthaEPGS86jtzSY9xWL1e9dyxXpgA=
+github.com/hexops/gotextdiff v1.0.3 h1:gitA9+qJrrTCsiCl7+kh75nPqQt1cx4ZkudSTLoUqJM=
 github.com/hjson/hjson-go/v4 v4.0.0 h1:wlm6IYYqHjOdXH1gHev4VoXCaW20HdQAGCxdOEEg2cs=
 github.com/hjson/hjson-go/v4 v4.0.0/go.mod h1:KaYt3bTw3zhBjYqnXkYywcYctk0A2nxeEFTse3rH13E=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
@@ -636,6 +643,8 @@ github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal 
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal v0.61.0/go.mod h1:gGprfSuPLNWQlYQTinPY4joqsjXAYO5RCEwkOeSCMrk=
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/sharedcomponent v0.61.0 h1:VssLXxF+gFbBrSA5S8GvCJKiVMs87U4Z4cQDpqQNLE0=
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/sharedcomponent v0.61.0/go.mod h1:2zWq5goi8Wbir/WeZ8tzxDkM6ID8q1dm11PvSpa1qWg=
+github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl v0.61.0 h1:UoW8X58pJxzFuXGeJAAb3k5O57Re4vS6eG+8loFhrY4=
+github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl v0.61.0/go.mod h1:rC6w4sIpBCtIQVk9k5rIJfebfjyOaVKPFJaA91DgDZs=
 github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.61.0 h1:wVZl62Ew11ZD+TdLOiilJ3rcFOxkz4l+z9lh1pvoW8I=
 github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.61.0/go.mod h1:sogKRbYzo+af7BXlT1+FNSqG/EwGIpW/kijZNo40kBw=
 github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/jaeger v0.61.0 h1:h4+P5auBCyCYinZSwgl4hJtDr/VL08s9iPmTaWriXkU=
@@ -647,6 +656,8 @@ github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometh
 github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheusremotewrite v0.61.0 h1:M+Fp9bPnO6bWcHa3ukQAn8m/a9Qb/7lCBBqUKE3rXQ4=
 github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/zipkin v0.61.0 h1:vmF1M5u3EYCNMYrWy9anSpPOVZWpItXvzKNRh5O0IUU=
 github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/zipkin v0.61.0/go.mod h1:5SsTAc6T17w5A8LRewK3BKoOemBgy49Ud/rord19Yks=
+github.com/open-telemetry/opentelemetry-collector-contrib/processor/routingprocessor v0.61.0 h1:D+WZfXFoTIjQSQE37XG8e3yEDotpy2Zkr4rtrpAoquw=
+github.com/open-telemetry/opentelemetry-collector-contrib/processor/routingprocessor v0.61.0/go.mod h1:isPuQqNIr+pbVmWyZZBqjwynzpjpDtA9SJ7sYWtyblg=
 github.com/open-telemetry/opentelemetry-collector-contrib/receiver/opencensusreceiver v0.61.0 h1:RkJS2Qj/IprisdHqbzNlwzeWS7ooBgssFp0Vi2ogw2g=
 github.com/open-telemetry/opentelemetry-collector-contrib/receiver/opencensusreceiver v0.61.0/go.mod h1:ngqKR0/sAl9vGQ+hPMcfWcF56TG5IG3KQK/4sbeRNCY=
 github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.61.0 h1:sJC69RFG/cXAzV9U2ShVRCrt1FcUmN8fXFBNVnSYuSk=
@@ -899,6 +910,8 @@ golang.org/x/exp v0.0.0-20191227195350-da58074b4299/go.mod h1:2RIsYlXP63K8oxa1u0
 golang.org/x/exp v0.0.0-20200119233911-0405dc783f0a/go.mod h1:2RIsYlXP63K8oxa1u096TMicItID8zy7Y6sNkU49FU4=
 golang.org/x/exp v0.0.0-20200207192155-f17229e696bd/go.mod h1:J/WKrq2StrnmMY6+EHIKF9dgMWnmCNThgcyBT1FY9mM=
 golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6/go.mod h1:3jZMyOhIsHpP37uCMkUooju7aAi5cS1Q23tOzKc+0MU=
+golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e h1:+WEEuIdZHnUeJJmEUjyYC2gfUMj69yZXw17EnHg/otA=
+golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e/go.mod h1:Kr81I6Kryrl9sr8s2FK3vxD90NdsKWRuOIl2O4CvYbA=
 golang.org/x/image v0.0.0-20190227222117-0694c2d4d067/go.mod h1:kZ7UVZpmo3dzQBMxlp+ypCbDeSB+sBbTgSJuh5dn5js=
 golang.org/x/image v0.0.0-20190802002840-cff245a6509b/go.mod h1:FeLwcggjj3mMvU+oOTbSwawSJRM1uh48EjtB4UJZlP0=
 golang.org/x/lint v0.0.0-20181026193005-c67002cb31c3/go.mod h1:UVdnD1Gm6xHRNCYTkRU2/jEulfH38KcIWyp/GAMgvoE=
