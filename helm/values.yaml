@@ -221,6 +221,7 @@ hpa:
   targetCPUUtilizationPercentage: 80
 
 kafka-topic-creator:
+  enabled: true
   jobName: jaeger-spans-kafka-topic-creator
   helmHook: pre-install,pre-upgrade
   kafka:
