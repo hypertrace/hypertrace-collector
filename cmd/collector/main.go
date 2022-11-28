@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/collector/service"
 	"go.uber.org/multierr"
 
+	"github.com/hypertrace/collector/processors/haproxyverifier"
 	"github.com/hypertrace/collector/processors/metricresourceattrstoattrs"
 	"github.com/hypertrace/collector/processors/tenantidprocessor"
 )
@@ -84,6 +85,8 @@ func components() (component.Factories, error) {
 
 	routingProcessor := routingprocessor.NewFactory()
 	factories.Processors[routingProcessor.Type()] = routingProcessor
+	hapv := haproxyverifier.NewFactory()
+	factories.Processors[hapv.Type()] = hapv
 
 	fef := fileexporter.NewFactory()
 	factories.Exporters[fef.Type()] = fef

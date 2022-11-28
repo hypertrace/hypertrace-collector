@@ -9,6 +9,7 @@ type Config struct {
 	RequestSpan              SpanConfig `mapstructure:"request_span"`
 	ResponseSpan             SpanConfig `mapstructure:"response_span"`
 	LogIntervalSeconds       int        `mapstructure:"log_interval_seconds"`
+	VerifyHaproxy            bool       `mapstructure:"verify_haproxy"`
 }
 
 type SpanConfig struct {
