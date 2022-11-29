@@ -14,12 +14,16 @@ type processor struct {
 
 // ProcessMetrics implements processorhelper.ProcessMetricsFunc
 func (p *processor) ProcessMetrics(ctx context.Context, metrics pmetric.Metrics) (pmetric.Metrics, error) {
+	if !p.removeNoneMetricType {
+		return metrics, nil
+	}
+
 	rms := metrics.ResourceMetrics()
 	for i := 0; i < rms.Len(); i++ {
 		sms := rms.At(i).ScopeMetrics()
 		for j := 0; j < sms.Len(); j++ {
 			sms.At(j).Metrics().RemoveIf(func(m pmetric.Metric) bool {
-				return p.removeNoneMetricType && m.Type() == pmetric.MetricTypeNone
+				return m.Type() == pmetric.MetricTypeNone
 			})
 		}
 	}
