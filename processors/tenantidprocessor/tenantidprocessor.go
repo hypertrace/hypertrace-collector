@@ -87,31 +87,31 @@ func (p *processor) addTenantIdToMetrics(metrics pmetric.Metrics, tenantIDHeader
 			metrics := sm.Metrics()
 			for k := 0; k < metrics.Len(); k++ {
 				metric := metrics.At(k)
-				metricDataType := metric.DataType()
+				metricDataType := metric.Type()
 				switch metricDataType {
-				case pmetric.MetricDataTypeNone:
+				case pmetric.MetricTypeNone:
 					p.logger.Error("Cannot add tenantId to metric. Metric Data type not present for metric: " + metric.Name())
-				case pmetric.MetricDataTypeGauge:
+				case pmetric.MetricTypeGauge:
 					metricData := metric.Gauge().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
 						metricData.At(l).Attributes().PutString(p.tenantIDAttributeKey, tenantIDHeaderValue)
 					}
-				case pmetric.MetricDataTypeSum:
+				case pmetric.MetricTypeSum:
 					metricData := metric.Sum().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
 						metricData.At(l).Attributes().PutString(p.tenantIDAttributeKey, tenantIDHeaderValue)
 					}
-				case pmetric.MetricDataTypeHistogram:
+				case pmetric.MetricTypeHistogram:
 					metricData := metric.Histogram().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
 						metricData.At(l).Attributes().PutString(p.tenantIDAttributeKey, tenantIDHeaderValue)
 					}
-				case pmetric.MetricDataTypeExponentialHistogram:
+				case pmetric.MetricTypeExponentialHistogram:
 					metricData := metric.ExponentialHistogram().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
 						metricData.At(l).Attributes().PutString(p.tenantIDAttributeKey, tenantIDHeaderValue)
 					}
-				case pmetric.MetricDataTypeSummary:
+				case pmetric.MetricTypeSummary:
 					metricData := metric.Summary().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
 						metricData.At(l).Attributes().PutString(p.tenantIDAttributeKey, tenantIDHeaderValue)

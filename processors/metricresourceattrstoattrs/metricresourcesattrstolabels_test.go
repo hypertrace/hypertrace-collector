@@ -54,7 +54,7 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 				"port":                                 "8888",
 				"scheme":                               "http",
 			},
-			dt: pmetric.MetricDataTypeSum,
+			dt: pmetric.MetricTypeSum,
 		},
 		"service name and instance resource attrs not present for sum metric: job and instance labels not added. existing job and instance labels are removed": {
 			inputResourceAttributes: map[string]string{
@@ -77,7 +77,7 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 				"port":                                 "8888",
 				"scheme":                               "http",
 			},
-			dt: pmetric.MetricDataTypeSum,
+			dt: pmetric.MetricTypeSum,
 		},
 		"no concerned labels present: job and instance labels retained": {
 			inputResourceAttributes: map[string]string{
@@ -98,7 +98,7 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 				"port":              "8888",
 				"scheme":            "http",
 			},
-			dt: pmetric.MetricDataTypeHistogram,
+			dt: pmetric.MetricTypeHistogram,
 		},
 		"service name and instance id resource attrs not present for sum metric: job and instance labels are added": {
 			inputResourceAttributes: map[string]string{
@@ -119,7 +119,7 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 				"port":              "8888",
 				"scheme":            "http",
 			},
-			dt: pmetric.MetricDataTypeSum,
+			dt: pmetric.MetricTypeSum,
 		},
 		"service name and instance id resource attrs not present for sum metric. job and instance labels already present: job and instance labels are not added": {
 			inputResourceAttributes: map[string]string{
@@ -142,7 +142,7 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 				"port":              "8888",
 				"scheme":            "http",
 			},
-			dt: pmetric.MetricDataTypeSum,
+			dt: pmetric.MetricTypeSum,
 		},
 		"all concerned resource attrs present for gauge metric: job and instance labels not added": {
 			inputResourceAttributes: map[string]string{
@@ -163,7 +163,7 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 				conventions.AttributeServiceInstanceID: "test-instance-id",
 				"port":                                 "8888",
 			},
-			dt: pmetric.MetricDataTypeGauge,
+			dt: pmetric.MetricTypeGauge,
 		},
 		"all concerned resource attrs present for histogram metric: job and instance labels not added": {
 			inputResourceAttributes: map[string]string{
@@ -184,7 +184,7 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 				conventions.AttributeServiceInstanceID: "test-instance-id",
 				"port":                                 "8888",
 			},
-			dt: pmetric.MetricDataTypeHistogram,
+			dt: pmetric.MetricTypeHistogram,
 		},
 		"all concerned resource attrs present for exponential histogram metric: job and instance labels not added": {
 			inputResourceAttributes: map[string]string{
@@ -205,7 +205,7 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 				conventions.AttributeServiceInstanceID: "test-instance-id",
 				"port":                                 "8888",
 			},
-			dt: pmetric.MetricDataTypeExponentialHistogram,
+			dt: pmetric.MetricTypeExponentialHistogram,
 		},
 		"all concerned resource attrs present for summary metric: job and instance labels not added": {
 			inputResourceAttributes: map[string]string{
@@ -226,7 +226,7 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 				conventions.AttributeServiceInstanceID: "test-instance-id",
 				"port":                                 "8888",
 			},
-			dt: pmetric.MetricDataTypeSummary,
+			dt: pmetric.MetricTypeSummary,
 		},
 		"service_instance_id attribute exists for gauge metric: service.instance.id resource attr not added": {
 			inputResourceAttributes: map[string]string{
@@ -244,7 +244,7 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 				conventions.AttributeServiceName: "test-service",
 				"port":                           "8888",
 			},
-			dt: pmetric.MetricDataTypeGauge,
+			dt: pmetric.MetricTypeGauge,
 		},
 		"service_instance_id does not attribute exists for gauge metric: service.instance.id resource attr added": {
 			inputResourceAttributes: map[string]string{
@@ -261,7 +261,7 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 				conventions.AttributeServiceInstanceID: "test-instance-id",
 				"port":                                 "8888",
 			},
-			dt: pmetric.MetricDataTypeGauge,
+			dt: pmetric.MetricTypeGauge,
 		},
 	}
 
@@ -317,25 +317,25 @@ func generateMetricData(resourceAttrs map[string]string, attrs map[string]string
 		for k, v := range attrs {
 			metric.Sum().DataPoints().At(0).Attributes().PutString(k, v)
 		}
-	case pmetric.MetricDataTypeGauge:
+	case pmetric.MetricTypeGauge:
 		metric.SetEmptyGauge()
 		metric.Gauge().DataPoints().AppendEmpty()
 		for k, v := range attrs {
 			metric.Gauge().DataPoints().At(0).Attributes().PutString(k, v)
 		}
-	case pmetric.MetricDataTypeHistogram:
+	case pmetric.MetricTypeHistogram:
 		metric.SetEmptyHistogram()
 		metric.Histogram().DataPoints().AppendEmpty()
 		for k, v := range attrs {
 			metric.Histogram().DataPoints().At(0).Attributes().PutString(k, v)
 		}
-	case pmetric.MetricDataTypeExponentialHistogram:
+	case pmetric.MetricTypeExponentialHistogram:
 		metric.SetEmptyExponentialHistogram()
 		metric.ExponentialHistogram().DataPoints().AppendEmpty()
 		for k, v := range attrs {
 			metric.ExponentialHistogram().DataPoints().At(0).Attributes().PutString(k, v)
 		}
-	case pmetric.MetricDataTypeSummary:
+	case pmetric.MetricTypeSummary:
 		metric.SetEmptySummary()
 		metric.Summary().DataPoints().AppendEmpty()
 		for k, v := range attrs {
@@ -345,17 +345,17 @@ func generateMetricData(resourceAttrs map[string]string, attrs map[string]string
 	return md
 }
 
-func getMetricDataPointAttributes(metric pmetric.Metric, dt pmetric.MetricDataType) pcommon.Map {
+func getMetricDataPointAttributes(metric pmetric.Metric, dt pmetric.MetricType) pcommon.Map {
 	switch dt {
-	case pmetric.MetricDataTypeSum:
+	case pmetric.MetricTypeSum:
 		return metric.Sum().DataPoints().At(0).Attributes()
-	case pmetric.MetricDataTypeGauge:
+	case pmetric.MetricTypeGauge:
 		return metric.Gauge().DataPoints().At(0).Attributes()
-	case pmetric.MetricDataTypeHistogram:
+	case pmetric.MetricTypeHistogram:
 		return metric.Histogram().DataPoints().At(0).Attributes()
-	case pmetric.MetricDataTypeExponentialHistogram:
+	case pmetric.MetricTypeExponentialHistogram:
 		return metric.ExponentialHistogram().DataPoints().At(0).Attributes()
-	case pmetric.MetricDataTypeSummary:
+	case pmetric.MetricTypeSummary:
 		return metric.Summary().DataPoints().At(0).Attributes()
 	}
 

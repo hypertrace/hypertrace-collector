@@ -80,29 +80,29 @@ func (p *processor) ProcessMetrics(ctx context.Context, metrics pmetric.Metrics)
 // applyToMetricAttributes casts out the correct struct type for the metric so that it can access the attributes map and apply a function
 // to it.
 func applyToMetricAttributes(metric pmetric.Metric, fn func(pcommon.Map)) {
-	metricDataType := metric.DataType()
+	metricDataType := metric.Type()
 	switch metricDataType {
-	case pmetric.MetricDataTypeGauge:
+	case pmetric.MetricTypeGauge:
 		metricData := metric.Gauge().DataPoints()
 		for l := 0; l < metricData.Len(); l++ {
 			fn(metricData.At(l).Attributes())
 		}
-	case pmetric.MetricDataTypeSum:
+	case pmetric.MetricTypeSum:
 		metricData := metric.Sum().DataPoints()
 		for l := 0; l < metricData.Len(); l++ {
 			fn(metricData.At(l).Attributes())
 		}
-	case pmetric.MetricDataTypeHistogram:
+	case pmetric.MetricTypeHistogram:
 		metricData := metric.Histogram().DataPoints()
 		for l := 0; l < metricData.Len(); l++ {
 			fn(metricData.At(l).Attributes())
 		}
-	case pmetric.MetricDataTypeExponentialHistogram:
+	case pmetric.MetricTypeExponentialHistogram:
 		metricData := metric.ExponentialHistogram().DataPoints()
 		for l := 0; l < metricData.Len(); l++ {
 			fn(metricData.At(l).Attributes())
 		}
-	case pmetric.MetricDataTypeSummary:
+	case pmetric.MetricTypeSummary:
 		metricData := metric.Summary().DataPoints()
 		for l := 0; l < metricData.Len(); l++ {
 			fn(metricData.At(l).Attributes())
