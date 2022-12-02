@@ -388,8 +388,8 @@ func assertTenantAttributeExists(t *testing.T, trace ptrace.Traces, tenantAttrKe
 		tenantAttr, ok := rs.Resource().Attributes().Get(tenantAttrKey)
 		require.True(t, ok)
 		numOfTenantAttrs++
-		assert.Equal(t, pcommon.ValueTypeString, tenantAttr.Type())
-		assert.Equal(t, tenantID, tenantAttr.StringVal())
+		assert.Equal(t, pcommon.ValueTypeStr, tenantAttr.Type())
+		assert.Equal(t, tenantID, tenantAttr.Str())
 	}
 	return numOfTenantAttrs
 }

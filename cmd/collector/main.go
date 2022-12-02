@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/collector/service"
 	"go.uber.org/multierr"
 
+	"github.com/hypertrace/collector/processors/metricremover"
 	"github.com/hypertrace/collector/processors/metricresourceattrstoattrs"
 	"github.com/hypertrace/collector/processors/tenantidprocessor"
 )
@@ -81,6 +82,9 @@ func components() (component.Factories, error) {
 
 	mrata := metricresourceattrstoattrs.NewFactory()
 	factories.Processors[mrata.Type()] = mrata
+
+	mr := metricremover.NewFactory()
+	factories.Processors[mr.Type()] = mr
 
 	routingProcessor := routingprocessor.NewFactory()
 	factories.Processors[routingProcessor.Type()] = routingProcessor

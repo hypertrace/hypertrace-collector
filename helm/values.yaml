@@ -171,6 +171,8 @@ configMap:
     processors:
       batch: {}
       hypertrace_metrics_resource_attrs_to_attrs: {}
+      hypertrace_metrics_remover:
+        remove_none_metric_type: true
 
     exporters:
       kafka:
@@ -211,7 +213,7 @@ configMap:
           exporters: [kafka]
         metrics:
           receivers: [otlp]
-          processors: [batch, hypertrace_metrics_resource_attrs_to_attrs]
+          processors: [hypertrace_metrics_remover, batch, hypertrace_metrics_resource_attrs_to_attrs]
           exporters: [prometheus]
 
 hpa:
