@@ -29,6 +29,7 @@ import (
 
 	"github.com/hypertrace/collector/processors/metricremover"
 	"github.com/hypertrace/collector/processors/metricresourceattrstoattrs"
+	"github.com/hypertrace/collector/processors/spancounter"
 	"github.com/hypertrace/collector/processors/tenantidprocessor"
 )
 
@@ -89,6 +90,9 @@ func components() (component.Factories, error) {
 	routingProcessor := routingprocessor.NewFactory()
 	factories.Processors[routingProcessor.Type()] = routingProcessor
 
+	sc := spancounter.NewFactory()
+	factories.Processors[sc.Type()] = sc
+
 	fef := fileexporter.NewFactory()
 	factories.Exporters[fef.Type()] = fef
 
@@ -112,6 +116,7 @@ func run(settings service.CollectorSettings) error {
 
 func registerMetricViews() error {
 	views := tenantidprocessor.MetricViews()
+	views = append(views, spancounter.MetricViews()...)
 	return view.Register(views...)
 }
 
