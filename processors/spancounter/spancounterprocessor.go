@@ -55,8 +55,11 @@ func createTenantsMap(cfg *Config) map[string]map[string][]SpanConfig {
 	return m
 }
 
-// ProcessTraces implements processorhelper.ProcessTracesFunc
 func (p *processor) ProcessTraces(ctx context.Context, traces ptrace.Traces) (ptrace.Traces, error) {
+	if len(p.tenantsMap) == 0 {
+		return traces, nil
+	}
+
 	rss := traces.ResourceSpans()
 	for i := 0; i < rss.Len(); i++ {
 		rs := rss.At(i)
