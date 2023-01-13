@@ -173,6 +173,21 @@ configMap:
       hypertrace_metrics_resource_attrs_to_attrs: {}
       hypertrace_metrics_remover:
         remove_none_metric_type: true
+      # Example of hypertrace_spancounter config
+      #
+      # hypertrace_spancounter:
+      #   tenant_configs:
+      #     - tenant_id: foo-bar-baz
+      #       service_configs:
+      #         - service_name: example-service
+      #           span_configs:
+      #             - label: example-service-attr-rules
+      #               span_attributes:
+      #                 - key: rpc.service
+      #                   value: config.service.v1.AttributeConfigService
+      #                 - key: rpc.method
+      #                   value: GetAttributeRules
+      hypertrace_spancounter: {}
 
     exporters:
       kafka:
