@@ -2,10 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Chart.Name }}
-  annotations:
-    # This annotation distinguishes this deployment from those done with skaffold in order to remove those ones before
-    # deploying this one.
-    deployment.traceable.ai/tool: helm3
   labels:
     release: {{ .Release.Name }}
   {{- with .Values.deploymentLabels }}
@@ -53,6 +49,14 @@ spec:
     {{- with .Values.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- if .Values.hostNetwork }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
     {{- end }}
       containers:
         - name: {{ .Chart.Name }}
