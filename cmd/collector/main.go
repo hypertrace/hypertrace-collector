@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/routingprocessor"
 	"log"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter"
@@ -10,6 +9,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/routingprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/opencensusreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
@@ -29,6 +29,7 @@ import (
 
 	"github.com/hypertrace/collector/processors/metricremover"
 	"github.com/hypertrace/collector/processors/metricresourceattrstoattrs"
+	"github.com/hypertrace/collector/processors/ratelimiter"
 	"github.com/hypertrace/collector/processors/tenantidprocessor"
 )
 
@@ -79,6 +80,9 @@ func components() (component.Factories, error) {
 
 	tidpf := tenantidprocessor.NewFactory()
 	factories.Processors[tidpf.Type()] = tidpf
+
+	rlpf := ratelimiter.NewFactory()
+	factories.Processors[rlpf.Type()] = rlpf
 
 	mrata := metricresourceattrstoattrs.NewFactory()
 	factories.Processors[mrata.Type()] = mrata
