@@ -22,7 +22,7 @@ const (
 	defaultDomain                   = "collector"
 	defaultDomainSoftLimitThreshold = uint32(100000) // Soft limit kicks in when limit remaining under 100k
 	defaultHeaderName               = "x-tenant-id"
-	defaultTimeoutMillis            = uint16(1000) // 1 second
+	defaultTimeoutMillis            = uint32(1000) // 1 second
 )
 
 // NewFactory creates a factory for the ratelimit processor.
