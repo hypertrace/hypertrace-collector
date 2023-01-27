@@ -4,12 +4,12 @@ import (
 	"context"
 	"net"
 	"strconv"
+	"time"
 
 	pb "github.com/envoyproxy/go-control-plane/envoy/service/ratelimit/v3"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/consumer"
-	"go.opentelemetry.io/collector/processor/processorhelper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -20,8 +20,9 @@ const (
 	defaultServiceHost              = "127.0.0.1"
 	defaultServicePort              = uint16(8081)
 	defaultDomain                   = "collector"
-	defaultDomainSoftLimitThreshold = uint32(100000)
+	defaultDomainSoftLimitThreshold = uint32(100000) // Soft limit kicks in when limit remaining under 100k
 	defaultHeaderName               = "x-tenant-id"
+	defaultTimeoutMillis            = uint16(1000) // 1 second
 )
 
 // NewFactory creates a factory for the ratelimit processor.
@@ -53,7 +54,7 @@ func createTraceProcessor(
 	nextConsumer consumer.Traces,
 ) (component.TracesProcessor, error) {
 	pCfg := cfg.(*Config)
-	rateLimitServiceClient, err := getRateLimitServiceClient(pCfg.RateLimitServiceHost, pCfg.RateLimitServicePort, params)
+	rateLimitServiceClient, err := getRateLimitServiceClient(ctx, pCfg.RateLimitServiceHost, pCfg.RateLimitServicePort, pCfg.RateLimitServiceTimeoutMillis, params)
 	if err != nil {
 		params.Logger.Error("failed to connect to rate limit service ", zap.Error(err))
 		return nil, err
@@ -63,23 +64,20 @@ func createTraceProcessor(
 		domain:                   pCfg.Domain,
 		domainSoftLimitThreshold: pCfg.DomainSoftRateLimitThreshold,
 		logger:                   params.Logger,
+		tenantIDHeaderName:       pCfg.TenantIDHeaderName,
+		nextConsumer:             nextConsumer,
 	}
-	return processorhelper.NewTracesProcessor(
-		ctx,
-		params,
-		cfg,
-		nextConsumer,
-		processor.ProcessTraces)
+	return processor, nil
 }
 
-func getRateLimitServiceClient(serviceHost string, servicePort uint16, params component.ProcessorCreateSettings) (pb.RateLimitServiceClient, error) {
-	var opts []grpc.DialOption
-	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+func getRateLimitServiceClient(ctx context.Context, serviceHost string, servicePort uint16, timeoutMillis uint32, params component.ProcessorCreateSettings) (pb.RateLimitServiceClient, error) {
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, time.Millisecond*time.Duration(timeoutMillis))
+	defer cancel()
 	var err error
 	var conn *grpc.ClientConn
 	dialString := net.JoinHostPort(serviceHost, strconv.Itoa(int(servicePort)))
 	params.Logger.Info("connecting to rate limit service %s " + dialString)
-	conn, err = grpc.Dial(dialString, opts...)
+	conn, err = grpc.DialContext(ctxWithTimeout, dialString, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
 	}

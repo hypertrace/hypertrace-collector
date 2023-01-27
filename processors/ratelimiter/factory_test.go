@@ -13,4 +13,5 @@ func TestCreateDefaultConfig(t *testing.T) {
 	assert.Equal(t, defaultServicePort, cfg.RateLimitServicePort)
 	assert.Equal(t, defaultDomainSoftLimitThreshold, cfg.DomainSoftRateLimitThreshold)
 	assert.Equal(t, defaultDomain, cfg.Domain)
+	assert.Equal(t, defaultTimeoutMillis, cfg.RateLimitServiceTimeoutMillis)
 }
