@@ -70,7 +70,8 @@ func createTraceProcessor(
 	return processor, nil
 }
 
-func getRateLimitServiceClient(ctx context.Context, serviceHost string, servicePort uint16, timeoutMillis uint32, params component.ProcessorCreateSettings) (pb.RateLimitServiceClient, error) {
+func getRateLimitServiceClient(ctx context.Context, serviceHost string, servicePort uint16,
+	timeoutMillis uint32, params component.ProcessorCreateSettings) (pb.RateLimitServiceClient, error) {
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, time.Millisecond*time.Duration(timeoutMillis))
 	defer cancel()
 	var err error

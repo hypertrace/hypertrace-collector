@@ -31,15 +31,15 @@ type MockProcessorConsumer struct {
 
 var _ component.TracesProcessor = (*MockProcessorConsumer)(nil)
 
-func (p *MockProcessorConsumer) Start(_ context.Context, _ component.Host) error {
+func (m *MockProcessorConsumer) Start(_ context.Context, _ component.Host) error {
 	return nil
 }
 
-func (p *MockProcessorConsumer) Shutdown(_ context.Context) error {
+func (m *MockProcessorConsumer) Shutdown(_ context.Context) error {
 	return nil
 }
 
-func (p *MockProcessorConsumer) Capabilities() consumer.Capabilities {
+func (m *MockProcessorConsumer) Capabilities() consumer.Capabilities {
 	return consumer.Capabilities{MutatesData: true}
 }
 
@@ -51,8 +51,8 @@ func (m *MockRateLimitServiceClient) ShouldRateLimit(ctx context.Context, in *pb
 	return nil, args.Get(1).(error)
 }
 
-func (f *MockProcessorConsumer) ConsumeTraces(ctx context.Context, ld ptrace.Traces) error {
-	args := f.Called(ctx, ld)
+func (m *MockProcessorConsumer) ConsumeTraces(ctx context.Context, ld ptrace.Traces) error {
+	args := m.Called(ctx, ld)
 	if args.Get(0) == nil {
 		return nil
 	}
