@@ -121,6 +121,7 @@ func run(settings service.CollectorSettings) error {
 func registerMetricViews() error {
 	views := tenantidprocessor.MetricViews()
 	views = append(views, spancounter.MetricViews()...)
+	views = append(views, ratelimiter.MetricViews()...)
 	return view.Register(views...)
 }
 

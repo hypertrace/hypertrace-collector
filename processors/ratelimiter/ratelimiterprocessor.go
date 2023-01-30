@@ -8,6 +8,7 @@ import (
 	pb_struct "github.com/envoyproxy/go-control-plane/envoy/extensions/common/ratelimit/v3"
 	pb "github.com/envoyproxy/go-control-plane/envoy/service/ratelimit/v3"
 	"go.opencensus.io/stats"
+	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -24,6 +25,30 @@ var (
 	droppedSpanCount          = stats.Int64("tenant_id_dropped_span_count", "Number of spans dropped per tenant due to global rate limiting", stats.UnitDimensionless)
 )
 
+func MetricViews() []*view.View {
+	tags := []tag.Key{tagTenantID}
+
+	viewDroppedSpanCountSoftLimit := &view.View{
+		Name:        droppedSpanCountSoftLimit.Name(),
+		Description: droppedSpanCountSoftLimit.Description(),
+		Measure:     droppedSpanCountSoftLimit,
+		Aggregation: view.Sum(),
+		TagKeys:     tags,
+	}
+
+	viewDroppedSpanCount := &view.View{
+		Name:        droppedSpanCount.Name(),
+		Description: droppedSpanCount.Description(),
+		Measure:     droppedSpanCount,
+		Aggregation: view.Sum(),
+		TagKeys:     tags,
+	}
+
+	return []*view.View{
+		viewDroppedSpanCountSoftLimit,
+		viewDroppedSpanCount,
+	}
+}
 func (p *processor) Start(_ context.Context, _ component.Host) error {
 	return nil
 }

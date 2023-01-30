@@ -24,8 +24,8 @@ func TestLoadConfig(t *testing.T) {
 	tIDcfg := cfg.Processors[config.NewComponentID(typeStr)].(*Config)
 	assert.Equal(t, "header-tenant", tIDcfg.TenantIDHeaderName)
 	assert.Equal(t, "app", tIDcfg.Domain)
-	assert.Equal(t, "localhost", tIDcfg.RateLimitServiceHost)
-	assert.Equal(t, uint16(8081), tIDcfg.RateLimitServicePort)
+	assert.Equal(t, "localhost", tIDcfg.ServiceHost)
+	assert.Equal(t, uint16(8081), tIDcfg.ServicePort)
 	assert.Equal(t, uint32(10), tIDcfg.DomainSoftRateLimitThreshold)
-	assert.Equal(t, uint32(10), tIDcfg.RateLimitServiceTimeoutMillis)
+	assert.Equal(t, uint32(10), tIDcfg.TimeoutMillis)
 }

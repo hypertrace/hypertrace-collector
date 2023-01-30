@@ -39,12 +39,12 @@ func createDefaultConfig() config.Processor {
 		ProcessorSettings: config.NewProcessorSettings(
 			config.NewComponentID(typeStr),
 		),
-		RateLimitServiceHost:          defaultServiceHost,
-		RateLimitServicePort:          defaultServicePort,
-		Domain:                        defaultDomain,
-		DomainSoftRateLimitThreshold:  defaultDomainSoftLimitThreshold,
-		TenantIDHeaderName:            defaultHeaderName,
-		RateLimitServiceTimeoutMillis: defaultTimeoutMillis,
+		ServiceHost:                  defaultServiceHost,
+		ServicePort:                  defaultServicePort,
+		Domain:                       defaultDomain,
+		DomainSoftRateLimitThreshold: defaultDomainSoftLimitThreshold,
+		TenantIDHeaderName:           defaultHeaderName,
+		TimeoutMillis:                defaultTimeoutMillis,
 	}
 }
 
@@ -55,7 +55,7 @@ func createTraceProcessor(
 	nextConsumer consumer.Traces,
 ) (component.TracesProcessor, error) {
 	pCfg := cfg.(*Config)
-	rateLimitServiceClient, err := getRateLimitServiceClient(ctx, pCfg.RateLimitServiceHost, pCfg.RateLimitServicePort, pCfg.RateLimitServiceTimeoutMillis, params)
+	rateLimitServiceClient, err := getRateLimitServiceClient(ctx, pCfg.ServiceHost, pCfg.ServicePort, pCfg.TimeoutMillis, params)
 	if err != nil {
 		params.Logger.Error("failed to connect to rate limit service ", zap.Error(err))
 		return nil, err

@@ -12,10 +12,10 @@ import (
 type Config struct {
 	config.ProcessorSettings `mapstructure:"-"`
 
-	// RateLimitServiceHost defines host where rate limiter service is running default "localhost".
-	RateLimitServiceHost string `mapstructure:"service_host"`
-	// RateLimitServicePort defines port where rate limiter service is running. Default 8081.
-	RateLimitServicePort uint16 `mapstructure:"service_port"`
+	// ServiceHost defines host where rate limiter service is running default "localhost".
+	ServiceHost string `mapstructure:"service_host"`
+	// ServicePort defines port where rate limiter service is running. Default 8081.
+	ServicePort uint16 `mapstructure:"service_port"`
 	//Domain  rate limit configuration domain to query. Default collector
 	Domain string `mapstructure:"domain"`
 	// DomainSoftRateLimitThreshold represents the threshold where soft limit window started.
@@ -23,5 +23,5 @@ type Config struct {
 	// TenantIDHeaderName defines tenant HTTP header name. Default x-tenant-id.
 	TenantIDHeaderName string `mapstructure:"tenant_id_header_name"`
 	// Timeout in millis for grpc call.
-	RateLimitServiceTimeoutMillis uint32 `mapstructure:"timeout_millis"`
+	TimeoutMillis uint32 `mapstructure:"timeout_millis"`
 }
