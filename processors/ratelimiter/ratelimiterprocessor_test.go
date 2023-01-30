@@ -63,12 +63,14 @@ func TestRateLimitingWhenEmptyTenantHeader(t *testing.T) {
 	mockRateLimitServiceClientObj := new(MockRateLimitServiceClient)
 	mockProcessorConsumerObj := new(MockProcessorConsumer)
 	p := &processor{
-		logger:                   zap.NewNop(),
-		tenantIDHeaderName:       defaultHeaderName,
-		domain:                   defaultDomain,
-		domainSoftLimitThreshold: defaultDomainSoftLimitThreshold,
-		rateLimitServiceClient:   mockRateLimitServiceClientObj,
-		nextConsumer:             mockProcessorConsumerObj,
+		logger:                     zap.NewNop(),
+		tenantIDHeaderName:         defaultHeaderName,
+		domain:                     defaultDomain,
+		domainSoftLimitThreshold:   defaultDomainSoftLimitThreshold,
+		rateLimitServiceClient:     mockRateLimitServiceClientObj,
+		rateLimitServiceClientConn: &grpc.ClientConn{},
+		cancelFunc:                 t.SkipNow,
+		nextConsumer:               mockProcessorConsumerObj,
 	}
 	mockRateLimitServiceClientObj.On("ShouldRateLimit", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("rate limit called failed"))
 	mockProcessorConsumerObj.On("ConsumeTraces", mock.Anything, mock.Anything).Return(nil)
@@ -90,12 +92,14 @@ func TestWhenRateLimitServiceCallFailed(t *testing.T) {
 	mockRateLimitServiceClientObj := new(MockRateLimitServiceClient)
 	mockProcessorConsumerObj := new(MockProcessorConsumer)
 	p := &processor{
-		logger:                   zap.NewNop(),
-		tenantIDHeaderName:       defaultHeaderName,
-		domain:                   defaultDomain,
-		domainSoftLimitThreshold: defaultDomainSoftLimitThreshold,
-		rateLimitServiceClient:   mockRateLimitServiceClientObj,
-		nextConsumer:             mockProcessorConsumerObj,
+		logger:                     zap.NewNop(),
+		tenantIDHeaderName:         defaultHeaderName,
+		domain:                     defaultDomain,
+		domainSoftLimitThreshold:   defaultDomainSoftLimitThreshold,
+		rateLimitServiceClient:     mockRateLimitServiceClientObj,
+		rateLimitServiceClientConn: &grpc.ClientConn{},
+		cancelFunc:                 t.SkipNow,
+		nextConsumer:               mockProcessorConsumerObj,
 	}
 	mockRateLimitServiceClientObj.On("ShouldRateLimit", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("rate limit called failed"))
 	mockProcessorConsumerObj.On("ConsumeTraces", mock.Anything, mock.Anything).Return(nil)
@@ -117,12 +121,14 @@ func TestRateLimitingWhenSoftLimitNotReachedButTenantLimitReached(t *testing.T) 
 	mockRateLimitServiceClientObj := new(MockRateLimitServiceClient)
 	mockProcessorConsumerObj := new(MockProcessorConsumer)
 	p := &processor{
-		logger:                   zap.NewNop(),
-		tenantIDHeaderName:       defaultHeaderName,
-		domain:                   defaultDomain,
-		domainSoftLimitThreshold: 2,
-		rateLimitServiceClient:   mockRateLimitServiceClientObj,
-		nextConsumer:             mockProcessorConsumerObj,
+		logger:                     zap.NewNop(),
+		tenantIDHeaderName:         defaultHeaderName,
+		domain:                     defaultDomain,
+		domainSoftLimitThreshold:   2,
+		rateLimitServiceClient:     mockRateLimitServiceClientObj,
+		rateLimitServiceClientConn: &grpc.ClientConn{},
+		cancelFunc:                 t.SkipNow,
+		nextConsumer:               mockProcessorConsumerObj,
 	}
 	rateLimitResponse := &pb.RateLimitResponse{
 		OverallCode: pb.RateLimitResponse_OK,
@@ -156,12 +162,14 @@ func TestRateLimitingWhenSoftLimitReachedAndTenantLimitReached(t *testing.T) {
 	mockRateLimitServiceClientObj := new(MockRateLimitServiceClient)
 	mockProcessorConsumerObj := new(MockProcessorConsumer)
 	p := &processor{
-		logger:                   zap.NewNop(),
-		tenantIDHeaderName:       defaultHeaderName,
-		domain:                   defaultDomain,
-		domainSoftLimitThreshold: 2,
-		rateLimitServiceClient:   mockRateLimitServiceClientObj,
-		nextConsumer:             mockProcessorConsumerObj,
+		logger:                     zap.NewNop(),
+		tenantIDHeaderName:         defaultHeaderName,
+		domain:                     defaultDomain,
+		domainSoftLimitThreshold:   2,
+		rateLimitServiceClient:     mockRateLimitServiceClientObj,
+		rateLimitServiceClientConn: &grpc.ClientConn{},
+		cancelFunc:                 t.SkipNow,
+		nextConsumer:               mockProcessorConsumerObj,
 	}
 	rateLimitResponse := &pb.RateLimitResponse{
 		OverallCode: pb.RateLimitResponse_OK,
@@ -195,12 +203,14 @@ func TestRateLimitingWhenHardLimitReached(t *testing.T) {
 	mockRateLimitServiceClientObj := new(MockRateLimitServiceClient)
 	mockProcessorConsumerObj := new(MockProcessorConsumer)
 	p := &processor{
-		logger:                   zap.NewNop(),
-		tenantIDHeaderName:       defaultHeaderName,
-		domain:                   defaultDomain,
-		domainSoftLimitThreshold: 2,
-		rateLimitServiceClient:   mockRateLimitServiceClientObj,
-		nextConsumer:             mockProcessorConsumerObj,
+		logger:                     zap.NewNop(),
+		tenantIDHeaderName:         defaultHeaderName,
+		domain:                     defaultDomain,
+		domainSoftLimitThreshold:   2,
+		rateLimitServiceClient:     mockRateLimitServiceClientObj,
+		rateLimitServiceClientConn: &grpc.ClientConn{},
+		cancelFunc:                 t.SkipNow,
+		nextConsumer:               mockProcessorConsumerObj,
 	}
 	rateLimitResponse := &pb.RateLimitResponse{
 		OverallCode: pb.RateLimitResponse_OK,

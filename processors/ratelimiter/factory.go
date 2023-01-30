@@ -55,25 +55,27 @@ func createTraceProcessor(
 	nextConsumer consumer.Traces,
 ) (component.TracesProcessor, error) {
 	pCfg := cfg.(*Config)
-	rateLimitServiceClient, err := getRateLimitServiceClient(ctx, pCfg.ServiceHost, pCfg.ServicePort, pCfg.TimeoutMillis, params)
+	rateLimitServiceClient, rateLimitServiceClientConn, cancelFunc, err := getRateLimitServiceClient(ctx, pCfg.ServiceHost, pCfg.ServicePort, pCfg.TimeoutMillis, params)
 	if err != nil {
 		params.Logger.Error("failed to connect to rate limit service ", zap.Error(err))
 		return nil, err
 	}
 	processor := &processor{
-		rateLimitServiceClient:   rateLimitServiceClient,
-		domain:                   pCfg.Domain,
-		domainSoftLimitThreshold: pCfg.DomainSoftRateLimitThreshold,
-		logger:                   params.Logger,
-		tenantIDHeaderName:       pCfg.TenantIDHeaderName,
-		nextConsumer:             nextConsumer,
+		rateLimitServiceClient:     rateLimitServiceClient,
+		domain:                     pCfg.Domain,
+		domainSoftLimitThreshold:   pCfg.DomainSoftRateLimitThreshold,
+		logger:                     params.Logger,
+		tenantIDHeaderName:         pCfg.TenantIDHeaderName,
+		nextConsumer:               nextConsumer,
+		rateLimitServiceClientConn: rateLimitServiceClientConn,
+		cancelFunc:                 cancelFunc,
 	}
 	return processor, nil
 }
 
 func getRateLimitServiceClient(ctx context.Context, serviceHost string, servicePort uint16,
-	timeoutMillis uint32, params component.ProcessorCreateSettings) (pb.RateLimitServiceClient, error) {
-	ctxWithTimeout, _ := context.WithTimeout(ctx, time.Millisecond*time.Duration(timeoutMillis))
+	timeoutMillis uint32, params component.ProcessorCreateSettings) (pb.RateLimitServiceClient, *grpc.ClientConn, context.CancelFunc, error) {
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, time.Millisecond*time.Duration(timeoutMillis))
 	var err error
 	var conn *grpc.ClientConn
 	dialString := net.JoinHostPort(serviceHost, strconv.Itoa(int(servicePort)))
@@ -81,7 +83,8 @@ func getRateLimitServiceClient(ctx context.Context, serviceHost string, serviceP
 	conn, err = grpc.DialContext(ctxWithTimeout, dialString, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		params.Logger.Error("Unable to connect to rate limit service", zap.Error(err))
-		return nil, err
+		cancel()
+		return nil, nil, nil, err
 	}
-	return pb.NewRateLimitServiceClient(conn), nil
+	return pb.NewRateLimitServiceClient(conn), conn, cancel, nil
 }

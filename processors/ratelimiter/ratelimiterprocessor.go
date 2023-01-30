@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -54,6 +55,8 @@ func (p *processor) Start(_ context.Context, _ component.Host) error {
 }
 
 func (p *processor) Shutdown(_ context.Context) error {
+	p.rateLimitServiceClientConn.Close()
+	p.cancelFunc()
 	return nil
 }
 
@@ -62,12 +65,14 @@ func (p *processor) Capabilities() consumer.Capabilities {
 }
 
 type processor struct {
-	rateLimitServiceClient   pb.RateLimitServiceClient
-	domain                   string
-	domainSoftLimitThreshold uint32
-	logger                   *zap.Logger
-	tenantIDHeaderName       string
-	nextConsumer             consumer.Traces
+	rateLimitServiceClient     pb.RateLimitServiceClient
+	domain                     string
+	domainSoftLimitThreshold   uint32
+	logger                     *zap.Logger
+	tenantIDHeaderName         string
+	nextConsumer               consumer.Traces
+	rateLimitServiceClientConn *grpc.ClientConn
+	cancelFunc                 context.CancelFunc
 }
 
 const (
