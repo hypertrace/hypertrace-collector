@@ -3,7 +3,7 @@ receivers:
 
 processors:
   hypertrace_ratelimiter:
-    header_name: header-tenant  
+    tenant_id_header_name: header-tenant
     service_host: localhost
     service_port: 8081
     domain: app

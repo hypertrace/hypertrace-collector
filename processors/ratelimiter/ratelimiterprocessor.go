@@ -8,6 +8,7 @@ import (
 	pb_struct "github.com/envoyproxy/go-control-plane/envoy/extensions/common/ratelimit/v3"
 	pb "github.com/envoyproxy/go-control-plane/envoy/service/ratelimit/v3"
 	"go.opencensus.io/stats"
+	"go.opencensus.io/tag"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -18,7 +19,9 @@ import (
 var _ component.TracesProcessor = (*processor)(nil)
 
 var (
-	droppedSpanCount = stats.Int64("dropped_span_count", "Number of spans dropped because of rate limiting", stats.UnitDimensionless)
+	tagTenantID               = tag.MustNewKey("tenant-id")
+	droppedSpanCountSoftLimit = stats.Int64("tenant_id_dropped_span_count_soft_limit", "Number of spans dropped because of rate limiting per tenant due to soft limit", stats.UnitDimensionless)
+	droppedSpanCount          = stats.Int64("tenant_id_dropped_span_count", "Number of spans dropped per tenant due to global rate limiting", stats.UnitDimensionless)
 )
 
 func (p *processor) Start(_ context.Context, _ component.Host) error {
@@ -52,6 +55,7 @@ func (p *processor) ConsumeTraces(ctx context.Context, traces ptrace.Traces) err
 	tenantId, err := p.getTenantId(ctx)
 	if err != nil {
 		// If tenantId is missing, rate limiting not applicable.
+		p.logger.Error("unable to extract tenantId ", zap.Error(err))
 		return p.nextConsumer.ConsumeTraces(ctx, traces)
 	}
 	// two descriptors, one for tenant and other one for domain(cluster)
@@ -86,6 +90,8 @@ func (p *processor) ConsumeTraces(ctx context.Context, traces ptrace.Traces) err
 		return p.nextConsumer.ConsumeTraces(ctx, traces)
 	}
 	descriptorStatuses := response.Statuses
+	ctx, _ = tag.New(ctx,
+		tag.Insert(tagTenantID, tenantId))
 	if len(descriptorStatuses) != 0 {
 		if descriptorStatuses[1].GetCode() == pb.RateLimitResponse_OVER_LIMIT {
 			// If global rate limit exceeded drop all events
@@ -95,7 +101,7 @@ func (p *processor) ConsumeTraces(ctx context.Context, traces ptrace.Traces) err
 		} else if descriptorStatuses[1].LimitRemaining < p.domainSoftLimitThreshold && descriptorStatuses[0].GetCode() == pb.RateLimitResponse_OVER_LIMIT {
 			// If soft limit reached then drop only spans from tenants where tenant specific limit exceeded.
 			p.logger.Warn(fmt.Sprintf("dropping spans for tenant %s due to soft limit reached, of spancount: %d", tenantId, traces.SpanCount()))
-			stats.Record(ctx, droppedSpanCount.M(int64(spanCount)))
+			stats.Record(ctx, droppedSpanCountSoftLimit.M(int64(spanCount)))
 			return nil
 		}
 		// Ignore dropping of spans when soft limit hasn't reached even though tenant rate limit reached.

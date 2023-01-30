@@ -39,11 +39,12 @@ func createDefaultConfig() config.Processor {
 		ProcessorSettings: config.NewProcessorSettings(
 			config.NewComponentID(typeStr),
 		),
-		RateLimitServiceHost:         defaultServiceHost,
-		RateLimitServicePort:         defaultServicePort,
-		Domain:                       defaultDomain,
-		DomainSoftRateLimitThreshold: defaultDomainSoftLimitThreshold,
-		TenantIDHeaderName:           defaultHeaderName,
+		RateLimitServiceHost:          defaultServiceHost,
+		RateLimitServicePort:          defaultServicePort,
+		Domain:                        defaultDomain,
+		DomainSoftRateLimitThreshold:  defaultDomainSoftLimitThreshold,
+		TenantIDHeaderName:            defaultHeaderName,
+		RateLimitServiceTimeoutMillis: defaultTimeoutMillis,
 	}
 }
 
@@ -72,16 +73,15 @@ func createTraceProcessor(
 
 func getRateLimitServiceClient(ctx context.Context, serviceHost string, servicePort uint16,
 	timeoutMillis uint32, params component.ProcessorCreateSettings) (pb.RateLimitServiceClient, error) {
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, time.Millisecond*time.Duration(timeoutMillis))
-	defer cancel()
+	ctxWithTimeout, _ := context.WithTimeout(ctx, time.Millisecond*time.Duration(timeoutMillis))
 	var err error
 	var conn *grpc.ClientConn
 	dialString := net.JoinHostPort(serviceHost, strconv.Itoa(int(servicePort)))
 	params.Logger.Info("connecting to rate limit service %s " + dialString)
 	conn, err = grpc.DialContext(ctxWithTimeout, dialString, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
+		params.Logger.Error("Unable to connect to rate limit service", zap.Error(err))
 		return nil, err
 	}
-	defer conn.Close()
 	return pb.NewRateLimitServiceClient(conn), nil
 }

@@ -21,7 +21,7 @@ type Config struct {
 	// DomainSoftRateLimitThreshold represents the threshold where soft limit window started.
 	DomainSoftRateLimitThreshold uint32 `mapstructure:"domain_soft_limit_threshold"`
 	// TenantIDHeaderName defines tenant HTTP header name. Default x-tenant-id.
-	TenantIDHeaderName string `mapstructure:"header_name"`
+	TenantIDHeaderName string `mapstructure:"tenant_id_header_name"`
 	// Timeout in millis for grpc call.
 	RateLimitServiceTimeoutMillis uint32 `mapstructure:"timeout_millis"`
 }
