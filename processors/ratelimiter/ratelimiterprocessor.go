@@ -48,8 +48,8 @@ type processor struct {
 }
 
 const (
-	TenantID       = "tenant_id"
-	GlobalTenantID = "global_tenant_id"
+	TenantSpans  = "tenant_spans"
+	ClusterSpans = "cluster_spans"
 )
 
 // ConsumeTraces consume traces and drops the requests if it is rate limited,
@@ -66,7 +66,7 @@ func (p *processor) ConsumeTraces(ctx context.Context, traces ptrace.Traces) err
 	desc[0] = &pb_struct.RateLimitDescriptor{
 		Entries: []*pb_struct.RateLimitDescriptor_Entry{
 			{
-				Key:   TenantID,
+				Key:   TenantSpans,
 				Value: tenantId,
 			},
 		},
@@ -74,8 +74,7 @@ func (p *processor) ConsumeTraces(ctx context.Context, traces ptrace.Traces) err
 	desc[1] = &pb_struct.RateLimitDescriptor{
 		Entries: []*pb_struct.RateLimitDescriptor_Entry{
 			{
-				Key:   TenantID,
-				Value: GlobalTenantID,
+				Key: ClusterSpans,
 			},
 		},
 	}
