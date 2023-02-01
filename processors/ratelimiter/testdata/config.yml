@@ -1,0 +1,19 @@
+receivers:
+  nop:
+
+processors:
+  hypertrace_ratelimiter:
+    tenant_id_header_name: header-tenant
+    service_host: localhost
+    service_port: 8081
+    domain: app
+    domain_soft_limit_threshold: 10
+    timeout_millis: 10
+exporters:
+  nop:
+
+service:
+  pipelines:
+    traces:
+      receivers: [nop]
+      exporters: [nop]
