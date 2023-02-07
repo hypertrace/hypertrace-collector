@@ -7,27 +7,27 @@ require (
 	github.com/envoyproxy/go-control-plane v0.10.3
 	github.com/google/uuid v1.3.0
 	github.com/jaegertracing/jaeger v1.38.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter v0.61.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter v0.61.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter v0.61.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.61.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension v0.61.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/jaeger v0.61.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/processor/routingprocessor v0.61.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver v0.61.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/opencensusreceiver v0.61.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.61.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/zipkinreceiver v0.61.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter v0.70.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter v0.70.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter v0.70.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.70.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension v0.70.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/jaeger v0.70.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/routingprocessor v0.70.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver v0.70.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/opencensusreceiver v0.70.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.70.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/zipkinreceiver v0.70.0
 	github.com/prometheus/common v0.37.0
 	github.com/stretchr/testify v1.8.1
-	go.opencensus.io v0.23.0
-	go.opentelemetry.io/collector v0.61.0
-	go.opentelemetry.io/collector/pdata v0.61.0
-	go.opentelemetry.io/collector/semconv v0.61.0
-	go.opentelemetry.io/otel/trace v1.10.0
-	go.uber.org/multierr v1.8.0
-	go.uber.org/zap v1.23.0
-	google.golang.org/grpc v1.49.0
+	go.opencensus.io v0.24.0
+	go.opentelemetry.io/collector v0.70.0
+	go.opentelemetry.io/collector/pdata v0.70.0
+	go.opentelemetry.io/collector/semconv v0.70.0
+	go.opentelemetry.io/otel/trace v1.11.2
+	go.uber.org/multierr v1.9.0
+	go.uber.org/zap v1.24.0
+	google.golang.org/grpc v1.52.0
 )
 
 require (
@@ -235,8 +235,8 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver v0.61.0 => ./receiver/jaegerreceiver
+replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver v0.70.0 => ./receiver/jaegerreceiver
 
-replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter v0.61.0 => ./exporter/kafkaexporter
+replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter v0.70.0 => ./exporter/kafkaexporter
 
-replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter v0.61.0 => ./exporter/prometheusexporter
+replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter v0.70.0 => ./exporter/prometheusexporter
