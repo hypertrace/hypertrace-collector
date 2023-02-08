@@ -34,6 +34,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -158,6 +159,7 @@ func createOTLPTracesReceiver(t *testing.T, nextConsumer consumer.Traces) (strin
 		TelemetrySettings: component.TelemetrySettings{
 			Logger:         zap.NewNop(),
 			TracerProvider: trace.NewNoopTracerProvider(),
+			MeterProvider:  metric.NewNoopMeterProvider(),
 		},
 	}
 	otlpTracesRec, err := factory.CreateTracesReceiver(context.Background(), params, cfg, nextConsumer)
@@ -180,7 +182,7 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 
 	tracesConsumer := tracesMultiConsumer{
 		tracesSink:        tracesSink,
-		tenantIDprocessor: tenantProcessor,
+		tenantProcessor: tenantProcessor,
 	}
 
 	addr, otlpTracesRec := createOTLPTracesReceiver(t, tracesConsumer)
@@ -196,6 +198,7 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 			TelemetrySettings: component.TelemetrySettings{
 				Logger:         zap.NewNop(),
 				TracerProvider: trace.NewNoopTracerProvider(),
+				MeterProvider:  metric.NewNoopMeterProvider(),
 			},
 		},
 		&otlpexporter.Config{
@@ -239,6 +242,7 @@ func createOTLPMetricsReceiver(t *testing.T, nextConsumer consumer.Metrics) (str
 		TelemetrySettings: component.TelemetrySettings{
 			Logger:         zap.NewNop(),
 			TracerProvider: trace.NewNoopTracerProvider(),
+			MeterProvider:  metric.NewNoopMeterProvider(),
 		},
 	}
 
@@ -278,8 +282,8 @@ func TestReceiveOTLPGRPC_Metrics(t *testing.T) {
 	metricsSink := new(consumertest.MetricsSink)
 
 	metricsConsumer := metricsMultiConsumer{
-		metricsSink:       metricsSink,
-		tenantIDprocessor: tenantProcessor,
+		metricsSink:     metricsSink,
+		tenantProcessor: tenantProcessor,
 	}
 
 	addr, otlpMetricsRec := createOTLPMetricsReceiver(t, metricsConsumer)
@@ -346,12 +350,13 @@ func TestReceiveJaegerThriftHTTP_Traces(t *testing.T) {
 		TelemetrySettings: component.TelemetrySettings{
 			Logger:         zap.NewNop(),
 			TracerProvider: trace.NewNoopTracerProvider(),
+			MeterProvider:  metric.NewNoopMeterProvider(),
 		},
 	}
 	jrf := jaegerreceiver.NewFactory()
 	rec, err := jrf.CreateTracesReceiver(context.Background(), params, cfg, tracesMultiConsumer{
-		tracesSink:        sink,
-		tenantIDprocessor: tenantProcessor,
+		tracesSink:      sink,
+		tenantProcessor: tenantProcessor,
 	})
 	require.NoError(t, err)
 
@@ -421,14 +426,14 @@ func assertTenantTagExists(t *testing.T, metricData pmetric.Metrics, tenantAttrK
 }
 
 type tracesMultiConsumer struct {
-	tracesSink        *consumertest.TracesSink
-	tenantIDprocessor *tenantIdProcessor
+	tracesSink      *consumertest.TracesSink
+	tenantProcessor *tenantIdProcessor
 }
 
 var _ consumer.Traces = (*tracesMultiConsumer)(nil)
 
 func (f tracesMultiConsumer) ConsumeTraces(ctx context.Context, td ptrace.Traces) error {
-	traces, err := f.tenantIDprocessor.ProcessTraces(ctx, td)
+	traces, err := f.tenantProcessor.ProcessTraces(ctx, td)
 	if err != nil {
 		return err
 	}
@@ -440,14 +445,14 @@ func (f tracesMultiConsumer) Capabilities() consumer.Capabilities {
 }
 
 type metricsMultiConsumer struct {
-	metricsSink       consumer.Metrics //*consumertest.MetricsSink
-	tenantIDprocessor *tenantIdProcessor
+	metricsSink     consumer.Metrics //*consumertest.MetricsSink
+	tenantProcessor *tenantIdProcessor
 }
 
 var _ consumer.Metrics = (*metricsMultiConsumer)(nil)
 
 func (f metricsMultiConsumer) ConsumeMetrics(ctx context.Context, md pmetric.Metrics) error {
-	metrics, err := f.tenantIDprocessor.ProcessMetrics(ctx, md)
+	metrics, err := f.tenantProcessor.ProcessMetrics(ctx, md)
 	if err != nil {
 		return err
 	}
