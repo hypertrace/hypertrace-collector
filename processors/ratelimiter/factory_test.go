@@ -11,7 +11,6 @@ func TestCreateDefaultConfig(t *testing.T) {
 	assert.Equal(t, defaultHeaderName, cfg.TenantIDHeaderName)
 	assert.Equal(t, defaultServiceHost, cfg.ServiceHost)
 	assert.Equal(t, defaultServicePort, cfg.ServicePort)
-	assert.Equal(t, defaultDomainSoftLimitThreshold, cfg.DomainSoftRateLimitThreshold)
 	assert.Equal(t, defaultDomain, cfg.Domain)
 	assert.Equal(t, defaultTimeoutMillis, cfg.TimeoutMillis)
 }

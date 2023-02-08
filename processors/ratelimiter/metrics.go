@@ -7,22 +7,12 @@ import (
 )
 
 var (
-	tagTenantID               = tag.MustNewKey("tenant-id")
-	droppedSpanCountSoftLimit = stats.Int64("tenant_id_dropped_span_count_soft_limit",
-		"Number of spans dropped because of rate limiting per tenant due to soft limit", stats.UnitDimensionless)
-	droppedSpanCount = stats.Int64("tenant_id_dropped_span_count", "Number of spans dropped per tenant due to global rate limiting", stats.UnitDimensionless)
+	tagTenantID      = tag.MustNewKey("tenant-id")
+	droppedSpanCount = stats.Int64("tenant_id_dropped_span_count", "Number of spans dropped per tenant due to rate limiting", stats.UnitDimensionless)
 )
 
 func MetricViews() []*view.View {
 	tags := []tag.Key{tagTenantID}
-
-	viewDroppedSpanCountSoftLimit := &view.View{
-		Name:        droppedSpanCountSoftLimit.Name(),
-		Description: droppedSpanCountSoftLimit.Description(),
-		Measure:     droppedSpanCountSoftLimit,
-		Aggregation: view.Sum(),
-		TagKeys:     tags,
-	}
 
 	viewDroppedSpanCount := &view.View{
 		Name:        droppedSpanCount.Name(),
@@ -33,7 +23,6 @@ func MetricViews() []*view.View {
 	}
 
 	return []*view.View{
-		viewDroppedSpanCountSoftLimit,
 		viewDroppedSpanCount,
 	}
 }
