@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/processor/processorhelper"
 )
@@ -25,11 +24,8 @@ func NewFactory() component.ProcessorFactory {
 	)
 }
 
-func createDefaultConfig() config.Processor {
+func createDefaultConfig() component.Config {
 	return &Config{
-		ProcessorSettings: config.NewProcessorSettings(
-			config.NewComponentID(typeStr),
-		),
 		TenantIDHeaderName:   defaultHeaderName,
 		TenantIDAttributeKey: defaultAttributeKey,
 	}
@@ -38,7 +34,7 @@ func createDefaultConfig() config.Processor {
 func createTraceProcessor(
 	ctx context.Context,
 	params component.ProcessorCreateSettings,
-	cfg config.Processor,
+	cfg component.Config,
 	nextConsumer consumer.Traces,
 ) (component.TracesProcessor, error) {
 	pCfg := cfg.(*Config)
@@ -58,7 +54,7 @@ func createTraceProcessor(
 func createMetricsProcessor(
 	ctx context.Context,
 	params component.ProcessorCreateSettings,
-	cfg config.Processor,
+	cfg component.Config,
 	nextConsumer consumer.Metrics,
 ) (component.MetricsProcessor, error) {
 	pCfg := cfg.(*Config)

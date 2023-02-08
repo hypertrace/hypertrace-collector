@@ -1,11 +1,6 @@
 package spancounter
 
-import (
-	"go.opentelemetry.io/collector/config"
-)
-
 type Config struct {
-	config.ProcessorSettings `mapstructure:"-"`
 	// TenantIDAttributeKey defines span attribute key for tenant. Default tenant-id.
 	TenantIDAttributeKey string         `mapstructure:"tenant_id_attribute_key"`
 	TenantConfigs        []TenantConfig `mapstructure:"tenant_configs"`

@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/uuid"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/processor/processorhelper"
 	"go.uber.org/zap"
@@ -24,11 +23,8 @@ func NewFactory() component.ProcessorFactory {
 	)
 }
 
-func createDefaultConfig() config.Processor {
+func createDefaultConfig() component.Config {
 	return &Config{
-		ProcessorSettings: config.NewProcessorSettings(
-			config.NewComponentID(typeStr),
-		),
 		TenantIDAttributeKey: defaultTenantIDAttributeKey,
 	}
 }
@@ -36,7 +32,7 @@ func createDefaultConfig() config.Processor {
 func createTracesProcessor(
 	ctx context.Context,
 	params component.ProcessorCreateSettings,
-	cfg config.Processor,
+	cfg component.Config,
 	nextConsumer consumer.Traces,
 ) (component.TracesProcessor, error) {
 	pCfg := cfg.(*Config)

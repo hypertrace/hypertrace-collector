@@ -1,17 +1,11 @@
 package ratelimiter
 
-import (
-	"go.opentelemetry.io/collector/config"
-)
-
 // Config defines config for ratelimit processor.
 // The processor calls rate limit service for group of spans.
 // The processor either drops or forwards data based on rate limit response.
 // The tenant ID header is obtained from the context object.
 // The processor run immediately after tenantId processor
 type Config struct {
-	config.ProcessorSettings `mapstructure:"-"`
-
 	// ServiceHost defines host where rate limiter service is running default "localhost".
 	ServiceHost string `mapstructure:"service_host"`
 	// ServicePort defines port where rate limiter service is running. Default 8081.

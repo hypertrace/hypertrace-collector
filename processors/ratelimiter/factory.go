@@ -8,7 +8,6 @@ import (
 
 	pb "github.com/envoyproxy/go-control-plane/envoy/service/ratelimit/v3"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/consumer"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -34,11 +33,8 @@ func NewFactory() component.ProcessorFactory {
 	)
 }
 
-func createDefaultConfig() config.Processor {
+func createDefaultConfig() component.Config {
 	return &Config{
-		ProcessorSettings: config.NewProcessorSettings(
-			config.NewComponentID(typeStr),
-		),
 		ServiceHost:                  defaultServiceHost,
 		ServicePort:                  defaultServicePort,
 		Domain:                       defaultDomain,
@@ -51,7 +47,7 @@ func createDefaultConfig() config.Processor {
 func createTraceProcessor(
 	ctx context.Context,
 	params component.ProcessorCreateSettings,
-	cfg config.Processor,
+	cfg component.Config,
 	nextConsumer consumer.Traces,
 ) (component.TracesProcessor, error) {
 	pCfg := cfg.(*Config)

@@ -21,7 +21,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
-	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/config/configgrpc"
 	"go.opentelemetry.io/collector/config/confighttp"
 	"go.opentelemetry.io/collector/config/configtls"
@@ -197,7 +196,6 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 			},
 		},
 		&otlpexporter.Config{
-			ExporterSettings: config.NewExporterSettings(config.NewComponentID("otlp")),
 			GRPCClientSettings: configgrpc.GRPCClientSettings{
 				Headers:      map[string]string{tenantProcessor.tenantIDHeaderName: testTenantID},
 				Endpoint:     addr,
@@ -295,7 +293,6 @@ func TestReceiveOTLPGRPC_Metrics(t *testing.T) {
 			},
 		},
 		&otlpexporter.Config{
-			ExporterSettings: config.NewExporterSettings(config.NewComponentID("otlp")),
 			GRPCClientSettings: configgrpc.GRPCClientSettings{
 				Headers:      map[string]string{tenantProcessor.tenantIDHeaderName: testTenantID},
 				Endpoint:     addr,
