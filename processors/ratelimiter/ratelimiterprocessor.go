@@ -12,18 +12,19 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/ptrace"
+	"go.opentelemetry.io/collector/processor"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
-var _ component.TracesProcessor = (*processor)(nil)
+var _ processor.Traces = (*rateLimiterProcessor)(nil)
 
-func (p *processor) Start(_ context.Context, _ component.Host) error {
+func (p *rateLimiterProcessor) Start(_ context.Context, _ component.Host) error {
 	return nil
 }
 
-func (p *processor) Shutdown(_ context.Context) error {
+func (p *rateLimiterProcessor) Shutdown(_ context.Context) error {
 	err := p.rateLimitServiceClientConn.Close()
 	if err != nil {
 		p.logger.Error("failure while closing rate limit service client connection ", zap.Error(err))
@@ -32,11 +33,11 @@ func (p *processor) Shutdown(_ context.Context) error {
 	return nil
 }
 
-func (p *processor) Capabilities() consumer.Capabilities {
+func (p *rateLimiterProcessor) Capabilities() consumer.Capabilities {
 	return consumer.Capabilities{MutatesData: true}
 }
 
-type processor struct {
+type rateLimiterProcessor struct {
 	rateLimitServiceClient     pb.RateLimitServiceClient
 	domain                     string
 	domainSoftLimitThreshold   uint32
@@ -54,7 +55,7 @@ const (
 
 // ConsumeTraces consume traces and drops the requests if it is rate limited,
 // otherwise calls next consumer
-func (p *processor) ConsumeTraces(ctx context.Context, traces ptrace.Traces) error {
+func (p *rateLimiterProcessor) ConsumeTraces(ctx context.Context, traces ptrace.Traces) error {
 	tenantId, err := p.getTenantId(ctx)
 	if err != nil {
 		// If tenantId is missing, rate limiting not applicable.
@@ -113,7 +114,7 @@ func (p *processor) ConsumeTraces(ctx context.Context, traces ptrace.Traces) err
 	return p.nextConsumer.ConsumeTraces(ctx, traces)
 }
 
-func (p *processor) getTenantId(ctx context.Context) (string, error) {
+func (p *rateLimiterProcessor) getTenantId(ctx context.Context) (string, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return "", fmt.Errorf("could not extract headers from context")

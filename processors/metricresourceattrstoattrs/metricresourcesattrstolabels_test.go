@@ -14,7 +14,7 @@ import (
 )
 
 func TestEmptyMetrics(t *testing.T) {
-	p := &processor{
+	p := &metricResourceAttrsProcessor{
 		logger: zap.NewNop(),
 	}
 	metrics := pmetric.NewMetrics()
@@ -278,7 +278,7 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 				testCase.dt,
 			)
 
-			p := processor{logger: logger}
+			p := metricResourceAttrsProcessor{logger: logger}
 
 			processedMetrics, err := p.ProcessMetrics(context.Background(), metrics)
 			assert.Nil(t, err)
@@ -304,7 +304,7 @@ func generateMetricData(resourceAttrs map[string]string, attrs map[string]string
 	md := pmetric.NewMetrics()
 	md.ResourceMetrics().AppendEmpty()
 	for k, v := range resourceAttrs {
-		md.ResourceMetrics().At(0).Resource().Attributes().PutString(k, v)
+		md.ResourceMetrics().At(0).Resource().Attributes().PutStr(k, v)
 	}
 	md.ResourceMetrics().At(0).ScopeMetrics().AppendEmpty()
 	md.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().AppendEmpty()
@@ -315,31 +315,31 @@ func generateMetricData(resourceAttrs map[string]string, attrs map[string]string
 		metric.SetEmptySum()
 		metric.Sum().DataPoints().AppendEmpty()
 		for k, v := range attrs {
-			metric.Sum().DataPoints().At(0).Attributes().PutString(k, v)
+			metric.Sum().DataPoints().At(0).Attributes().PutStr(k, v)
 		}
 	case pmetric.MetricTypeGauge:
 		metric.SetEmptyGauge()
 		metric.Gauge().DataPoints().AppendEmpty()
 		for k, v := range attrs {
-			metric.Gauge().DataPoints().At(0).Attributes().PutString(k, v)
+			metric.Gauge().DataPoints().At(0).Attributes().PutStr(k, v)
 		}
 	case pmetric.MetricTypeHistogram:
 		metric.SetEmptyHistogram()
 		metric.Histogram().DataPoints().AppendEmpty()
 		for k, v := range attrs {
-			metric.Histogram().DataPoints().At(0).Attributes().PutString(k, v)
+			metric.Histogram().DataPoints().At(0).Attributes().PutStr(k, v)
 		}
 	case pmetric.MetricTypeExponentialHistogram:
 		metric.SetEmptyExponentialHistogram()
 		metric.ExponentialHistogram().DataPoints().AppendEmpty()
 		for k, v := range attrs {
-			metric.ExponentialHistogram().DataPoints().At(0).Attributes().PutString(k, v)
+			metric.ExponentialHistogram().DataPoints().At(0).Attributes().PutStr(k, v)
 		}
 	case pmetric.MetricTypeSummary:
 		metric.SetEmptySummary()
 		metric.Summary().DataPoints().AppendEmpty()
 		for k, v := range attrs {
-			metric.Summary().DataPoints().At(0).Attributes().PutString(k, v)
+			metric.Summary().DataPoints().At(0).Attributes().PutStr(k, v)
 		}
 	}
 	return md

@@ -5,6 +5,7 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/processor/processorhelper"
 )
 
@@ -12,30 +13,26 @@ const (
 	typeStr = "hypertrace_metrics_remover"
 )
 
-func NewFactory() component.ProcessorFactory {
-	return component.NewProcessorFactory(
+func NewFactory() processor.Factory {
+	return processor.NewFactory(
 		typeStr,
 		createDefaultConfig,
-		component.WithMetricsProcessor(createMetricsProcessor, component.StabilityLevelStable),
+		processor.WithMetrics(createMetricsProcessor, component.StabilityLevelStable),
 	)
 }
 
 func createDefaultConfig() component.Config {
-	return &Config{
-		ProcessorSettings: config.NewProcessorSettings(
-			component.NewIDWithName(typeStr),
-		),
-	}
+	return &Config{}
 }
 
 func createMetricsProcessor(
 	ctx context.Context,
-	params component.ProcessorCreateSettings,
+	params processor.CreateSettings,
 	cfg component.Config,
 	nextConsumer consumer.Metrics,
-) (component.MetricsProcessor, error) {
+) (processor.Metrics, error) {
 	pCfg := cfg.(*Config)
-	processor := &processor{
+	metricRemover := &metricRemoverProcessor{
 		logger:               params.Logger,
 		removeNoneMetricType: pCfg.RemoveNoneMetricType,
 	}
@@ -44,5 +41,5 @@ func createMetricsProcessor(
 		params,
 		cfg,
 		nextConsumer,
-		processor.ProcessMetrics)
+		metricRemover.ProcessMetrics)
 }

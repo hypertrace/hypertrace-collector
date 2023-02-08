@@ -13,14 +13,14 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-type processor struct {
+type tenantIdProcessor struct {
 	tenantIDHeaderName   string
 	tenantIDAttributeKey string
 	logger               *zap.Logger
 }
 
 // ProcessMetrics implements processorhelper.ProcessMetricsFunc
-func (p *processor) ProcessMetrics(ctx context.Context, metrics pmetric.Metrics) (pmetric.Metrics, error) {
+func (p *tenantIdProcessor) ProcessMetrics(ctx context.Context, metrics pmetric.Metrics) (pmetric.Metrics, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return metrics, fmt.Errorf("could not extract headers from context. Number of metrics: %d", metrics.MetricCount())
@@ -45,7 +45,7 @@ func (p *processor) ProcessMetrics(ctx context.Context, metrics pmetric.Metrics)
 }
 
 // ProcessTraces implements processorhelper.ProcessTracesFunc
-func (p *processor) ProcessTraces(ctx context.Context, traces ptrace.Traces) (ptrace.Traces, error) {
+func (p *tenantIdProcessor) ProcessTraces(ctx context.Context, traces ptrace.Traces) (ptrace.Traces, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return traces, fmt.Errorf("could not extract headers from context. Number of spans: %d", traces.SpanCount())
@@ -68,19 +68,19 @@ func (p *processor) ProcessTraces(ctx context.Context, traces ptrace.Traces) (pt
 	return traces, nil
 }
 
-func (p *processor) addTenantIdToSpans(traces ptrace.Traces, tenantIDHeaderValue string) {
+func (p *tenantIdProcessor) addTenantIdToSpans(traces ptrace.Traces, tenantIDHeaderValue string) {
 	rss := traces.ResourceSpans()
 	for i := 0; i < rss.Len(); i++ {
 		rs := rss.At(i)
-		rs.Resource().Attributes().PutString(p.tenantIDAttributeKey, tenantIDHeaderValue)
+		rs.Resource().Attributes().PutStr(p.tenantIDAttributeKey, tenantIDHeaderValue)
 	}
 }
 
-func (p *processor) addTenantIdToMetrics(metrics pmetric.Metrics, tenantIDHeaderValue string) {
+func (p *tenantIdProcessor) addTenantIdToMetrics(metrics pmetric.Metrics, tenantIDHeaderValue string) {
 	rms := metrics.ResourceMetrics()
 	for i := 0; i < rms.Len(); i++ {
 		rm := rms.At(i)
-		rm.Resource().Attributes().PutString(p.tenantIDAttributeKey, tenantIDHeaderValue)
+		rm.Resource().Attributes().PutStr(p.tenantIDAttributeKey, tenantIDHeaderValue)
 		sms := rm.ScopeMetrics()
 		for j := 0; j < sms.Len(); j++ {
 			sm := sms.At(j)
@@ -89,32 +89,32 @@ func (p *processor) addTenantIdToMetrics(metrics pmetric.Metrics, tenantIDHeader
 				metric := metrics.At(k)
 				metricDataType := metric.Type()
 				switch metricDataType {
-				case pmetric.MetricTypeNone:
+				case pmetric.MetricTypeEmpty:
 					p.logger.Error("Cannot add tenantId to metric. Metric Data type not present for metric: " + metric.Name())
 				case pmetric.MetricTypeGauge:
 					metricData := metric.Gauge().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
-						metricData.At(l).Attributes().PutString(p.tenantIDAttributeKey, tenantIDHeaderValue)
+						metricData.At(l).Attributes().PutStr(p.tenantIDAttributeKey, tenantIDHeaderValue)
 					}
 				case pmetric.MetricTypeSum:
 					metricData := metric.Sum().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
-						metricData.At(l).Attributes().PutString(p.tenantIDAttributeKey, tenantIDHeaderValue)
+						metricData.At(l).Attributes().PutStr(p.tenantIDAttributeKey, tenantIDHeaderValue)
 					}
 				case pmetric.MetricTypeHistogram:
 					metricData := metric.Histogram().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
-						metricData.At(l).Attributes().PutString(p.tenantIDAttributeKey, tenantIDHeaderValue)
+						metricData.At(l).Attributes().PutStr(p.tenantIDAttributeKey, tenantIDHeaderValue)
 					}
 				case pmetric.MetricTypeExponentialHistogram:
 					metricData := metric.ExponentialHistogram().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
-						metricData.At(l).Attributes().PutString(p.tenantIDAttributeKey, tenantIDHeaderValue)
+						metricData.At(l).Attributes().PutStr(p.tenantIDAttributeKey, tenantIDHeaderValue)
 					}
 				case pmetric.MetricTypeSummary:
 					metricData := metric.Summary().DataPoints()
 					for l := 0; l < metricData.Len(); l++ {
-						metricData.At(l).Attributes().PutString(p.tenantIDAttributeKey, tenantIDHeaderValue)
+						metricData.At(l).Attributes().PutStr(p.tenantIDAttributeKey, tenantIDHeaderValue)
 					}
 				}
 			}

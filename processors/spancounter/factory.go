@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/processor/processorhelper"
 	"go.uber.org/zap"
 )
@@ -15,11 +16,11 @@ const (
 )
 
 // NewFactory creates a factory for the spancounter processor.
-func NewFactory() component.ProcessorFactory {
-	return component.NewProcessorFactory(
+func NewFactory() processor.Factory {
+	return processor.NewFactory(
 		typeStr,
 		createDefaultConfig,
-		component.WithTracesProcessor(createTracesProcessor, component.StabilityLevelStable),
+		processor.WithTraces(createTracesProcessor, component.StabilityLevelStable),
 	)
 }
 
@@ -31,10 +32,10 @@ func createDefaultConfig() component.Config {
 
 func createTracesProcessor(
 	ctx context.Context,
-	params component.ProcessorCreateSettings,
+	params processor.CreateSettings,
 	cfg component.Config,
 	nextConsumer consumer.Traces,
-) (component.TracesProcessor, error) {
+) (processor.Traces, error) {
 	pCfg := cfg.(*Config)
 	addUniqueLabelsToSpanConfigs(pCfg)
 	params.Logger.Info("Criteria based span counter processor config", zap.Any("config", pCfg))

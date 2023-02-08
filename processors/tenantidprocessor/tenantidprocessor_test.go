@@ -23,13 +23,16 @@ import (
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/config/configgrpc"
 	"go.opentelemetry.io/collector/config/confighttp"
+	"go.opentelemetry.io/collector/config/configopaque"
 	"go.opentelemetry.io/collector/config/configtls"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/consumer/consumertest"
+	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/otlpexporter"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/pdata/ptrace"
+	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
@@ -41,7 +44,7 @@ import (
 const testTenantID = "jdoe"
 
 func TestMissingMetadataInContext(t *testing.T) {
-	p := &processor{
+	p := &tenantIdProcessor{
 		logger:               zap.NewNop(),
 		tenantIDHeaderName:   defaultHeaderName,
 		tenantIDAttributeKey: defaultHeaderName,
@@ -56,7 +59,7 @@ func TestMissingMetadataInContext(t *testing.T) {
 }
 
 func TestMissingTenantHeader(t *testing.T) {
-	p := &processor{
+	p := &tenantIdProcessor{
 		logger:               zap.NewNop(),
 		tenantIDHeaderName:   defaultHeaderName,
 		tenantIDAttributeKey: defaultHeaderName,
@@ -77,7 +80,7 @@ func TestMissingTenantHeader(t *testing.T) {
 }
 
 func TestMultipleTenantHeaders(t *testing.T) {
-	p := &processor{
+	p := &tenantIdProcessor{
 		logger:               zap.NewNop(),
 		tenantIDHeaderName:   defaultHeaderName,
 		tenantIDAttributeKey: defaultHeaderName,
@@ -99,7 +102,7 @@ func TestMultipleTenantHeaders(t *testing.T) {
 }
 
 func TestEmptyTraces(t *testing.T) {
-	p := &processor{
+	p := &tenantIdProcessor{
 		logger:               zap.NewNop(),
 		tenantIDHeaderName:   defaultHeaderName,
 		tenantIDAttributeKey: defaultHeaderName,
@@ -116,7 +119,7 @@ func TestEmptyTraces(t *testing.T) {
 }
 
 func TestEmptyMetrics(t *testing.T) {
-	p := &processor{
+	p := &tenantIdProcessor{
 		logger:               zap.NewNop(),
 		tenantIDHeaderName:   defaultHeaderName,
 		tenantIDAttributeKey: defaultHeaderName,
@@ -145,13 +148,13 @@ func getAvailableLocalAddress(t *testing.T) string {
 	return ln.Addr().String()
 }
 
-func createOTLPTracesReceiver(t *testing.T, nextConsumer consumer.Traces) (string, component.MetricsReceiver) {
+func createOTLPTracesReceiver(t *testing.T, nextConsumer consumer.Traces) (string, receiver.Metrics) {
 	addr := getAvailableLocalAddress(t)
 	factory := otlpreceiver.NewFactory()
 	cfg := factory.CreateDefaultConfig().(*otlpreceiver.Config)
 	cfg.GRPC.NetAddr.Endpoint = addr
 	cfg.HTTP = nil
-	params := component.ReceiverCreateSettings{
+	params := receiver.CreateSettings{
 		TelemetrySettings: component.TelemetrySettings{
 			Logger:         zap.NewNop(),
 			TracerProvider: trace.NewNoopTracerProvider(),
@@ -169,7 +172,7 @@ func createOTLPTracesReceiver(t *testing.T, nextConsumer consumer.Traces) (strin
 
 func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 	tracesSink := new(consumertest.TracesSink)
-	tenantProcessor := &processor{
+	tenantProcessor := &tenantIdProcessor{
 		logger:               zap.NewNop(),
 		tenantIDHeaderName:   defaultHeaderName,
 		tenantIDAttributeKey: defaultAttributeKey,
@@ -189,7 +192,7 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 	otlpExpFac := otlpexporter.NewFactory()
 	tracesExporter, err := otlpExpFac.CreateTracesExporter(
 		context.Background(),
-		component.ExporterCreateSettings{
+		exporter.CreateSettings{
 			TelemetrySettings: component.TelemetrySettings{
 				Logger:         zap.NewNop(),
 				TracerProvider: trace.NewNoopTracerProvider(),
@@ -197,7 +200,7 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 		},
 		&otlpexporter.Config{
 			GRPCClientSettings: configgrpc.GRPCClientSettings{
-				Headers:      map[string]string{tenantProcessor.tenantIDHeaderName: testTenantID},
+				Headers:      map[string]configopaque.String{tenantProcessor.tenantIDHeaderName: configopaque.String(testTenantID)},
 				Endpoint:     addr,
 				WaitForReady: true,
 				TLSSetting: configtls.TLSClientSetting{
@@ -226,13 +229,13 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 	assert.Equal(t, reqTraces.ResourceSpans().Len(), tenantAttrsFound)
 }
 
-func createOTLPMetricsReceiver(t *testing.T, nextConsumer consumer.Metrics) (string, component.MetricsReceiver) {
+func createOTLPMetricsReceiver(t *testing.T, nextConsumer consumer.Metrics) (string, receiver.Metrics) {
 	addr := getAvailableLocalAddress(t)
 	factory := otlpreceiver.NewFactory()
 	cfg := factory.CreateDefaultConfig().(*otlpreceiver.Config)
 	cfg.GRPC.NetAddr.Endpoint = addr
 	cfg.HTTP = nil
-	params := component.ReceiverCreateSettings{
+	params := receiver.CreateSettings{
 		TelemetrySettings: component.TelemetrySettings{
 			Logger:         zap.NewNop(),
 			TracerProvider: trace.NewNoopTracerProvider(),
@@ -266,7 +269,7 @@ func generateMetricData() pmetric.Metrics {
 }
 
 func TestReceiveOTLPGRPC_Metrics(t *testing.T) {
-	tenantProcessor := &processor{
+	tenantProcessor := &tenantIdProcessor{
 		logger:               zap.NewNop(),
 		tenantIDHeaderName:   defaultHeaderName,
 		tenantIDAttributeKey: defaultAttributeKey,
@@ -286,7 +289,7 @@ func TestReceiveOTLPGRPC_Metrics(t *testing.T) {
 
 	metricsExporter, err := otlpexporter.NewFactory().CreateMetricsExporter(
 		context.Background(),
-		component.ExporterCreateSettings{
+		exporter.CreateSettings{
 			TelemetrySettings: component.TelemetrySettings{
 				Logger:         zap.NewNop(),
 				TracerProvider: trace.NewNoopTracerProvider(),
@@ -294,7 +297,7 @@ func TestReceiveOTLPGRPC_Metrics(t *testing.T) {
 		},
 		&otlpexporter.Config{
 			GRPCClientSettings: configgrpc.GRPCClientSettings{
-				Headers:      map[string]string{tenantProcessor.tenantIDHeaderName: testTenantID},
+				Headers:      map[string]configopaque.String{tenantProcessor.tenantIDHeaderName: configopaque.String(testTenantID)},
 				Endpoint:     addr,
 				WaitForReady: true,
 				TLSSetting: configtls.TLSClientSetting{
@@ -325,7 +328,7 @@ func TestReceiveOTLPGRPC_Metrics(t *testing.T) {
 
 func TestReceiveJaegerThriftHTTP_Traces(t *testing.T) {
 	sink := new(consumertest.TracesSink)
-	tenantProcessor := &processor{
+	tenantProcessor := &tenantIdProcessor{
 		logger:               zap.NewNop(),
 		tenantIDHeaderName:   defaultHeaderName,
 		tenantIDAttributeKey: defaultAttributeKey,
@@ -339,7 +342,7 @@ func TestReceiveJaegerThriftHTTP_Traces(t *testing.T) {
 			},
 		},
 	}
-	params := component.ReceiverCreateSettings{
+	params := receiver.CreateSettings{
 		TelemetrySettings: component.TelemetrySettings{
 			Logger:         zap.NewNop(),
 			TracerProvider: trace.NewNoopTracerProvider(),
@@ -409,7 +412,7 @@ func assertTenantTagExists(t *testing.T, metricData pmetric.Metrics, tenantAttrK
 					tenantAttr, ok := metricDataPoints.At(l).Attributes().Get(tenantAttrKey)
 					require.True(t, ok)
 					numOfTenantAttrs++
-					assert.Equal(t, pcommon.NewValueString(tenantID), tenantAttr)
+					assert.Equal(t, pcommon.NewValueStr(tenantID), tenantAttr)
 				}
 			}
 		}
@@ -419,7 +422,7 @@ func assertTenantTagExists(t *testing.T, metricData pmetric.Metrics, tenantAttrK
 
 type tracesMultiConsumer struct {
 	tracesSink        *consumertest.TracesSink
-	tenantIDprocessor *processor
+	tenantIDprocessor *tenantIdProcessor
 }
 
 var _ consumer.Traces = (*tracesMultiConsumer)(nil)
@@ -438,7 +441,7 @@ func (f tracesMultiConsumer) Capabilities() consumer.Capabilities {
 
 type metricsMultiConsumer struct {
 	metricsSink       consumer.Metrics //*consumertest.MetricsSink
-	tenantIDprocessor *processor
+	tenantIDprocessor *tenantIdProcessor
 }
 
 var _ consumer.Metrics = (*metricsMultiConsumer)(nil)
@@ -503,7 +506,7 @@ func initResource1(r pcommon.Resource) {
 }
 
 func initResourceAttributes1(dest pcommon.Map) {
-	dest.PutString("resource-attr", "resource-attr-val-1")
+	dest.PutStr("resource-attr", "resource-attr-val-1")
 }
 
 func fillSpanOne(span ptrace.Span) {
@@ -532,7 +535,7 @@ func fillSpanOne(span ptrace.Span) {
 }
 
 func initSpanEventAttributes(dest pcommon.Map) {
-	dest.PutString("span-event-attr", "span-event-attr-val")
+	dest.PutStr("span-event-attr", "span-event-attr-val")
 }
 
 func jaegerModelToThrift(batch *model.Batch) *jaegerthrift.Batch {
