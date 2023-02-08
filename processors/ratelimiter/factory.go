@@ -16,13 +16,12 @@ import (
 )
 
 const (
-	typeStr                         = "hypertrace_ratelimiter"
-	defaultServiceHost              = "127.0.0.1"
-	defaultServicePort              = uint16(8081)
-	defaultDomain                   = "collector"
-	defaultDomainSoftLimitThreshold = uint32(100000) // Soft limit kicks in when limit remaining under 100k
-	defaultHeaderName               = "x-tenant-id"
-	defaultTimeoutMillis            = uint32(1000) // 1 second
+	typeStr              = "hypertrace_ratelimiter"
+	defaultServiceHost   = "127.0.0.1"
+	defaultServicePort   = uint16(8081)
+	defaultDomain        = "collector"
+	defaultHeaderName    = "x-tenant-id"
+	defaultTimeoutMillis = uint32(1000) // 1 second
 )
 
 // NewFactory creates a factory for the ratelimit processor.
@@ -36,12 +35,11 @@ func NewFactory() processor.Factory {
 
 func createDefaultConfig() component.Config {
 	return &Config{
-		ServiceHost:                  defaultServiceHost,
-		ServicePort:                  defaultServicePort,
-		Domain:                       defaultDomain,
-		DomainSoftRateLimitThreshold: defaultDomainSoftLimitThreshold,
-		TenantIDHeaderName:           defaultHeaderName,
-		TimeoutMillis:                defaultTimeoutMillis,
+		ServiceHost:        defaultServiceHost,
+		ServicePort:        defaultServicePort,
+		Domain:             defaultDomain,
+		TenantIDHeaderName: defaultHeaderName,
+		TimeoutMillis:      defaultTimeoutMillis,
 	}
 }
 
@@ -60,7 +58,6 @@ func createTraceProcessor(
 	rateLimiter := &rateLimiterProcessor{
 		rateLimitServiceClient:     rateLimitServiceClient,
 		domain:                     pCfg.Domain,
-		domainSoftLimitThreshold:   pCfg.DomainSoftRateLimitThreshold,
 		logger:                     params.Logger,
 		tenantIDHeaderName:         pCfg.TenantIDHeaderName,
 		nextConsumer:               nextConsumer,

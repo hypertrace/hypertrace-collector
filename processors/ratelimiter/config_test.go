@@ -26,6 +26,5 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, "app", tIDcfg.Domain)
 	assert.Equal(t, "localhost", tIDcfg.ServiceHost)
 	assert.Equal(t, uint16(8081), tIDcfg.ServicePort)
-	assert.Equal(t, uint32(10), tIDcfg.DomainSoftRateLimitThreshold)
 	assert.Equal(t, uint32(10), tIDcfg.TimeoutMillis)
 }
