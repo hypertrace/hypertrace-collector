@@ -39,7 +39,6 @@ func (p *processor) Capabilities() consumer.Capabilities {
 type processor struct {
 	rateLimitServiceClient     pb.RateLimitServiceClient
 	domain                     string
-	domainSoftLimitThreshold   uint32
 	logger                     *zap.Logger
 	tenantIDHeaderName         string
 	nextConsumer               consumer.Traces
@@ -95,18 +94,14 @@ func (p *processor) ConsumeTraces(ctx context.Context, traces ptrace.Traces) err
 	ctx, _ = tag.New(ctx,
 		tag.Insert(tagTenantID, tenantId))
 	if len(descriptorStatuses) == 2 {
-		if descriptorStatuses[1].GetCode() == pb.RateLimitResponse_OVER_LIMIT {
-			// If global rate limit exceeded drop all events
-			p.logger.Warn(fmt.Sprintf("dropping spans for tenant %s due to global rate limit exceeded, of spancount: %d", tenantId, spanCount))
+		if descriptorStatuses[1].GetCode() == pb.RateLimitResponse_OVER_LIMIT &&
+			descriptorStatuses[0].GetCode() == pb.RateLimitResponse_OVER_LIMIT {
+			// If cluster rate limit exceeded and tenant rate limit exceeded drop request.
+			p.logger.Warn(fmt.Sprintf("dropping spans for tenant %s as rate limit exceeded, of spancount: %d", tenantId, spanCount))
 			stats.Record(ctx, droppedSpanCount.M(int64(spanCount)))
 			return nil
-		} else if descriptorStatuses[1].LimitRemaining < p.domainSoftLimitThreshold && descriptorStatuses[0].GetCode() == pb.RateLimitResponse_OVER_LIMIT {
-			// If soft limit reached then drop only spans from tenants where tenant specific limit exceeded.
-			p.logger.Warn(fmt.Sprintf("dropping spans for tenant %s due to soft limit reached, of spancount: %d", tenantId, spanCount))
-			stats.Record(ctx, droppedSpanCountSoftLimit.M(int64(spanCount)))
-			return nil
 		}
-		// Ignore dropping of spans when soft limit hasn't reached even though tenant rate limit reached.
+		// Ignore dropping of spans when cluster limit not reached.
 	} else {
 		p.logger.Error(fmt.Sprintf("unexpected descriptor status length from rate limit response: %s ", descriptorStatuses))
 	}

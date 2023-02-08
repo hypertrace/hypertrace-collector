@@ -18,8 +18,6 @@ type Config struct {
 	ServicePort uint16 `mapstructure:"service_port"`
 	//Domain  rate limit configuration domain to query. Default collector
 	Domain string `mapstructure:"domain"`
-	// DomainSoftRateLimitThreshold represents the threshold where soft limit window started.
-	DomainSoftRateLimitThreshold uint32 `mapstructure:"domain_soft_limit_threshold"`
 	// TenantIDHeaderName defines tenant HTTP header name. Default x-tenant-id.
 	TenantIDHeaderName string `mapstructure:"tenant_id_header_name"`
 	// Timeout in millis for grpc call.
