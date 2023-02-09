@@ -69,8 +69,8 @@ func NewTestSpanWithTraceIdAndNameAndSpanKind(traceId pcommon.TraceID, spanId pc
 		var val pcommon.Value
 		switch attrKVs[i+1].(type) {
 		case string:
-			val = pcommon.NewValueString(attrKVs[i+1].(string))
-			s.Attributes().PutString(attrKVs[i].(string), val.Str())
+			val = pcommon.NewValueStr(attrKVs[i+1].(string))
+			s.Attributes().PutStr(attrKVs[i].(string), val.Str())
 		case int, int8, int16, int32, int64:
 			val = pcommon.NewValueInt(int64(attrKVs[i+1].(int)))
 			s.Attributes().PutInt(attrKVs[i].(string), val.Int())
@@ -91,7 +91,7 @@ func NewAttributeMap() pcommon.Map {
 func NewAttributeMapFromStringMap(m map[string]string) pcommon.Map {
 	attributeMap := pcommon.NewMap()
 	for k, v := range m {
-		attributeMap.PutString(k, v)
+		attributeMap.PutStr(k, v)
 	}
 	return attributeMap
 }

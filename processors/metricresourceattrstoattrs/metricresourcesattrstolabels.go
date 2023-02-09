@@ -12,12 +12,12 @@ import (
 
 const ocServiceInstanceIdAttrKey = "service_instance_id"
 
-type processor struct {
+type metricResourceAttrsProcessor struct {
 	logger *zap.Logger
 }
 
 // ProcessMetrics implements processorhelper.ProcessMetricsFunc
-func (p *processor) ProcessMetrics(ctx context.Context, metrics pmetric.Metrics) (pmetric.Metrics, error) {
+func (p *metricResourceAttrsProcessor) ProcessMetrics(ctx context.Context, metrics pmetric.Metrics) (pmetric.Metrics, error) {
 	rms := metrics.ResourceMetrics()
 	for i := 0; i < rms.Len(); i++ {
 		rm := rms.At(i)
@@ -48,11 +48,11 @@ func (p *processor) ProcessMetrics(ctx context.Context, metrics pmetric.Metrics)
 						// Copy service.instance.id if "service_instance_id" does not exist
 						if key == conventions.AttributeServiceInstanceID {
 							if _, ok := am.Get(ocServiceInstanceIdAttrKey); !ok {
-								am.PutString(key, v.AsString())
+								am.PutStr(key, v.AsString())
 							}
 						} else {
 							if _, ok := am.Get(key); !ok {
-								am.PutString(key, v.AsString())
+								am.PutStr(key, v.AsString())
 							}
 						}
 					})

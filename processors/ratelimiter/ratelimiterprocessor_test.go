@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/ptrace"
+	"go.opentelemetry.io/collector/processor"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -29,7 +30,7 @@ type MockProcessorConsumer struct {
 	mock.Mock
 }
 
-var _ component.TracesProcessor = (*MockProcessorConsumer)(nil)
+var _ processor.Traces = (*MockProcessorConsumer)(nil)
 
 func (m *MockProcessorConsumer) Start(_ context.Context, _ component.Host) error {
 	return nil
@@ -62,7 +63,7 @@ func (m *MockProcessorConsumer) ConsumeTraces(ctx context.Context, ld ptrace.Tra
 func TestRateLimitingWhenEmptyTenantHeader(t *testing.T) {
 	mockRateLimitServiceClientObj := new(MockRateLimitServiceClient)
 	mockProcessorConsumerObj := new(MockProcessorConsumer)
-	p := &processor{
+	p := &rateLimiterProcessor{
 		logger:                     zap.NewNop(),
 		tenantIDHeaderName:         defaultHeaderName,
 		domain:                     defaultDomain,
@@ -90,7 +91,7 @@ func TestRateLimitingWhenEmptyTenantHeader(t *testing.T) {
 func TestWhenRateLimitServiceCallFailed(t *testing.T) {
 	mockRateLimitServiceClientObj := new(MockRateLimitServiceClient)
 	mockProcessorConsumerObj := new(MockProcessorConsumer)
-	p := &processor{
+	p := &rateLimiterProcessor{
 		logger:                     zap.NewNop(),
 		tenantIDHeaderName:         defaultHeaderName,
 		domain:                     defaultDomain,
@@ -118,7 +119,7 @@ func TestWhenRateLimitServiceCallFailed(t *testing.T) {
 func TestRateLimitingWhenClusterLimitNotReachedButTenantLimitReached(t *testing.T) {
 	mockRateLimitServiceClientObj := new(MockRateLimitServiceClient)
 	mockProcessorConsumerObj := new(MockProcessorConsumer)
-	p := &processor{
+	p := &rateLimiterProcessor{
 		logger:                     zap.NewNop(),
 		tenantIDHeaderName:         defaultHeaderName,
 		domain:                     defaultDomain,
@@ -158,7 +159,7 @@ func TestRateLimitingWhenClusterLimitNotReachedButTenantLimitReached(t *testing.
 func TestRateLimitingWhenClusterAndTenantLimitReached(t *testing.T) {
 	mockRateLimitServiceClientObj := new(MockRateLimitServiceClient)
 	mockProcessorConsumerObj := new(MockProcessorConsumer)
-	p := &processor{
+	p := &rateLimiterProcessor{
 		logger:                     zap.NewNop(),
 		tenantIDHeaderName:         defaultHeaderName,
 		domain:                     defaultDomain,

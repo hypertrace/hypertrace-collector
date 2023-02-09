@@ -11,7 +11,7 @@ import (
 )
 
 func TestEmptyMetrics(t *testing.T) {
-	p := &processor{
+	p := &metricRemoverProcessor{
 		logger:               zap.NewNop(),
 		removeNoneMetricType: true,
 	}
@@ -30,17 +30,17 @@ func TestMetricsRemoval(t *testing.T) {
 	}{
 		"config enabled none metrics removed": {
 			removeNoneMetricType: true,
-			inputDtArr: []pmetric.MetricType{pmetric.MetricTypeGauge, pmetric.MetricTypeSum, pmetric.MetricTypeNone, pmetric.MetricTypeHistogram,
-				pmetric.MetricTypeExponentialHistogram, pmetric.MetricTypeNone, pmetric.MetricTypeSummary},
+			inputDtArr: []pmetric.MetricType{pmetric.MetricTypeGauge, pmetric.MetricTypeSum, pmetric.MetricTypeEmpty, pmetric.MetricTypeHistogram,
+				pmetric.MetricTypeExponentialHistogram, pmetric.MetricTypeEmpty, pmetric.MetricTypeSummary},
 			expectedDtArr: []pmetric.MetricType{pmetric.MetricTypeGauge, pmetric.MetricTypeSum, pmetric.MetricTypeHistogram,
 				pmetric.MetricTypeExponentialHistogram, pmetric.MetricTypeSummary},
 		},
 		"config disabled none metrics are not removed": {
 			removeNoneMetricType: false,
-			inputDtArr: []pmetric.MetricType{pmetric.MetricTypeGauge, pmetric.MetricTypeSum, pmetric.MetricTypeNone, pmetric.MetricTypeHistogram,
-				pmetric.MetricTypeExponentialHistogram, pmetric.MetricTypeNone, pmetric.MetricTypeSummary},
-			expectedDtArr: []pmetric.MetricType{pmetric.MetricTypeGauge, pmetric.MetricTypeSum, pmetric.MetricTypeNone, pmetric.MetricTypeHistogram,
-				pmetric.MetricTypeExponentialHistogram, pmetric.MetricTypeNone, pmetric.MetricTypeSummary},
+			inputDtArr: []pmetric.MetricType{pmetric.MetricTypeGauge, pmetric.MetricTypeSum, pmetric.MetricTypeEmpty, pmetric.MetricTypeHistogram,
+				pmetric.MetricTypeExponentialHistogram, pmetric.MetricTypeEmpty, pmetric.MetricTypeSummary},
+			expectedDtArr: []pmetric.MetricType{pmetric.MetricTypeGauge, pmetric.MetricTypeSum, pmetric.MetricTypeEmpty, pmetric.MetricTypeHistogram,
+				pmetric.MetricTypeExponentialHistogram, pmetric.MetricTypeEmpty, pmetric.MetricTypeSummary},
 		},
 		"no none metrics": {
 			removeNoneMetricType: true,
@@ -51,13 +51,13 @@ func TestMetricsRemoval(t *testing.T) {
 		},
 		"only none metrics config disabled": {
 			removeNoneMetricType: false,
-			inputDtArr:           []pmetric.MetricType{pmetric.MetricTypeNone, pmetric.MetricTypeNone, pmetric.MetricTypeNone, pmetric.MetricTypeNone},
-			expectedDtArr:        []pmetric.MetricType{pmetric.MetricTypeNone, pmetric.MetricTypeNone, pmetric.MetricTypeNone, pmetric.MetricTypeNone},
+			inputDtArr:           []pmetric.MetricType{pmetric.MetricTypeEmpty, pmetric.MetricTypeEmpty, pmetric.MetricTypeEmpty, pmetric.MetricTypeEmpty},
+			expectedDtArr:        []pmetric.MetricType{pmetric.MetricTypeEmpty, pmetric.MetricTypeEmpty, pmetric.MetricTypeEmpty, pmetric.MetricTypeEmpty},
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			p := &processor{
+			p := &metricRemoverProcessor{
 				logger:               logger,
 				removeNoneMetricType: testCase.removeNoneMetricType,
 			}
@@ -73,11 +73,11 @@ func TestMetricsRemoval(t *testing.T) {
 // Can't add this test to the test array above since the test compares metric_arr(nil)
 // and metric_arr{} which are technically the same thing but not equal.
 func TestMetricsRemovalAllNoneMetrics(t *testing.T) {
-	p := &processor{
+	p := &metricRemoverProcessor{
 		logger:               zap.NewNop(),
 		removeNoneMetricType: true,
 	}
-	dtArr := []pmetric.MetricType{pmetric.MetricTypeNone, pmetric.MetricTypeNone, pmetric.MetricTypeNone, pmetric.MetricTypeNone}
+	dtArr := []pmetric.MetricType{pmetric.MetricTypeEmpty, pmetric.MetricTypeEmpty, pmetric.MetricTypeEmpty, pmetric.MetricTypeEmpty}
 	metrics := generateMetricData(dtArr)
 	gotMetrics, err := p.ProcessMetrics(context.Background(), metrics)
 	require.NoError(t, err)
@@ -108,7 +108,7 @@ func generateMetricData(dtArr []pmetric.MetricType) pmetric.Metrics {
 		case pmetric.MetricTypeSummary:
 			metric.SetEmptySummary()
 			metric.Summary().DataPoints().AppendEmpty()
-		case pmetric.MetricTypeNone:
+		case pmetric.MetricTypeEmpty:
 			metric.SetName("none.metric")
 		}
 	}

@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/processor/processorhelper"
 )
 
@@ -16,20 +16,17 @@ const (
 )
 
 // NewFactory creates a factory for the tenant ID processor.
-func NewFactory() component.ProcessorFactory {
-	return component.NewProcessorFactory(
+func NewFactory() processor.Factory {
+	return processor.NewFactory(
 		typeStr,
 		createDefaultConfig,
-		component.WithTracesProcessor(createTraceProcessor, component.StabilityLevelStable),
-		component.WithMetricsProcessor(createMetricsProcessor, component.StabilityLevelStable),
+		processor.WithTraces(createTraceProcessor, component.StabilityLevelStable),
+		processor.WithMetrics(createMetricsProcessor, component.StabilityLevelStable),
 	)
 }
 
-func createDefaultConfig() config.Processor {
+func createDefaultConfig() component.Config {
 	return &Config{
-		ProcessorSettings: config.NewProcessorSettings(
-			config.NewComponentID(typeStr),
-		),
 		TenantIDHeaderName:   defaultHeaderName,
 		TenantIDAttributeKey: defaultAttributeKey,
 	}
@@ -37,12 +34,12 @@ func createDefaultConfig() config.Processor {
 
 func createTraceProcessor(
 	ctx context.Context,
-	params component.ProcessorCreateSettings,
-	cfg config.Processor,
+	params processor.CreateSettings,
+	cfg component.Config,
 	nextConsumer consumer.Traces,
-) (component.TracesProcessor, error) {
+) (processor.Traces, error) {
 	pCfg := cfg.(*Config)
-	processor := &processor{
+	tenantProcessor := &tenantIdProcessor{
 		tenantIDAttributeKey: pCfg.TenantIDAttributeKey,
 		tenantIDHeaderName:   pCfg.TenantIDHeaderName,
 		logger:               params.Logger,
@@ -52,17 +49,17 @@ func createTraceProcessor(
 		params,
 		cfg,
 		nextConsumer,
-		processor.ProcessTraces)
+		tenantProcessor.ProcessTraces)
 }
 
 func createMetricsProcessor(
 	ctx context.Context,
-	params component.ProcessorCreateSettings,
-	cfg config.Processor,
+	params processor.CreateSettings,
+	cfg component.Config,
 	nextConsumer consumer.Metrics,
-) (component.MetricsProcessor, error) {
+) (processor.Metrics, error) {
 	pCfg := cfg.(*Config)
-	processor := &processor{
+	tenantProcessor := &tenantIdProcessor{
 		tenantIDAttributeKey: pCfg.TenantIDAttributeKey,
 		tenantIDHeaderName:   pCfg.TenantIDHeaderName,
 		logger:               params.Logger,
@@ -72,6 +69,6 @@ func createMetricsProcessor(
 		params,
 		cfg,
 		nextConsumer,
-		processor.ProcessMetrics,
+		tenantProcessor.ProcessMetrics,
 	)
 }

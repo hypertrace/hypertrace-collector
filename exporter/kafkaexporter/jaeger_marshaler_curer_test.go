@@ -26,7 +26,7 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 
 	td := ptrace.NewTraces()
 	rs := td.ResourceSpans().AppendEmpty()
-	rs.Resource().Attributes().PutString("test-key", "test-val")
+	rs.Resource().Attributes().PutStr("test-key", "test-val")
 	ils := rs.ScopeSpans().AppendEmpty()
 
 	// Will add this span to the messages queue to export
@@ -36,7 +36,7 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 	span.SetEndTimestamp(pcommon.Timestamp(20))
 	span.SetTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})
 	span.SetSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8})
-	span.Attributes().PutString("tag1", "tag1-val")
+	span.Attributes().PutStr("tag1", "tag1-val")
 
 	// Will cure this span
 	span = ils.Spans().AppendEmpty()
@@ -45,8 +45,8 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 	span.SetEndTimestamp(pcommon.Timestamp(225))
 	span.SetTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})
 	span.SetSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8})
-	span.Attributes().PutString("tag10", "tag10-val")
-	span.Attributes().PutString("big-tag", createLongString(maxMessageBytes, "a"))
+	span.Attributes().PutStr("tag10", "tag10-val")
+	span.Attributes().PutStr("big-tag", createLongString(maxMessageBytes, "a"))
 
 	// Will be unable to cure this span. Depending on the test config, will drop it or not.
 	span = ils.Spans().AppendEmpty()
@@ -55,11 +55,11 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 	span.SetEndTimestamp(pcommon.Timestamp(225))
 	span.SetTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})
 	span.SetSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8})
-	span.Attributes().PutString("tag10", "tag10-val")
+	span.Attributes().PutStr("tag10", "tag10-val")
 	for i := 0; i < 64; i++ {
-		span.Attributes().PutString(fmt.Sprintf("big-tag-%d", i), createLongString(maxMessageBytes, "a"))
+		span.Attributes().PutStr(fmt.Sprintf("big-tag-%d", i), createLongString(maxMessageBytes, "a"))
 	}
-	span.Attributes().PutString("big-tag", createLongString(maxMessageBytes, "a"))
+	span.Attributes().PutStr("big-tag", createLongString(maxMessageBytes, "a"))
 
 	// Will cure this span by curing the span logs
 	span = ils.Spans().AppendEmpty()
@@ -68,8 +68,8 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 	span.SetEndTimestamp(pcommon.Timestamp(226))
 	span.SetTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})
 	span.SetSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8})
-	span.Attributes().PutString("tag10", "tag10-val")
-	span.Attributes().PutString("tag11", "tag11-val")
+	span.Attributes().PutStr("tag10", "tag10-val")
+	span.Attributes().PutStr("tag11", "tag11-val")
 	// Add events to span
 	for i := 0; i < 128; i++ {
 		se := span.Events().AppendEmpty()
@@ -84,8 +84,8 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 	span.SetEndTimestamp(pcommon.Timestamp(227))
 	span.SetTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})
 	span.SetSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8})
-	span.Attributes().PutString("tag10", "tag10-val")
-	span.Attributes().PutString("tag11", "tag11-val")
+	span.Attributes().PutStr("tag10", "tag10-val")
+	span.Attributes().PutStr("tag11", "tag11-val")
 	// Add events to span
 	for i := 0; i < 1024; i++ {
 		se := span.Events().AppendEmpty()
@@ -130,7 +130,7 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 	// cured attribute.
 	curedTd := ptrace.NewTraces()
 	curedRs := curedTd.ResourceSpans().AppendEmpty()
-	curedRs.Resource().Attributes().PutString("test-key", "test-val")
+	curedRs.Resource().Attributes().PutStr("test-key", "test-val")
 	curedIls := curedRs.ScopeSpans().AppendEmpty()
 
 	curedSpan := curedIls.Spans().AppendEmpty()
@@ -139,8 +139,8 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 	curedSpan.SetEndTimestamp(pcommon.Timestamp(225))
 	curedSpan.SetTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})
 	curedSpan.SetSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8})
-	curedSpan.Attributes().PutString("tag10", "tag10-val")
-	curedSpan.Attributes().PutString("big-tag", createLongString(maxAttributeValueSize, "a"))
+	curedSpan.Attributes().PutStr("tag10", "tag10-val")
+	curedSpan.Attributes().PutStr("big-tag", createLongString(maxAttributeValueSize, "a"))
 	curedSpan.Attributes().PutBool("big-tag"+truncationTagSuffix, true)
 
 	// batches[0].Spans[3] when cured will be the same as curedBatches[0].Spans[1] except for the truncated log events.
@@ -150,8 +150,8 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 	curedSpan.SetEndTimestamp(pcommon.Timestamp(226))
 	curedSpan.SetTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})
 	curedSpan.SetSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8})
-	curedSpan.Attributes().PutString("tag10", "tag10-val")
-	curedSpan.Attributes().PutString("tag11", "tag11-val")
+	curedSpan.Attributes().PutStr("tag10", "tag10-val")
+	curedSpan.Attributes().PutStr("tag11", "tag11-val")
 	curedSpan.Attributes().PutBool(spanLogsTruncationTagName, true)
 	// Add events to span
 	for i := 0; i < 16; i++ {
@@ -169,8 +169,8 @@ func TestJaegerMarshalerCurer(t *testing.T) {
 	curedSpan.SetEndTimestamp(pcommon.Timestamp(226))
 	curedSpan.SetTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})
 	curedSpan.SetSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8})
-	curedSpan.Attributes().PutString("tag10", "tag10-val")
-	curedSpan.Attributes().PutString("tag11", "tag11-val")
+	curedSpan.Attributes().PutStr("tag10", "tag10-val")
+	curedSpan.Attributes().PutStr("tag11", "tag11-val")
 	curedSpan.Attributes().PutBool(spanLogsTruncationTagName, true)
 	// Add events to span
 	for i := 0; i < 4; i++ {

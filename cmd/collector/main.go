@@ -16,15 +16,19 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/zipkinreceiver"
 	"go.opencensus.io/stats/view"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/loggingexporter"
 	"go.opentelemetry.io/collector/exporter/otlpexporter"
 	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
+	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/extension/ballastextension"
 	"go.opentelemetry.io/collector/extension/zpagesextension"
+	"go.opentelemetry.io/collector/otelcol"
+	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"go.opentelemetry.io/collector/processor/memorylimiterprocessor"
+	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
-	"go.opentelemetry.io/collector/service"
 	"go.uber.org/multierr"
 
 	"github.com/hypertrace/collector/processors/metricremover"
@@ -50,15 +54,15 @@ func main() {
 		Version:     BuildVersion,
 	}
 
-	if err := run(service.CollectorSettings{BuildInfo: info, Factories: factories}); err != nil {
+	if err := run(otelcol.CollectorSettings{BuildInfo: info, Factories: factories}); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func components() (component.Factories, error) {
+func components() (otelcol.Factories, error) {
 	factories, err := defaultComponents()
 	if err != nil {
-		return component.Factories{}, err
+		return otelcol.Factories{}, err
 	}
 
 	hcf := healthcheckextension.NewFactory()
@@ -109,8 +113,8 @@ func components() (component.Factories, error) {
 	return factories, nil
 }
 
-func run(settings service.CollectorSettings) error {
-	cmd := service.NewCommand(settings)
+func run(settings otelcol.CollectorSettings) error {
+	cmd := otelcol.NewCommand(settings)
 	if err := cmd.Execute(); err != nil {
 		return fmt.Errorf("collector server run finished with error: %w", err)
 	}
@@ -127,34 +131,34 @@ func registerMetricViews() error {
 
 // defaultComponents() is defined here since service/defaultcomponents pkg was
 // removed in the otel collector repo.
-func defaultComponents() (component.Factories, error) {
+func defaultComponents() (otelcol.Factories, error) {
 	var errs error
 
-	extensions, err := component.MakeExtensionFactoryMap(
+	extensions, err := extension.MakeFactoryMap(
 		zpagesextension.NewFactory(),
 		ballastextension.NewFactory(),
 	)
 	errs = multierr.Append(errs, err)
 
-	receivers, err := component.MakeReceiverFactoryMap(
+	receivers, err := receiver.MakeFactoryMap(
 		otlpreceiver.NewFactory(),
 	)
 	errs = multierr.Append(errs, err)
 
-	exporters, err := component.MakeExporterFactoryMap(
+	exporters, err := exporter.MakeFactoryMap(
 		loggingexporter.NewFactory(),
 		otlpexporter.NewFactory(),
 		otlphttpexporter.NewFactory(),
 	)
 	errs = multierr.Append(errs, err)
 
-	processors, err := component.MakeProcessorFactoryMap(
+	processors, err := processor.MakeFactoryMap(
 		batchprocessor.NewFactory(),
 		memorylimiterprocessor.NewFactory(),
 	)
 	errs = multierr.Append(errs, err)
 
-	factories := component.Factories{
+	factories := otelcol.Factories{
 		Extensions: extensions,
 		Receivers:  receivers,
 		Processors: processors,

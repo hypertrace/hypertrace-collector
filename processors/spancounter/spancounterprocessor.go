@@ -12,7 +12,7 @@ import (
 
 const defaultTenantIDAttributeKey string = "tenant-id"
 
-type processor struct {
+type spanCounterProcessor struct {
 	logger *zap.Logger
 	// The levels are tenant > service > span config. So this is a map of tenant ids
 	// to maps of service names to span configs
@@ -20,19 +20,17 @@ type processor struct {
 	tenantsMap           map[string]map[string][]SpanConfig
 }
 
-func newProcessor(logger *zap.Logger, cfg *Config) *processor {
+func newProcessor(logger *zap.Logger, cfg *Config) *spanCounterProcessor {
 	tm := createTenantsMap(cfg)
 	tenantIDAttributeKey := defaultTenantIDAttributeKey
 	if len(cfg.TenantIDAttributeKey) != 0 {
 		tenantIDAttributeKey = cfg.TenantIDAttributeKey
 	}
-	processor := &processor{
+	return &spanCounterProcessor{
 		logger:               logger,
 		tenantIDAttributeKey: tenantIDAttributeKey,
 		tenantsMap:           tm,
 	}
-
-	return processor
 }
 
 func createTenantsMap(cfg *Config) map[string]map[string][]SpanConfig {
@@ -55,7 +53,7 @@ func createTenantsMap(cfg *Config) map[string]map[string][]SpanConfig {
 	return m
 }
 
-func (p *processor) ProcessTraces(ctx context.Context, traces ptrace.Traces) (ptrace.Traces, error) {
+func (p *spanCounterProcessor) ProcessTraces(ctx context.Context, traces ptrace.Traces) (ptrace.Traces, error) {
 	if len(p.tenantsMap) == 0 {
 		return traces, nil
 	}

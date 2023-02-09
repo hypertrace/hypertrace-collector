@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/processor/processorhelper"
 )
 
@@ -14,29 +14,25 @@ const (
 )
 
 // NewFactory creates a factory for the metricresourceattrstoattrs processor.
-func NewFactory() component.ProcessorFactory {
-	return component.NewProcessorFactory(
+func NewFactory() processor.Factory {
+	return processor.NewFactory(
 		typeStr,
 		createDefaultConfig,
-		component.WithMetricsProcessor(createMetricsProcessor, component.StabilityLevelStable),
+		processor.WithMetrics(createMetricsProcessor, component.StabilityLevelStable),
 	)
 }
 
-func createDefaultConfig() config.Processor {
-	return &Config{
-		ProcessorSettings: config.NewProcessorSettings(
-			config.NewComponentID(typeStr),
-		),
-	}
+func createDefaultConfig() component.Config {
+	return &Config{}
 }
 
 func createMetricsProcessor(
 	ctx context.Context,
-	params component.ProcessorCreateSettings,
-	cfg config.Processor,
+	params processor.CreateSettings,
+	cfg component.Config,
 	nextConsumer consumer.Metrics,
-) (component.MetricsProcessor, error) {
-	processor := &processor{
+) (processor.Metrics, error) {
+	metricResourceAttrs := &metricResourceAttrsProcessor{
 		logger: params.Logger,
 	}
 	return processorhelper.NewMetricsProcessor(
@@ -44,5 +40,5 @@ func createMetricsProcessor(
 		params,
 		cfg,
 		nextConsumer,
-		processor.ProcessMetrics)
+		metricResourceAttrs.ProcessMetrics)
 }

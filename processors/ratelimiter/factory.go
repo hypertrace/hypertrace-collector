@@ -8,8 +8,8 @@ import (
 
 	pb "github.com/envoyproxy/go-control-plane/envoy/service/ratelimit/v3"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/processor"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -25,19 +25,16 @@ const (
 )
 
 // NewFactory creates a factory for the ratelimit processor.
-func NewFactory() component.ProcessorFactory {
-	return component.NewProcessorFactory(
+func NewFactory() processor.Factory {
+	return processor.NewFactory(
 		typeStr,
 		createDefaultConfig,
-		component.WithTracesProcessor(createTraceProcessor, component.StabilityLevelStable),
+		processor.WithTraces(createTraceProcessor, component.StabilityLevelStable),
 	)
 }
 
-func createDefaultConfig() config.Processor {
+func createDefaultConfig() component.Config {
 	return &Config{
-		ProcessorSettings: config.NewProcessorSettings(
-			config.NewComponentID(typeStr),
-		),
 		ServiceHost:        defaultServiceHost,
 		ServicePort:        defaultServicePort,
 		Domain:             defaultDomain,
@@ -48,17 +45,17 @@ func createDefaultConfig() config.Processor {
 
 func createTraceProcessor(
 	ctx context.Context,
-	params component.ProcessorCreateSettings,
-	cfg config.Processor,
+	params processor.CreateSettings,
+	cfg component.Config,
 	nextConsumer consumer.Traces,
-) (component.TracesProcessor, error) {
+) (processor.Traces, error) {
 	pCfg := cfg.(*Config)
 	rateLimitServiceClient, rateLimitServiceClientConn, cancelFunc, err := getRateLimitServiceClient(ctx, pCfg.ServiceHost, pCfg.ServicePort, pCfg.TimeoutMillis, params)
 	if err != nil {
 		params.Logger.Error("failed to connect to rate limit service ", zap.Error(err))
 		return nil, err
 	}
-	processor := &processor{
+	rateLimiter := &rateLimiterProcessor{
 		rateLimitServiceClient:     rateLimitServiceClient,
 		domain:                     pCfg.Domain,
 		logger:                     params.Logger,
@@ -67,11 +64,11 @@ func createTraceProcessor(
 		rateLimitServiceClientConn: rateLimitServiceClientConn,
 		cancelFunc:                 cancelFunc,
 	}
-	return processor, nil
+	return rateLimiter, nil
 }
 
 func getRateLimitServiceClient(ctx context.Context, serviceHost string, servicePort uint16,
-	timeoutMillis uint32, params component.ProcessorCreateSettings) (pb.RateLimitServiceClient, *grpc.ClientConn, context.CancelFunc, error) {
+	timeoutMillis uint32, params processor.CreateSettings) (pb.RateLimitServiceClient, *grpc.ClientConn, context.CancelFunc, error) {
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, time.Millisecond*time.Duration(timeoutMillis))
 	var err error
 	var conn *grpc.ClientConn
