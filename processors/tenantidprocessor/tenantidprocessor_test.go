@@ -181,7 +181,7 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 	}
 
 	tracesConsumer := tracesMultiConsumer{
-		tracesSink:        tracesSink,
+		tracesSink:      tracesSink,
 		tenantProcessor: tenantProcessor,
 	}
 
