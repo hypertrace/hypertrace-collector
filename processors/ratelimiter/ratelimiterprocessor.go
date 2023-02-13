@@ -78,7 +78,10 @@ func (p *rateLimiterProcessor) ConsumeTraces(ctx context.Context, traces ptrace.
 			},
 		},
 	}
+	ctx, _ = tag.New(ctx,
+		tag.Insert(tagTenantID, tenantId))
 	spanCount := uint32(traces.SpanCount())
+	stats.Record(ctx, rateLimitServiceCallsCount.M(int64(1)))
 	response, err := p.rateLimitServiceClient.ShouldRateLimit(
 		ctx,
 		&pb.RateLimitRequest{
@@ -92,8 +95,6 @@ func (p *rateLimiterProcessor) ConsumeTraces(ctx context.Context, traces ptrace.
 		return p.nextConsumer.ConsumeTraces(ctx, traces)
 	}
 	descriptorStatuses := response.Statuses
-	ctx, _ = tag.New(ctx,
-		tag.Insert(tagTenantID, tenantId))
 	if len(descriptorStatuses) == 2 {
 		if descriptorStatuses[1].GetCode() == pb.RateLimitResponse_OVER_LIMIT &&
 			descriptorStatuses[0].GetCode() == pb.RateLimitResponse_OVER_LIMIT {
