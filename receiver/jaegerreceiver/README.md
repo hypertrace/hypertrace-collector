@@ -1,6 +1,6 @@
 # Jaeger Receiver
 
-**IMPORTANT:** This component is copied from https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.70.0/receiver/jaegerreceiver and
+**IMPORTANT:** This component is copied from https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.71.0/receiver/jaegerreceiver and
 adapted to accept metadata from headers into the processing pipeline.
 
 | Status                   |                   |
