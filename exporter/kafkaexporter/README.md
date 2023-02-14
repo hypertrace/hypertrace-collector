@@ -1,6 +1,6 @@
 # Kafka Exporter
 
-**IMPORTANT:** This component is copied from https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.70.0/exporter/kafkaexporter and
+**IMPORTANT:** This component is copied from https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.71.0/exporter/kafkaexporter and
 adapted to accept compression settings and also do span curing on large spans.
 
 
