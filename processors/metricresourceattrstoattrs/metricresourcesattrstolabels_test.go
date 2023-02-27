@@ -246,7 +246,7 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 			},
 			dt: pmetric.MetricTypeGauge,
 		},
-		"service_instance_id does not attribute exists for gauge metric: service.instance.id resource attr added": {
+		"service_instance_id attribute does not exists for gauge metric: service.instance.id resource attr added": {
 			inputResourceAttributes: map[string]string{
 				conventions.AttributeServiceName:       "test-service",
 				conventions.AttributeServiceInstanceID: "test-instance-id",
@@ -254,6 +254,24 @@ func TestCopyingResourceAttributesToMetricAttributes(t *testing.T) {
 			},
 			inputMetricAttributes: map[string]string{
 				"foo10": "baz10",
+			},
+			expectedMetricAttributes: map[string]string{
+				"foo10":                                "baz10",
+				conventions.AttributeServiceName:       "test-service",
+				conventions.AttributeServiceInstanceID: "test-instance-id",
+				"port":                                 "8888",
+			},
+			dt: pmetric.MetricTypeGauge,
+		},
+		"service.name resource attribute exists. service_name attribute exists for gauge metric: service_name attr removed": {
+			inputResourceAttributes: map[string]string{
+				conventions.AttributeServiceName:       "test-service",
+				conventions.AttributeServiceInstanceID: "test-instance-id",
+				"port":                                 "8888",
+			},
+			inputMetricAttributes: map[string]string{
+				"foo10":              "baz10",
+				ocServiceNameAttrKey: "different-service-name",
 			},
 			expectedMetricAttributes: map[string]string{
 				"foo10":                                "baz10",
