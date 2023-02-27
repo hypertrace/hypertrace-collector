@@ -11,6 +11,7 @@ import (
 )
 
 const ocServiceInstanceIdAttrKey = "service_instance_id"
+const ocServiceNameAttrKey = "service_name"
 
 type metricResourceAttrsProcessor struct {
 	logger *zap.Logger
@@ -61,10 +62,13 @@ func (p *metricResourceAttrsProcessor) ProcessMetrics(ctx context.Context, metri
 				// Remove job and instance labels from the metric attributes if hasResourceServiceNameAttr OR hasResourceServiceInstanceIDAttr is true.
 				// This is because they will be added by the prometheus exporter based on serviceName and serviceInstanceId
 				// and if already present they will be duplicated and will cause an error while processing metrics.
+				// Also remove the OpenCensus "service_name" attribute if "service.name" resource attribute exists since when sanitized by prometheus the resource
+				// attribute will be a duplicate and will cause an error to be thrown. "service.name" becomes "service_name" when sanitized by prometheus.
 				if hasResourceServiceNameAttr || hasResourceServiceInstanceIDAttr {
 					applyToMetricAttributes(metric, func(am pcommon.Map) {
 						if hasResourceServiceNameAttr {
 							am.Remove(model.JobLabel)
+							am.Remove(ocServiceNameAttrKey)
 						}
 						if hasResourceServiceInstanceIDAttr {
 							am.Remove(model.InstanceLabel)
