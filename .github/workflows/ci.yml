@@ -62,4 +62,4 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: hypertrace/github-actions/trivy-image-scan@main
         with:
-          image: hypertrace/hypertrace-collector:latest
+          image: hypertrace/hypertrace-collector
