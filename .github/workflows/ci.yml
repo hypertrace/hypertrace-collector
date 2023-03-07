@@ -63,3 +63,4 @@ jobs:
         uses: hypertrace/github-actions/trivy-image-scan@main
         with:
           image: hypertrace/hypertrace-collector
+          tag: latest
