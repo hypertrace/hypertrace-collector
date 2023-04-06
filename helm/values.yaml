@@ -192,6 +192,20 @@ configMap:
       #                 - key: rpc.method
       #                   value: GetAttributeRules
       hypertrace_spancounter: {}
+      # opentelemetry-go http and grpc intsrumentation send duration and content length metrics
+      # which end up filling up the memory of the collector and prometheus servers. For example,
+      # a duration metric object is created for each request which in a high load scenario will
+      # produce loads of metric objects. This processor filters them out.
+      filter/metrics:
+        metrics:
+          exclude:
+            match_type: regexp
+            metric_names:
+              - http\.server\.duration.*
+              - rpc\.server\.duration.*
+              - http\.server\.request_content_length
+              - http\.server\.response_content_length
+              - http\.client\.duration.*
 
     exporters:
       kafka:
@@ -232,7 +246,7 @@ configMap:
           exporters: [kafka]
         metrics:
           receivers: [otlp]
-          processors: [hypertrace_metrics_remover, batch, hypertrace_metrics_resource_attrs_to_attrs]
+          processors: [filter/metrics, hypertrace_metrics_remover, batch, hypertrace_metrics_resource_attrs_to_attrs]
           exporters: [prometheus]
 
 hpa:
