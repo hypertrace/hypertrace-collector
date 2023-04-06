@@ -86,6 +86,8 @@ github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d/go.mod h1:rBZYJk5
 github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 h1:s6gZFSlWYmbqAuRjVTiNNhvNRfY2Wxp9nhfyel4rklc=
 github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137/go.mod h1:OMCwj8VM1Kc9e19TLln2VL61YJF0x1XFtfdL4JdbSyE=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
+github.com/antonmedv/expr v1.12.0 h1:hIOn7jjY86E09PXvn9zgdt2FbWVru0ud9Rm5DbNoYNw=
+github.com/antonmedv/expr v1.12.0/go.mod h1:FPC8iWArxls7axbVLsW+kpg1mz29A1b2M6jt+hZfDkU=
 github.com/apache/thrift v0.17.0 h1:cMd2aj52n+8VoAtvSvLn4kDC3aZ6IAkBuqWQ2IDu7wo=
 github.com/apache/thrift v0.17.0/go.mod h1:OLxhMRJxomX+1I/KUw03qoV3mMz16BwaKI+d4fPBx7Q=
 github.com/armon/circbuf v0.0.0-20150827004946-bbbad097214e/go.mod h1:3U/XgcO3hCbHZ8TKRvWD2dDTCfh9M9ya+I9JpbB7O8o=
@@ -567,6 +569,8 @@ github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextensi
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/common v0.71.0 h1:80WGBl1Z3DN2cwfgs527mXv9Xfo/Jk9gYut8RxWN3Uk=
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal v0.71.0 h1:v4I84/Ek2uu5zQyghQuLavc12c5zYsETdfWj0BiF99s=
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal v0.71.0/go.mod h1:NCc8DESPhS1Cny3bkSI+2DSRuKGfusJZ1DHMvYHEiJU=
+github.com/open-telemetry/opentelemetry-collector-contrib/internal/filter v0.71.0 h1:K8sYw/LPVuP4Pg935ORaXxaeyFP45l7puLyRAmn2GqM=
+github.com/open-telemetry/opentelemetry-collector-contrib/internal/filter v0.71.0/go.mod h1:RB8jNyyFNSz5suJEF2z21aAUvn9ADh/4iva1M2XTjuE=
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/sharedcomponent v0.71.0 h1:e4e9cVSW/Ieb2b76ZpmwmtSFVqKG0/MlPo6KzI2L/5Q=
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/sharedcomponent v0.71.0/go.mod h1:+2GAIhYO3hrG2HliE65l3xEKT5MUHnBu73I7mRRt/oE=
 github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl v0.71.0 h1:hA4QPwJZFN+Ms76+1NzFzDYP64ZVWWR+dOYHkt8FcYg=
@@ -585,6 +589,8 @@ github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometh
 github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheusremotewrite v0.71.0 h1:s97+uANDh/ZPKfkrVoBpElp+K1e5oX3aFkPOylybAys=
 github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/zipkin v0.71.0 h1:mrI6JQ7x66IL9elH5DkBETsZFgaMiE/iAU+AXK/6obU=
 github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/zipkin v0.71.0/go.mod h1:iHKKp2x9HaYsA/fIJ9D8qvheLyXz9cGJcQMbCKhD3z8=
+github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.71.0 h1:l2/2r1SVYkVTBbEVK2nccmJtZr+IiB0rX5AJQyxx3Rs=
+github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.71.0/go.mod h1:nVEeZB4m1OzF7WBiOE/5IR/8QAaljp4tnsw3/k+4Ap8=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/routingprocessor v0.71.0 h1:hWnGn6HYX5MVQkvL3Fjv/CpVY4my/rJK2Q8XcLKlDqU=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/routingprocessor v0.71.0/go.mod h1:ryWsgno+oM7lx5PgqbQ6KIrCzZszdLAKi34XLCT9jQ8=
 github.com/open-telemetry/opentelemetry-collector-contrib/receiver/opencensusreceiver v0.71.0 h1:tUZisEip83ZKuhAXqz7g3KiqKAor1UOZ+bwegCq2pJ4=

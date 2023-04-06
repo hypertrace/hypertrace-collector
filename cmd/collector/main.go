@@ -9,6 +9,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/routingprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/opencensusreceiver"
@@ -100,6 +101,9 @@ func components() (otelcol.Factories, error) {
 
 	sc := spancounter.NewFactory()
 	factories.Processors[sc.Type()] = sc
+
+	fp := filterprocessor.NewFactory()
+	factories.Processors[fp.Type()] = fp
 
 	fef := fileexporter.NewFactory()
 	factories.Exporters[fef.Type()] = fef
