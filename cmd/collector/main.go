@@ -117,8 +117,8 @@ func components() (otelcol.Factories, error) {
 	return factories, nil
 }
 
-func run(settings otelcol.CollectorSettings) error {
-	cmd := otelcol.NewCommand(settings)
+func run(settings2 otelcol.CollectorSettings) error {
+	cmd := otelcol.NewCommand(settings2)
 	if err := cmd.Execute(); err != nil {
 		return fmt.Errorf("collector server run finished with error: %w", err)
 	}
