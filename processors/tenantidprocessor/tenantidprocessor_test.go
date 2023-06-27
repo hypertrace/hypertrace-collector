@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"go.opentelemetry.io/otel/metric/noop"
 	"io"
 	"net"
 	"net/http"
@@ -33,7 +34,6 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -158,7 +158,7 @@ func createOTLPTracesReceiver(t *testing.T, nextConsumer consumer.Traces) (strin
 		TelemetrySettings: component.TelemetrySettings{
 			Logger:         zap.NewNop(),
 			TracerProvider: trace.NewNoopTracerProvider(),
-			MeterProvider:  metric.NewNoopMeterProvider(),
+			MeterProvider:  noop.NewMeterProvider(),
 		},
 	}
 	otlpTracesRec, err := factory.CreateTracesReceiver(context.Background(), params, cfg, nextConsumer)
@@ -197,7 +197,7 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 			TelemetrySettings: component.TelemetrySettings{
 				Logger:         zap.NewNop(),
 				TracerProvider: trace.NewNoopTracerProvider(),
-				MeterProvider:  metric.NewNoopMeterProvider(),
+				MeterProvider:  noop.NewMeterProvider(),
 			},
 		},
 		&otlpexporter.Config{
@@ -241,7 +241,7 @@ func createOTLPMetricsReceiver(t *testing.T, nextConsumer consumer.Metrics) (str
 		TelemetrySettings: component.TelemetrySettings{
 			Logger:         zap.NewNop(),
 			TracerProvider: trace.NewNoopTracerProvider(),
-			MeterProvider:  metric.NewNoopMeterProvider(),
+			MeterProvider:  noop.NewMeterProvider(),
 		},
 	}
 
@@ -349,7 +349,7 @@ func TestReceiveJaegerThriftHTTP_Traces(t *testing.T) {
 		TelemetrySettings: component.TelemetrySettings{
 			Logger:         zap.NewNop(),
 			TracerProvider: trace.NewNoopTracerProvider(),
-			MeterProvider:  metric.NewNoopMeterProvider(),
+			MeterProvider:  noop.NewMeterProvider(),
 		},
 	}
 	jrf := jaegerreceiver.NewFactory()
