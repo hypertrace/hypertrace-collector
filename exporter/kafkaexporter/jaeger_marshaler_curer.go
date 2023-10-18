@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	jaegerproto "github.com/jaegertracing/jaeger/model"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.uber.org/multierr"
@@ -67,7 +67,7 @@ func (j jaegerMarshalerCurer) Marshal(traces ptrace.Traces, topic string) ([]*sa
 				Value: sarama.ByteEncoder(bts),
 				Key:   sarama.ByteEncoder(key),
 			}
-			// Computed the same way as in https://github.com/Shopify/sarama/blob/a060ecaa8887587485754af088bd8a521f6d55e9/async_producer.go#L233
+			// Computed the same way as in https://github.com/IBM/sarama/blob/a060ecaa8887587485754af088bd8a521f6d55e9/async_producer.go#L233
 			messageSize := byteSize(msg, j.version)
 			if messageSize > j.maxMessageBytes {
 				// Log span info for a span that exceeds the max message size
@@ -289,8 +289,19 @@ func valueSize(kv jaegerproto.KeyValue) int {
 }
 
 // byteSize computes the kafka message size.
-// Computed the same way as in https://github.com/Shopify/sarama/blob/a060ecaa8887587485754af088bd8a521f6d55e9/async_producer.go#L233
+// Computed the same way as in https://github.com/IBM/sarama/blob/a060ecaa8887587485754af088bd8a521f6d55e9/async_producer.go#L233
 // For updates check the function in the sarama package whenever it changes.
+// The version condition is based on a call in the dispatch() method that only allows only for versions at least at V0_11_0_0.
+//
+// https://github.com/IBM/sarama/blob/98ec384372ecbb9d86036c6f210f840c45dbfa70/async_producer.go#L445
+//
+//	version := 1
+//	if p.conf.Version.IsAtLeast(V0_11_0_0) {
+//		version = 2
+//	} else if msg.Headers != nil {
+//		p.returnError(msg, ConfigurationError("Producing headers requires Kafka at least v0.11"))
+//		continue
+//	}
 func byteSize(m *sarama.ProducerMessage, v sarama.KafkaVersion) int {
 	var size int
 	if v.IsAtLeast(sarama.V0_11_0_0) {
