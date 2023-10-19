@@ -19,17 +19,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go-version }}
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - if: matrix.os == 'ubuntu-latest'
         name: golangci-lint
-        uses: golangci/golangci-lint-action@v3.3.1
+        uses: golangci/golangci-lint-action@v3.7.1
         with:
           # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-          version: v1.50.1
+          version: v1.54.2
           skip-pkg-cache: true
           only-new-issues: true
       - name: Run unit tests
@@ -47,9 +47,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Build and push image
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v5
         with:
           # this workflow runs on PRs, it only tests if the image can be built
           push: false
