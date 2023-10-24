@@ -26,18 +26,18 @@ import (
 	"github.com/jaegertracing/jaeger/thrift-gen/agent"
 	"github.com/jaegertracing/jaeger/thrift-gen/baggage"
 	"github.com/jaegertracing/jaeger/thrift-gen/jaeger"
-	"github.com/jaegertracing/jaeger/thrift-gen/sampling"
 	"github.com/jaegertracing/jaeger/thrift-gen/zipkincore"
-	jaegertranslator "github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/jaeger"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configgrpc"
 	"go.opentelemetry.io/collector/config/confighttp"
 	"go.opentelemetry.io/collector/consumer"
-	"go.opentelemetry.io/collector/obsreport"
 	"go.opentelemetry.io/collector/receiver"
+	"go.opentelemetry.io/collector/receiver/receiverhelper"
 	"go.uber.org/multierr"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+
+	jaegertranslator "github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/jaeger"
 )
 
 // configuration defines the behavior and the ports that
@@ -69,8 +69,8 @@ type jReceiver struct {
 
 	settings receiver.CreateSettings
 
-	grpcObsrecv *obsreport.Receiver
-	httpObsrecv *obsreport.Receiver
+	grpcObsrecv *receiverhelper.ObsReport
+	httpObsrecv *receiverhelper.ObsReport
 }
 
 const (
@@ -98,7 +98,7 @@ func newJaegerReceiver(
 	nextConsumer consumer.Traces,
 	set receiver.CreateSettings,
 ) (*jReceiver, error) {
-	grpcObsrecv, err := obsreport.NewReceiver(obsreport.ReceiverSettings{
+	grpcObsrecv, err := receiverhelper.NewObsReport(receiverhelper.ObsReportSettings{
 		ReceiverID:             id,
 		Transport:              grpcTransport,
 		ReceiverCreateSettings: set,
@@ -106,7 +106,7 @@ func newJaegerReceiver(
 	if err != nil {
 		return nil, err
 	}
-	httpObsrecv, err := obsreport.NewReceiver(obsreport.ReceiverSettings{
+	httpObsrecv, err := receiverhelper.NewObsReport(receiverhelper.ObsReportSettings{
 		ReceiverID:             id,
 		Transport:              collectorHTTPTransport,
 		ReceiverCreateSettings: set,
@@ -177,7 +177,7 @@ var errNotImplemented = fmt.Errorf("not implemented")
 
 type notImplementedConfigManager struct{}
 
-func (notImplementedConfigManager) GetSamplingStrategy(_ context.Context, _ string) (*sampling.SamplingStrategyResponse, error) {
+func (notImplementedConfigManager) GetSamplingStrategy(_ context.Context, _ string) (*api_v2.SamplingStrategyResponse, error) {
 	return nil, errNotImplemented
 }
 func (notImplementedConfigManager) GetBaggageRestrictions(_ context.Context, _ string) ([]*baggage.BaggageRestriction, error) {
@@ -186,7 +186,7 @@ func (notImplementedConfigManager) GetBaggageRestrictions(_ context.Context, _ s
 
 type agentHandler struct {
 	nextConsumer consumer.Traces
-	obsrecv      *obsreport.Receiver
+	obsrecv      *receiverhelper.ObsReport
 }
 
 // EmitZipkinBatch is unsupported agent's
@@ -228,7 +228,7 @@ func (jr *jReceiver) startAgent(host component.Host) error {
 	}
 
 	if jr.config.AgentBinaryThrift.Endpoint != "" {
-		obsrecv, err := obsreport.NewReceiver(obsreport.ReceiverSettings{
+		obsrecv, err := receiverhelper.NewObsReport(receiverhelper.ObsReportSettings{
 			ReceiverID:             jr.id,
 			Transport:              agentTransportBinary,
 			ReceiverCreateSettings: jr.settings,
@@ -249,7 +249,7 @@ func (jr *jReceiver) startAgent(host component.Host) error {
 	}
 
 	if jr.config.AgentCompactThrift.Endpoint != "" {
-		obsrecv, err := obsreport.NewReceiver(obsreport.ReceiverSettings{
+		obsrecv, err := receiverhelper.NewObsReport(receiverhelper.ObsReportSettings{
 			ReceiverID:             jr.id,
 			Transport:              agentTransportCompact,
 			ReceiverCreateSettings: jr.settings,

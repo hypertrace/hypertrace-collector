@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"go.opentelemetry.io/otel/metric/noop"
 	"io"
 	"net"
 	"net/http"
@@ -34,6 +33,8 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
+	"go.opentelemetry.io/collector/receiver/receivertest"
+	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -148,19 +149,13 @@ func getAvailableLocalAddress(t *testing.T) string {
 	return ln.Addr().String()
 }
 
-func createOTLPTracesReceiver(t *testing.T, nextConsumer consumer.Traces) (string, receiver.Metrics) {
+func createOTLPTracesReceiver(t *testing.T, nextConsumer consumer.Traces) (string, receiver.Traces) {
 	addr := getAvailableLocalAddress(t)
 	factory := otlpreceiver.NewFactory()
 	cfg := factory.CreateDefaultConfig().(*otlpreceiver.Config)
 	cfg.GRPC.NetAddr.Endpoint = addr
 	cfg.HTTP = nil
-	params := receiver.CreateSettings{
-		TelemetrySettings: component.TelemetrySettings{
-			Logger:         zap.NewNop(),
-			TracerProvider: trace.NewNoopTracerProvider(),
-			MeterProvider:  noop.NewMeterProvider(),
-		},
-	}
+	params := receivertest.NewNopCreateSettings()
 	otlpTracesRec, err := factory.CreateTracesReceiver(context.Background(), params, cfg, nextConsumer)
 	require.NoError(t, err)
 
@@ -237,13 +232,7 @@ func createOTLPMetricsReceiver(t *testing.T, nextConsumer consumer.Metrics) (str
 	cfg := factory.CreateDefaultConfig().(*otlpreceiver.Config)
 	cfg.GRPC.NetAddr.Endpoint = addr
 	cfg.HTTP = nil
-	params := receiver.CreateSettings{
-		TelemetrySettings: component.TelemetrySettings{
-			Logger:         zap.NewNop(),
-			TracerProvider: trace.NewNoopTracerProvider(),
-			MeterProvider:  noop.NewMeterProvider(),
-		},
-	}
+	params := receivertest.NewNopCreateSettings()
 
 	otlpMetricsRec, err := factory.CreateMetricsReceiver(
 		context.Background(),

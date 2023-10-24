@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/gogo/protobuf/jsonpb"
 	jaegerproto "github.com/jaegertracing/jaeger/model"
 	"github.com/stretchr/testify/assert"
