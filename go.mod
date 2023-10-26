@@ -69,7 +69,6 @@ require (
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.0.0 // indirect
 	github.com/IBM/sarama v1.41.2 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
-	github.com/Shopify/sarama v1.38.1 // indirect
 	github.com/alecthomas/participle/v2 v2.1.0 // indirect
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 // indirect
 	github.com/antonmedv/expr v1.15.3 // indirect
