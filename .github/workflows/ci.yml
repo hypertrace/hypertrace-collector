@@ -10,6 +10,8 @@ on:
     paths-ignore:
       - "**/*.md"
       - "LICENSE"
+  schedule:
+    - cron: '37 21 * * 5'
 jobs:
   test-and-build:
     strategy:
@@ -64,3 +66,4 @@ jobs:
         with:
           image: hypertrace/hypertrace-collector
           tag: latest
+          output-mode: github
