@@ -17,6 +17,6 @@ func newPromLogger(zapLog *zap.Logger) *promLogger {
 	}
 }
 
-func (l *promLogger) Println(v ...interface{}) {
+func (l *promLogger) Println(v ...any) {
 	// Do nothing. This is to avoid noisy error logs that fill up our logs.
 }
