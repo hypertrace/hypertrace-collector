@@ -44,18 +44,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	factories, err := components()
-	if err != nil {
-		log.Fatalf("failed to build default components: %v", err)
-	}
-
 	info := component.BuildInfo{
 		Command:     "collector",
 		Description: "Hypertrace Collector",
 		Version:     BuildVersion,
 	}
 
-	if err := run(otelcol.CollectorSettings{BuildInfo: info, Factories: factories}); err != nil {
+	if err := run(otelcol.CollectorSettings{BuildInfo: info, Factories: components}); err != nil {
 		log.Fatal(err)
 	}
 }
