@@ -35,7 +35,7 @@ import (
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 	"go.opentelemetry.io/collector/receiver/receivertest"
 	"go.opentelemetry.io/otel/metric/noop"
-	"go.opentelemetry.io/otel/trace"
+	tracenoop "go.opentelemetry.io/otel/trace/noop"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -191,12 +191,12 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 		exporter.CreateSettings{
 			TelemetrySettings: component.TelemetrySettings{
 				Logger:         zap.NewNop(),
-				TracerProvider: trace.NewNoopTracerProvider(),
+				TracerProvider: tracenoop.NewTracerProvider(),
 				MeterProvider:  noop.NewMeterProvider(),
 			},
 		},
 		&otlpexporter.Config{
-			GRPCClientSettings: configgrpc.GRPCClientSettings{
+			ClientConfig: configgrpc.ClientConfig{
 				Headers:      map[string]configopaque.String{tenantProcessor.tenantIDHeaderName: configopaque.String(testTenantID)},
 				Endpoint:     addr,
 				WaitForReady: true,
@@ -284,12 +284,13 @@ func TestReceiveOTLPGRPC_Metrics(t *testing.T) {
 		exporter.CreateSettings{
 			TelemetrySettings: component.TelemetrySettings{
 				Logger:         zap.NewNop(),
-				TracerProvider: trace.NewNoopTracerProvider(),
+				TracerProvider: tracenoop.NewTracerProvider(),
+				MeterProvider:  noop.NewMeterProvider(),
 			},
 		},
 		&otlpexporter.Config{
-			GRPCClientSettings: configgrpc.GRPCClientSettings{
-				Headers:      map[string]configopaque.String{tenantProcessor.tenantIDHeaderName: configopaque.String(testTenantID)},
+			ClientConfig: configgrpc.ClientConfig{
+				Headers:      map[string]configopaque.String{tenantProcessor.tenantIDHeaderName: testTenantID},
 				Endpoint:     addr,
 				WaitForReady: true,
 				TLSSetting: configtls.TLSClientSetting{
@@ -329,7 +330,7 @@ func TestReceiveJaegerThriftHTTP_Traces(t *testing.T) {
 	addr := getAvailableLocalAddress(t)
 	cfg := &jaegerreceiver.Config{
 		Protocols: jaegerreceiver.Protocols{
-			ThriftHTTP: &confighttp.HTTPServerSettings{
+			ThriftHTTP: &confighttp.ServerConfig{
 				Endpoint: addr,
 			},
 		},
@@ -337,7 +338,7 @@ func TestReceiveJaegerThriftHTTP_Traces(t *testing.T) {
 	params := receiver.CreateSettings{
 		TelemetrySettings: component.TelemetrySettings{
 			Logger:         zap.NewNop(),
-			TracerProvider: trace.NewNoopTracerProvider(),
+			TracerProvider: tracenoop.NewTracerProvider(),
 			MeterProvider:  noop.NewMeterProvider(),
 		},
 	}
