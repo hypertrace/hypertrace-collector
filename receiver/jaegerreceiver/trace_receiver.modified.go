@@ -315,7 +315,7 @@ func (jr *jReceiver) buildProcessor(address string, cfg ServerConfigUDP, factory
 
 func (jr *jReceiver) decodeThriftHTTPBody(r *http.Request) (*jaeger.Batch, *httpError) {
 	bodyBytes, err := io.ReadAll(r.Body)
-	r.Body.Close()
+	defer r.Body.Close()
 	if err != nil {
 		return nil, &httpError{
 			fmt.Sprintf("Unable to process request body: %v", err),
