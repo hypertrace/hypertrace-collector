@@ -12,6 +12,7 @@ on:
       - "LICENSE"
   schedule:
     - cron: '37 21 * * 5'
+
 jobs:
   test-and-build:
     strategy:
