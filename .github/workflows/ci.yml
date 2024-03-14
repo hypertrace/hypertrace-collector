@@ -52,7 +52,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Build and push image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v5
         with:
           # this workflow runs on PRs, it only tests if the image can be built
           push: false
