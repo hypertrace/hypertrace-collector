@@ -58,6 +58,7 @@ func TestCreateDefaultConfig(t *testing.T) {
 	assert.NoError(t, componenttest.CheckConfigStruct(cfg))
 	assert.Equal(t, []string{defaultBroker}, cfg.Brokers)
 	assert.Equal(t, "", cfg.Topic)
+	assert.Equal(t, "sarama", cfg.ClientID)
 }
 
 func TestCreateMetricExporter(t *testing.T) {
@@ -130,6 +131,7 @@ func TestCreateMetricExporter(t *testing.T) {
 			}
 			assert.NoError(t, err, "Must not error")
 			assert.NotNil(t, exporter, "Must return valid exporter when no error is returned")
+			assert.NoError(t, exporter.Shutdown(context.Background()))
 		})
 	}
 }
@@ -204,6 +206,7 @@ func TestCreateLogExporter(t *testing.T) {
 			}
 			assert.NoError(t, err, "Must not error")
 			assert.NotNil(t, exporter, "Must return valid exporter when no error is returned")
+			assert.NoError(t, exporter.Shutdown(context.Background()))
 		})
 	}
 }
@@ -278,6 +281,7 @@ func TestCreateTraceExporter(t *testing.T) {
 			}
 			assert.NoError(t, err, "Must not error")
 			assert.NotNil(t, exporter, "Must return valid exporter when no error is returned")
+			assert.NoError(t, exporter.Shutdown(context.Background()))
 		})
 	}
 }

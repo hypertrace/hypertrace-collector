@@ -12,5 +12,10 @@ status:
   - observiq
   - redhat
   - sumo
+  - liatrio
   codeowners:
     active: [Aneurysm9]
+
+tests:
+  config:
+    endpoint: "127.0.0.1:1234"
