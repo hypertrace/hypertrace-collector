@@ -20,7 +20,10 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-const testTenantID = "jdoe"
+const (
+	testTenantID       string = "jdoe"
+	basicAuthPrefixStr string = "Basic: "
+)
 
 type MockRateLimitServiceClient struct {
 	mock.Mock
@@ -75,7 +78,7 @@ func TestRateLimitingWhenEmptyTenantHeader(t *testing.T) {
 	mockRateLimitServiceClientObj.On("ShouldRateLimit", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("rate limit called failed"))
 	mockProcessorConsumerObj.On("ConsumeTraces", mock.Anything, mock.Anything).Return(nil)
 	tokenString := base64.StdEncoding.EncodeToString([]byte("testuser:passw123"))
-	span := testutil.NewTestSpan("http.request.header.authorization", "Basic: "+tokenString)
+	span := testutil.NewTestSpan("http.request.header.authorization", fmt.Sprintf("%s%s", basicAuthPrefixStr, tokenString))
 	traces := testutil.NewTestTraces(span)
 	md := metadata.New(map[string]string{})
 	ctx := metadata.NewIncomingContext(
@@ -103,7 +106,7 @@ func TestWhenRateLimitServiceCallFailed(t *testing.T) {
 	mockRateLimitServiceClientObj.On("ShouldRateLimit", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("rate limit called failed"))
 	mockProcessorConsumerObj.On("ConsumeTraces", mock.Anything, mock.Anything).Return(nil)
 	tokenString := base64.StdEncoding.EncodeToString([]byte("testuser:passw123"))
-	span := testutil.NewTestSpan("http.request.header.authorization", "Basic: "+tokenString)
+	span := testutil.NewTestSpan("http.request.header.authorization", fmt.Sprintf("%s%s", basicAuthPrefixStr, tokenString))
 	traces := testutil.NewTestTraces(span)
 	md := metadata.New(map[string]string{p.tenantIDHeaderName: testTenantID})
 	ctx := metadata.NewIncomingContext(
@@ -143,7 +146,7 @@ func TestRateLimitingWhenClusterLimitNotReachedButTenantLimitReached(t *testing.
 	mockRateLimitServiceClientObj.On("ShouldRateLimit", mock.Anything, mock.Anything).Return(rateLimitResponse, nil)
 	mockProcessorConsumerObj.On("ConsumeTraces", mock.Anything, mock.Anything).Return(nil)
 	tokenString := base64.StdEncoding.EncodeToString([]byte("testuser:passw123"))
-	span := testutil.NewTestSpan("http.request.header.authorization", "Basic: "+tokenString)
+	span := testutil.NewTestSpan("http.request.header.authorization", fmt.Sprintf("%s%s", basicAuthPrefixStr, tokenString))
 	traces := testutil.NewTestTraces(span)
 	md := metadata.New(map[string]string{p.tenantIDHeaderName: testTenantID})
 	ctx := metadata.NewIncomingContext(
@@ -182,7 +185,7 @@ func TestRateLimitingWhenClusterAndTenantLimitReached(t *testing.T) {
 	mockRateLimitServiceClientObj.On("ShouldRateLimit", mock.Anything, mock.Anything).Return(rateLimitResponse, nil)
 	mockProcessorConsumerObj.On("ConsumeTraces", mock.Anything, mock.Anything).Return(nil)
 	tokenString := base64.StdEncoding.EncodeToString([]byte("testuser:passw123"))
-	span := testutil.NewTestSpan("http.request.header.authorization", "Basic: "+tokenString)
+	span := testutil.NewTestSpan("http.request.header.authorization", fmt.Sprintf("%s%s", basicAuthPrefixStr, tokenString))
 	traces := testutil.NewTestTraces(span)
 	md := metadata.New(map[string]string{p.tenantIDHeaderName: testTenantID})
 	ctx := metadata.NewIncomingContext(
