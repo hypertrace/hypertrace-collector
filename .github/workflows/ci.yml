@@ -12,26 +12,27 @@ on:
       - "LICENSE"
   schedule:
     - cron: '37 21 * * 5'
+
 jobs:
   test-and-build:
     strategy:
       matrix:
-        go-version: ["1.20"]
+        go-version: ["1.21"]
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
       - name: Checkout code
         uses: actions/checkout@v4
       - if: matrix.os == 'ubuntu-latest'
         name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v4
         with:
           # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-          version: v1.54.2
+          version: v1.56.2
           skip-pkg-cache: true
           only-new-issues: true
       - name: Run unit tests
