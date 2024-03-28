@@ -213,6 +213,7 @@ configMap:
               - ^otlp.*
               - ^mirror_stats_.*
               - traceableagent_heartbeat_bucket
+              - otelcol_processor_batch_batch_send_size_bucket
     exporters:
       kafka:
         protocol_version: 2.0.0
