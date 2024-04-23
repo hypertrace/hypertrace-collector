@@ -1,0 +1,40 @@
+{{- if and ( .Capabilities.APIVersions.Has "monitoring.coreos.com/v1" ) ( .Values.metrics.enabled ) ( .Values.metrics.podmonitor.enabled ) }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ .Values.metrics.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    monitoring: shared
+spec:
+  jobLabel: hypertrace-collector-pods
+  selector:
+    matchLabels:
+      {{- toYaml .Values.metrics.deploymentSelectorMatchLabels | nindent 6 }}
+  podMetricsEndpoints:
+  - interval: {{ .Values.metrics.podmonitor.interval }}
+    port: {{ .Values.metrics.podmonitor.port }}
+    scheme: {{ .Values.metrics.podmonitor.scheme }}
+    {{- if .Values.metrics.podmonitor.tlsConfig }}
+    tlsConfig:
+      {{- .Values.metrics.podmonitor.tlsConfig | nindent 6 }}
+    {{- end }}
+    relabelings:
+    - regex: __meta_kubernetes_pod_label_(.+)
+      replacement: $1
+      action: labelmap
+    - sourceLabels: [ __meta_kubernetes_namespace ]
+      regex: (.*)
+      targetLabel: namespace
+      replacement: $1
+      action: replace
+    - sourceLabels: [ __meta_kubernetes_pod_name ]
+      regex: (.*)
+      targetLabel: pod
+      replacement: $1
+      action: replace
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+{{- end }}

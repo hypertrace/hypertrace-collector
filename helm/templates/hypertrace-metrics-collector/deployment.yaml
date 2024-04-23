@@ -1,0 +1,101 @@
+{{- if .Values.metrics.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.metrics.name }}
+  labels:
+    release: {{ .Release.Name }}
+  {{- with .Values.metrics.deploymentLabels }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  minReadySeconds: {{ .Values.metrics.minReadySeconds }}
+  progressDeadlineSeconds: {{ .Values.metrics.progressDeadlineSeconds }}
+  replicas: {{ .Values.metrics.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: {{ .Values.metrics.maxUnavailable }}
+  selector:
+    matchLabels:
+      {{- toYaml .Values.metrics.deploymentSelectorMatchLabels | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/hypertrace-collector/config-map.yaml") . | sha256sum }}
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8888"
+        prometheus.io/scrape: "true"
+      {{- with .Values.metrics.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        release: {{ .Release.Name }}
+      {{- with .Values.metrics.podLabels }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.metrics.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.metrics.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.metrics.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- if .Values.metrics.hostNetwork }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+    {{- end }}
+      containers:
+        - name: {{ .Values.metrics.name }}
+          image: "{{ .Values.image.repository }}:{{ .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - "/usr/local/bin/hypertrace/collector"
+            - "--config=/conf/hypertrace-collector-config.yaml"
+            - "--set=service.telemetry.metrics.address={{ .Values.metricsAddress }}"
+          ports:
+          {{ range $port := .Values.metrics.containerPorts }}
+            - name: {{ $port.name }}
+              containerPort: {{ $port.containerPort }}
+          {{ end }}
+        {{- with .Values.metrics.env }}
+          env:
+            {{- toYaml . | nindent 12}}
+        {{- end }}
+        {{- with .Values.metrics.volumeMounts }}
+          volumeMounts:
+          {{- toYaml . | nindent 12}}
+        {{- end }}
+          livenessProbe:
+            initialDelaySeconds: {{ int .Values.metrics.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ int .Values.metrics.livenessProbe.periodSeconds }}
+            httpGet:
+              path: /
+              port: 13133
+          readinessProbe:
+            initialDelaySeconds: {{ int .Values.metrics.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ int .Values.metrics.readinessProbe.periodSeconds }}
+            httpGet:
+              path: /
+              port: 13133
+          resources:
+            {{- toYaml .Values.metrics.resources | nindent 12 }}
+        {{- with .Values.metrics.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+        {{- end }}
+{{- end }}
