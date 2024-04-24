@@ -4,7 +4,7 @@ kind: Service
 metadata:
   name: {{ .Values.metrics.name }}
   labels:
-    app: hypertrace-collector
+    app: hypertrace-metrics-collector
     release: {{ .Release.Name }}
 spec:
   type: {{ .Values.metrics.service.type }}

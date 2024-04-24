@@ -8,7 +8,7 @@ metadata:
   labels:
     monitoring: shared
 spec:
-  jobLabel: hypertrace-collector-pods
+  jobLabel: hypertrace-metrics-collector-pods
   selector:
     matchLabels:
       {{- toYaml .Values.metrics.deploymentSelectorMatchLabels | nindent 6 }}
