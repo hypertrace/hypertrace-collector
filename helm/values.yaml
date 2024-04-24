@@ -15,6 +15,7 @@ maxUnavailable: 0
 image:
   repository: hypertrace/hypertrace-collector
   pullPolicy: IfNotPresent
+  tag: ""
 
 env:
   - name: GOGC
