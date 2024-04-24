@@ -143,6 +143,131 @@ volumes:
 
 nodeSelector: {}
 
+hpa:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+podmonitor:
+  enabled: false
+  interval: 30s
+  port: "http-prom-exp"
+  scheme: "http"
+
+metrics:
+  enabled: false
+  name: hypertrace-metrics-collector
+  replicaCount: 1
+
+  minReadySeconds: 5
+  progressDeadlineSeconds: 120
+  maxUnavailable: 0
+
+  env:
+    - name: GOGC
+      value: "80"
+
+  containerPorts:
+    - name: grpc-otlp
+      containerPort: 4317
+    #   Port for exposing internal metrics to prometheus. Should match with {{ .Values.metricsAddress }}
+    - name: http-prom-int
+      containerPort: 8888
+    #   Port for exposing prometheus exporter metrics. Should match with {{ .Values.configmap.data.exporters.prometheus.endpoint }}
+    - name: http-prom-exp
+      containerPort: 8889
+
+  service:
+    type: ClusterIP
+    ports:
+      - name: grpc-otlp
+        port: 4317
+        targetPort: 4317
+        protocol: TCP
+
+  livenessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+  resources:
+    limits:
+      cpu: 1
+      memory: 2Gi
+    requests:
+      cpu: 200m
+      memory: 400Mi
+
+  deploymentLabels:
+    app: hypertrace-metrics-collector
+
+  podLabels:
+    app: hypertrace-metrics-collector
+
+  podAnnotations: {}
+
+  podSecurityContext:
+    runAsUser: 65532
+    fsGroup: 65532
+
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+      add:
+        - NET_BIND_SERVICE
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+
+  affinity: {}
+
+  hostNetwork: false
+
+  # The Deployment Selector match labels are different from the pod labels. Note that they should be a subset of the pod
+  # labels. You append new labels to them but cannot remove labels. If you remove or modify the labels you will need to
+  # delete the existing deployment bearing the same name and then redeploy. This is the reason why they are separated from
+  # the pod labels. You can add and remove pod labels without having an effect on the deployment.
+  # Also, please use "apiVersion: apps/v1" instead of the deprecated "apiVersion: extensions/v1beta1" for the deployment
+  # apiVersion in the yaml file.
+  deploymentSelectorMatchLabels:
+    app: hypertrace-metrics-collector
+
+  serviceSelectorLabels:
+    app: hypertrace-metrics-collector
+
+  # Volumes and Volume mounts
+  volumeMounts:
+    - name: hypertrace-collector-config-vol
+      mountPath: /conf
+
+  volumes:
+    - configMap:
+        name: hypertrace-collector-config
+        items:
+          - key: hypertrace-collector-config
+            path: hypertrace-collector-config.yaml
+      name: hypertrace-collector-config-vol
+
+  nodeSelector: {}
+
+  hpa:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+
+  podmonitor:
+    enabled: true
+    interval: 30s
+    port: "http-prom-exp"
+    scheme: "http"
+
 ###########
 # Config Maps
 ###########
@@ -257,12 +382,6 @@ configMap:
           processors: [filter/metrics, hypertrace_metrics_remover, batch, hypertrace_metrics_resource_attrs_to_attrs]
           exporters: [prometheus]
 
-hpa:
-  enabled: false
-  minReplicas: 2
-  maxReplicas: 5
-  targetCPUUtilizationPercentage: 80
-
 kafka-topic-creator:
   enabled: true
   jobName: jaeger-spans-kafka-topic-creator
@@ -280,9 +399,3 @@ kafka-topic-creator:
   imagePullSecrets: []
   podAnnotations:
     sidecar.istio.io/inject: "false"
-
-podmonitor:
-  enabled: false
-  interval: 15s
-  port: "http-prom-exp"
-  scheme: "http"

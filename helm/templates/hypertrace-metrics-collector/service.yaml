@@ -1,0 +1,20 @@
+{{- if .Values.metrics.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.metrics.name }}
+  labels:
+    app: hypertrace-metrics-collector
+    release: {{ .Release.Name }}
+spec:
+  type: {{ .Values.metrics.service.type }}
+  ports:
+  {{ range $port := .Values.metrics.service.ports }}
+    - name: {{ $port.name }}
+      port: {{ $port.port }}
+      targetPort: {{ $port.targetPort }}
+      protocol: {{ $port.protocol }}
+  {{ end }}
+  selector:
+    {{- toYaml .Values.metrics.serviceSelectorLabels | nindent 4 }}
+{{- end }}
