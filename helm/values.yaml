@@ -152,6 +152,7 @@ hpa:
 podmonitor:
   enabled: false
   interval: 30s
+  scrapeTimeout: 25s
   port: "http-prom-exp"
   scheme: "http"
 
@@ -265,6 +266,7 @@ metrics:
   podmonitor:
     enabled: true
     interval: 30s
+    scrapeTimeout: 25s
     port: "http-prom-exp"
     scheme: "http"
 
