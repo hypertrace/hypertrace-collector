@@ -16,6 +16,7 @@ spec:
   - interval: {{ .Values.podmonitor.interval }}
     port: {{ .Values.podmonitor.port }}
     scheme: {{ .Values.podmonitor.scheme }}
+    scrapeTimeout: {{ .Values.podmonitor.scrapeTimeout }}
     {{- if .Values.podmonitor.tlsConfig }}
     tlsConfig:
       {{- .Values.podmonitor.tlsConfig | nindent 6 }}
