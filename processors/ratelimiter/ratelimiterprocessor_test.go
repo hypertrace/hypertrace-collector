@@ -119,7 +119,7 @@ func TestWhenRateLimitServiceCallFailed(t *testing.T) {
 	mockProcessorConsumerObj.AssertNumberOfCalls(t, "ConsumeTraces", 1)
 }
 
-func TestRateLimitingWhenClusterLimitNotReachedButTenantLimitReached(t *testing.T) {
+func TestRateLimitingWhenTenantLimitReached(t *testing.T) {
 	mockRateLimitServiceClientObj := new(MockRateLimitServiceClient)
 	mockProcessorConsumerObj := new(MockProcessorConsumer)
 	p := &rateLimiterProcessor{
@@ -134,49 +134,6 @@ func TestRateLimitingWhenClusterLimitNotReachedButTenantLimitReached(t *testing.
 	rateLimitResponse := &pb.RateLimitResponse{
 		OverallCode: pb.RateLimitResponse_OK,
 		Statuses: []*pb.RateLimitResponse_DescriptorStatus{
-			{
-				Code: pb.RateLimitResponse_OVER_LIMIT,
-			},
-			{
-				Code:           pb.RateLimitResponse_OK,
-				LimitRemaining: 5,
-			},
-		},
-	}
-	mockRateLimitServiceClientObj.On("ShouldRateLimit", mock.Anything, mock.Anything).Return(rateLimitResponse, nil)
-	mockProcessorConsumerObj.On("ConsumeTraces", mock.Anything, mock.Anything).Return(nil)
-	tokenString := base64.StdEncoding.EncodeToString([]byte("testuser:passw123"))
-	span := testutil.NewTestSpan("http.request.header.authorization", fmt.Sprintf("%s%s", basicAuthPrefixStr, tokenString))
-	traces := testutil.NewTestTraces(span)
-	md := metadata.New(map[string]string{p.tenantIDHeaderName: testTenantID})
-	ctx := metadata.NewIncomingContext(
-		context.Background(),
-		md,
-	)
-	err := p.ConsumeTraces(ctx, traces)
-	require.NoError(t, err)
-	mockRateLimitServiceClientObj.AssertNumberOfCalls(t, "ShouldRateLimit", 1)
-	mockProcessorConsumerObj.AssertNumberOfCalls(t, "ConsumeTraces", 1)
-}
-
-func TestRateLimitingWhenClusterAndTenantLimitReached(t *testing.T) {
-	mockRateLimitServiceClientObj := new(MockRateLimitServiceClient)
-	mockProcessorConsumerObj := new(MockProcessorConsumer)
-	p := &rateLimiterProcessor{
-		logger:                     zap.NewNop(),
-		tenantIDHeaderName:         defaultHeaderName,
-		domain:                     defaultDomain,
-		rateLimitServiceClient:     mockRateLimitServiceClientObj,
-		rateLimitServiceClientConn: &grpc.ClientConn{},
-		cancelFunc:                 t.SkipNow,
-		nextConsumer:               mockProcessorConsumerObj,
-	}
-	rateLimitResponse := &pb.RateLimitResponse{
-		OverallCode: pb.RateLimitResponse_OK,
-		Statuses: []*pb.RateLimitResponse_DescriptorStatus{
-			{
-				Code: pb.RateLimitResponse_OVER_LIMIT,
-			},
 			{
 				Code: pb.RateLimitResponse_OVER_LIMIT,
 			},

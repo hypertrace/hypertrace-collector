@@ -49,7 +49,6 @@ type rateLimiterProcessor struct {
 
 const (
 	TenantSpans  = "tenant_spans"
-	ClusterSpans = "cluster_spans"
 )
 
 // ConsumeTraces consume traces and drops the requests if it is rate limited,
@@ -61,20 +60,12 @@ func (p *rateLimiterProcessor) ConsumeTraces(ctx context.Context, traces ptrace.
 		p.logger.Error("unable to extract tenantId ", zap.Error(err))
 		return p.nextConsumer.ConsumeTraces(ctx, traces)
 	}
-	// two descriptors, one for tenant and other one for domain(cluster)
-	desc := make([]*pb_struct.RateLimitDescriptor, 2)
+	desc := make([]*pb_struct.RateLimitDescriptor, 1)
 	desc[0] = &pb_struct.RateLimitDescriptor{
 		Entries: []*pb_struct.RateLimitDescriptor_Entry{
 			{
 				Key:   TenantSpans,
 				Value: tenantId,
-			},
-		},
-	}
-	desc[1] = &pb_struct.RateLimitDescriptor{
-		Entries: []*pb_struct.RateLimitDescriptor_Entry{
-			{
-				Key: ClusterSpans,
 			},
 		},
 	}
@@ -95,15 +86,13 @@ func (p *rateLimiterProcessor) ConsumeTraces(ctx context.Context, traces ptrace.
 		return p.nextConsumer.ConsumeTraces(ctx, traces)
 	}
 	descriptorStatuses := response.Statuses
-	if len(descriptorStatuses) == 2 {
-		if descriptorStatuses[1].GetCode() == pb.RateLimitResponse_OVER_LIMIT &&
-			descriptorStatuses[0].GetCode() == pb.RateLimitResponse_OVER_LIMIT {
-			// If cluster rate limit exceeded and tenant rate limit exceeded drop request.
+	if len(descriptorStatuses) == 1 {
+		if descriptorStatuses[0].GetCode() == pb.RateLimitResponse_OVER_LIMIT {
+			// If tenant rate limit exceeded drop request.
 			p.logger.Warn(fmt.Sprintf("dropping spans for tenant %s as rate limit exceeded, of spancount: %d", tenantId, spanCount))
 			stats.Record(ctx, droppedSpanCount.M(int64(spanCount)))
 			return nil
 		}
-		// Ignore dropping of spans when cluster limit not reached.
 	} else {
 		p.logger.Error(fmt.Sprintf("unexpected descriptor status length from rate limit response: %s ", descriptorStatuses))
 	}
