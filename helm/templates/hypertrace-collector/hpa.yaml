@@ -9,6 +9,23 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
+  {{- if .Values.hpa.behavior.enabled }}
+  behavior:
+    scaleUp:
+      policies:
+        - type: {{ .Values.hpa.behavior.scaleUp.policy.type }}
+          value: {{ .Values.hpa.behavior.scaleUp.policy.value }}
+          periodSeconds: {{ .Values.hpa.behavior.scaleUp.policy.periodSeconds }}
+      selectPolicy: {{ .Values.hpa.behavior.scaleUp.selectPolicy }}
+      stabilizationWindowSeconds: {{ .Values.hpa.behavior.scaleUp.stabilizationWindowSeconds }}
+    scaleDown:
+      policies:
+        - type: {{ .Values.hpa.behavior.scaleDown.policy.type }}
+          value: {{ .Values.hpa.behavior.scaleDown.policy.value }}
+          periodSeconds: {{ .Values.hpa.behavior.scaleDown.policy.periodSeconds }}
+      selectPolicy: {{ .Values.hpa.behavior.scaleDown.selectPolicy }}
+      stabilizationWindowSeconds: {{ .Values.hpa.behavior.scaleDown.selectPolicy }}
+  {{- end }}
   minReplicas: {{ int .Values.hpa.minReplicas }}
   maxReplicas: {{ int .Values.hpa.maxReplicas }}
   scaleTargetRef:
