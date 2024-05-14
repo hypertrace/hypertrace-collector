@@ -148,6 +148,22 @@ hpa:
   minReplicas: 2
   maxReplicas: 5
   targetCPUUtilizationPercentage: 80
+  behavior:
+    enabled: false
+    scaleUp:
+      policy:
+        type: Pods
+        value: 2
+        periodSeconds: 60
+      selectPolicy: Max
+      stabilizationWindowSeconds: 0
+    scaleDown:
+      policy:
+        type: Pods
+        value: 1
+        periodSeconds: 600
+      selectPolicy: Min
+      stabilizationWindowSeconds: 600
 
 podmonitor:
   enabled: false
