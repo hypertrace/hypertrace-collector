@@ -15,9 +15,9 @@ linters:
     - lll
     - misspell
     - nakedret
-    - structcheck
     - unparam
-    - varcheck
+    # Replaces structcheck and varcheck. Available since go 1.20
+    - unused
 
 linters-settings:
   dupl:
