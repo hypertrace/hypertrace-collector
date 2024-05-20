@@ -48,7 +48,7 @@ type rateLimiterProcessor struct {
 }
 
 const (
-	TenantSpans  = "tenant_spans"
+	TenantSpans = "tenant_spans"
 )
 
 // ConsumeTraces consume traces and drops the requests if it is rate limited,
