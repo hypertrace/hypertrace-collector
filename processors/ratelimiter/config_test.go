@@ -14,13 +14,13 @@ func TestLoadConfig(t *testing.T) {
 	factories, err := otelcoltest.NopFactories()
 	assert.NoError(t, err)
 
-	factories.Processors[typeStr] = NewFactory()
+	factories.Processors[Type] = NewFactory()
 
 	cfg, err := otelcoltest.LoadConfig(path.Join(".", "testdata", "config.yml"), factories)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 	id := component.ID{}
-	id.UnmarshalText([]byte(typeStr))
+	id.UnmarshalText([]byte(Type.String()))
 	tIDcfg := cfg.Processors[id].(*Config)
 	assert.Equal(t, "header-tenant", tIDcfg.TenantIDHeaderName)
 	assert.Equal(t, "app", tIDcfg.Domain)

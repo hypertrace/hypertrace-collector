@@ -10,15 +10,18 @@ import (
 )
 
 const (
-	typeStr             = "hypertrace_tenantid"
 	defaultHeaderName   = "x-tenant-id"
 	defaultAttributeKey = "tenant-id"
+)
+
+var (
+	Type = component.MustNewType("hypertrace_tenantid")
 )
 
 // NewFactory creates a factory for the tenant ID processor.
 func NewFactory() processor.Factory {
 	return processor.NewFactory(
-		typeStr,
+		Type,
 		createDefaultConfig,
 		processor.WithTraces(createTraceProcessor, component.StabilityLevelStable),
 		processor.WithMetrics(createMetricsProcessor, component.StabilityLevelStable),
