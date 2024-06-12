@@ -11,14 +11,14 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	typeStr = "hypertrace_spancounter"
+var (
+	Type = component.MustNewType("hypertrace_spancounter")
 )
 
 // NewFactory creates a factory for the spancounter processor.
 func NewFactory() processor.Factory {
 	return processor.NewFactory(
-		typeStr,
+		Type,
 		createDefaultConfig,
 		processor.WithTraces(createTracesProcessor, component.StabilityLevelStable),
 	)

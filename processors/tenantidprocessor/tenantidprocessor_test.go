@@ -200,7 +200,7 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 				Headers:      map[string]configopaque.String{tenantProcessor.tenantIDHeaderName: configopaque.String(testTenantID)},
 				Endpoint:     addr,
 				WaitForReady: true,
-				TLSSetting: configtls.TLSClientSetting{
+				TLSSetting: configtls.ClientConfig{
 					Insecure: true,
 				},
 			},
@@ -293,7 +293,7 @@ func TestReceiveOTLPGRPC_Metrics(t *testing.T) {
 				Headers:      map[string]configopaque.String{tenantProcessor.tenantIDHeaderName: testTenantID},
 				Endpoint:     addr,
 				WaitForReady: true,
-				TLSSetting: configtls.TLSClientSetting{
+				TLSSetting: configtls.ClientConfig{
 					Insecure: true,
 				},
 			},

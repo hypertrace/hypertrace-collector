@@ -9,13 +9,13 @@ import (
 	"go.opentelemetry.io/collector/processor/processorhelper"
 )
 
-const (
-	typeStr = "hypertrace_metrics_remover"
+var (
+	Type = component.MustNewType("hypertrace_metrics_remover")
 )
 
 func NewFactory() processor.Factory {
 	return processor.NewFactory(
-		typeStr,
+		Type,
 		createDefaultConfig,
 		processor.WithMetrics(createMetricsProcessor, component.StabilityLevelStable),
 	)

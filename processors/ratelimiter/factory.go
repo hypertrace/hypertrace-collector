@@ -16,7 +16,6 @@ import (
 )
 
 const (
-	typeStr              = "hypertrace_ratelimiter"
 	defaultServiceHost   = "127.0.0.1"
 	defaultServicePort   = uint16(8081)
 	defaultDomain        = "collector"
@@ -24,10 +23,14 @@ const (
 	defaultTimeoutMillis = uint32(1000) // 1 second
 )
 
+var (
+	Type = component.MustNewType("hypertrace_ratelimiter")
+)
+
 // NewFactory creates a factory for the ratelimit processor.
 func NewFactory() processor.Factory {
 	return processor.NewFactory(
-		typeStr,
+		Type,
 		createDefaultConfig,
 		processor.WithTraces(createTraceProcessor, component.StabilityLevelStable),
 	)

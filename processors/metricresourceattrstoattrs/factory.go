@@ -9,14 +9,14 @@ import (
 	"go.opentelemetry.io/collector/processor/processorhelper"
 )
 
-const (
-	typeStr = "hypertrace_metrics_resource_attrs_to_attrs"
+var (
+	Type = component.MustNewType("hypertrace_metrics_resource_attrs_to_attrs")
 )
 
 // NewFactory creates a factory for the metricresourceattrstoattrs processor.
 func NewFactory() processor.Factory {
 	return processor.NewFactory(
-		typeStr,
+		Type,
 		createDefaultConfig,
 		processor.WithMetrics(createMetricsProcessor, component.StabilityLevelStable),
 	)
