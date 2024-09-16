@@ -1,8 +1,6 @@
 module github.com/hypertrace/collector
 
-go 1.21.0
-
-toolchain go1.22.1
+go 1.22
 
 require (
 	github.com/apache/thrift v0.20.0
