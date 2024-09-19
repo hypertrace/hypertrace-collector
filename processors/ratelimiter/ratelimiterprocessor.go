@@ -71,7 +71,9 @@ func (p *rateLimiterProcessor) ConsumeTraces(ctx context.Context, traces ptrace.
 	}
 	ctx, _ = tag.New(ctx,
 		tag.Insert(tagTenantID, tenantId))
-	spanCount := uint32(traces.SpanCount())
+	// G115 (CWE-190): integer overflow conversion int -> uint32 (Confidence: MEDIUM, Severity: HIGH)
+	// This is a false positive we can ignore.
+	spanCount := uint32(traces.SpanCount()) // #nosec G115
 	stats.Record(ctx, rateLimitServiceCallsCount.M(int64(1)))
 	response, err := p.rateLimitServiceClient.ShouldRateLimit(
 		ctx,
