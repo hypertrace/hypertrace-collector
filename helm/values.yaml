@@ -401,3 +401,5 @@ kafka-topic-creator:
   imagePullSecrets: []
   podAnnotations:
     sidecar.istio.io/inject: "false"
+
+containerSecurityContext: {}

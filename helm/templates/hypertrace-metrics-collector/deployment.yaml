@@ -94,7 +94,7 @@ spec:
               port: 13133
           resources:
             {{- toYaml .Values.metrics.resources | nindent 12 }}
-        {{- with .Values.metrics.securityContext }}
+        {{- with .Values.containerSecurityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
         {{- end }}
