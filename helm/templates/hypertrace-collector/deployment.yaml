@@ -25,14 +25,20 @@ spec:
         prometheus.io/path: "/metrics"
         prometheus.io/port: "8888"
         prometheus.io/scrape: "true"
-      {{- with .Values.podAnnotations }}
+        {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- end }}
+        {{- with .Values.commonPodAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       labels:
         release: {{ .Release.Name }}
-      {{- with .Values.podLabels }}
+        {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- end }}
+        {{- with .Values.commonPodLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
     {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
