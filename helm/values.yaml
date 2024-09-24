@@ -100,17 +100,18 @@ podAnnotations: {}
 podSecurityContext:
   runAsUser: 65532
   fsGroup: 65532
+  runAsNonRoot: true
+  fsGroupChangePolicy: "OnRootMismatch"
+  seccompProfile:
+    type: RuntimeDefault
 
-securityContext:
+containerSecurityContext:
   allowPrivilegeEscalation: false
   capabilities:
     drop:
       - ALL
     add:
       - NET_BIND_SERVICE
-  runAsNonRoot: true
-  seccompProfile:
-    type: RuntimeDefault
 
 affinity: {}
 
@@ -210,21 +211,6 @@ metrics:
     app: hypertrace-metrics-collector
 
   podAnnotations: {}
-
-  podSecurityContext:
-    runAsUser: 65532
-    fsGroup: 65532
-
-  securityContext:
-    allowPrivilegeEscalation: false
-    capabilities:
-      drop:
-        - ALL
-      add:
-        - NET_BIND_SERVICE
-    runAsNonRoot: true
-    seccompProfile:
-      type: RuntimeDefault
 
   affinity: {}
 
@@ -383,23 +369,3 @@ configMap:
           receivers: [otlp]
           processors: [filter/metrics, hypertrace_metrics_remover, batch, hypertrace_metrics_resource_attrs_to_attrs]
           exporters: [prometheus]
-
-kafka-topic-creator:
-  enabled: true
-  jobName: jaeger-spans-kafka-topic-creator
-  helmHook: pre-install,pre-upgrade
-  kafka:
-    topics:
-      jaeger-spans:
-        replicationFactor: 1
-        partitions: 8
-        configs:
-          retention.bytes: 4294967296
-          retention.ms: 86400000
-  zookeeper:
-    address: zookeeper:2181
-  imagePullSecrets: []
-  podAnnotations:
-    sidecar.istio.io/inject: "false"
-
-containerSecurityContext: {}

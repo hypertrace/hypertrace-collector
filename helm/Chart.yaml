@@ -24,9 +24,3 @@ version: 0.1.0
 # This is the appVersion which will correspond to build version tag. The "helm package" command will take care of setting
 # this.
 appVersion: 0.1.0
-
-dependencies:
-  - name: kafka-topic-creator
-    condition: kafka-topic-creator.enabled
-    repository: "https://storage.googleapis.com/hypertrace-helm-charts"
-    version: 0.2.x
