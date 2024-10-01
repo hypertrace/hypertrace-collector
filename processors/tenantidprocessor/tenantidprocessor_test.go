@@ -155,7 +155,7 @@ func createOTLPTracesReceiver(t *testing.T, nextConsumer consumer.Traces) (strin
 	cfg := factory.CreateDefaultConfig().(*otlpreceiver.Config)
 	cfg.GRPC.NetAddr.Endpoint = addr
 	cfg.HTTP = nil
-	params := receivertest.NewNopCreateSettings()
+	params := receivertest.NewNopSettings()
 	otlpTracesRec, err := factory.CreateTracesReceiver(context.Background(), params, cfg, nextConsumer)
 	require.NoError(t, err)
 
@@ -188,11 +188,12 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 	otlpExpFac := otlpexporter.NewFactory()
 	tracesExporter, err := otlpExpFac.CreateTracesExporter(
 		context.Background(),
-		exporter.CreateSettings{
+		exporter.Settings{
 			TelemetrySettings: component.TelemetrySettings{
-				Logger:         zap.NewNop(),
-				TracerProvider: tracenoop.NewTracerProvider(),
-				MeterProvider:  noop.NewMeterProvider(),
+				Logger:               zap.NewNop(),
+				TracerProvider:       tracenoop.NewTracerProvider(),
+				MeterProvider:        noop.NewMeterProvider(),
+				LeveledMeterProvider: componenttest.NewNopTelemetrySettings().LeveledMeterProvider,
 			},
 		},
 		&otlpexporter.Config{
@@ -232,7 +233,7 @@ func createOTLPMetricsReceiver(t *testing.T, nextConsumer consumer.Metrics) (str
 	cfg := factory.CreateDefaultConfig().(*otlpreceiver.Config)
 	cfg.GRPC.NetAddr.Endpoint = addr
 	cfg.HTTP = nil
-	params := receivertest.NewNopCreateSettings()
+	params := receivertest.NewNopSettings()
 
 	otlpMetricsRec, err := factory.CreateMetricsReceiver(
 		context.Background(),
@@ -281,11 +282,12 @@ func TestReceiveOTLPGRPC_Metrics(t *testing.T) {
 
 	metricsExporter, err := otlpexporter.NewFactory().CreateMetricsExporter(
 		context.Background(),
-		exporter.CreateSettings{
+		exporter.Settings{
 			TelemetrySettings: component.TelemetrySettings{
-				Logger:         zap.NewNop(),
-				TracerProvider: tracenoop.NewTracerProvider(),
-				MeterProvider:  noop.NewMeterProvider(),
+				Logger:               zap.NewNop(),
+				TracerProvider:       tracenoop.NewTracerProvider(),
+				MeterProvider:        noop.NewMeterProvider(),
+				LeveledMeterProvider: componenttest.NewNopTelemetrySettings().LeveledMeterProvider,
 			},
 		},
 		&otlpexporter.Config{
@@ -335,11 +337,12 @@ func TestReceiveJaegerThriftHTTP_Traces(t *testing.T) {
 			},
 		},
 	}
-	params := receiver.CreateSettings{
+	params := receiver.Settings{
 		TelemetrySettings: component.TelemetrySettings{
-			Logger:         zap.NewNop(),
-			TracerProvider: tracenoop.NewTracerProvider(),
-			MeterProvider:  noop.NewMeterProvider(),
+			Logger:               zap.NewNop(),
+			TracerProvider:       tracenoop.NewTracerProvider(),
+			MeterProvider:        noop.NewMeterProvider(),
+			LeveledMeterProvider: componenttest.NewNopTelemetrySettings().LeveledMeterProvider,
 		},
 	}
 	jrf := jaegerreceiver.NewFactory()

@@ -44,7 +44,7 @@ import (
 var jaegerReceiver = component.MustNewIDWithName("jaeger", "receiver_test")
 
 func TestTraceSource(t *testing.T) {
-	set := receivertest.NewNopCreateSettings()
+	set := receivertest.NewNopSettings()
 	jr, err := newJaegerReceiver(jaegerReceiver, &configuration{}, nil, set)
 	require.NoError(t, err)
 	require.NotNil(t, jr)
@@ -84,7 +84,7 @@ func TestReception(t *testing.T) {
 	}
 	sink := new(consumertest.TracesSink)
 
-	set := receivertest.NewNopCreateSettings()
+	set := receivertest.NewNopSettings()
 	jr, err := newJaegerReceiver(jaegerReceiver, config, sink, set)
 	require.NoError(t, err)
 
@@ -104,7 +104,7 @@ func TestReception(t *testing.T) {
 	assert.NoError(t, err, "should not have failed to create the Jaeger OpenCensus exporter")
 
 	gotTraces := sink.AllTraces()
-	assert.Equal(t, 1, len(gotTraces))
+	assert.Len(t, gotTraces, 1)
 
 	assert.EqualValues(t, td, gotTraces[0])
 }
@@ -115,7 +115,7 @@ func TestPortsNotOpen(t *testing.T) {
 
 	sink := new(consumertest.TracesSink)
 
-	set := receivertest.NewNopCreateSettings()
+	set := receivertest.NewNopSettings()
 	jr, err := newJaegerReceiver(jaegerReceiver, config, sink, set)
 	require.NoError(t, err)
 
@@ -150,7 +150,7 @@ func TestGRPCReception(t *testing.T) {
 	}
 	sink := new(consumertest.TracesSink)
 
-	set := receivertest.NewNopCreateSettings()
+	set := receivertest.NewNopSettings()
 	jr, err := newJaegerReceiver(jaegerReceiver, config, sink, set)
 	require.NoError(t, err)
 
@@ -178,7 +178,7 @@ func TestGRPCReception(t *testing.T) {
 	assert.NotNil(t, resp, "response should not have been nil")
 
 	gotTraces := sink.AllTraces()
-	assert.Equal(t, 1, len(gotTraces))
+	assert.Len(t, gotTraces, 1)
 	want := expectedTraceData(now, nowPlus10min, nowPlus10min2sec)
 
 	assert.Len(t, req.Batch.Spans, want.SpanCount(), "got a conflicting amount of spans")
@@ -208,7 +208,7 @@ func TestGRPCReceptionWithTLS(t *testing.T) {
 	}
 	sink := new(consumertest.TracesSink)
 
-	set := receivertest.NewNopCreateSettings()
+	set := receivertest.NewNopSettings()
 	jr, err := newJaegerReceiver(jaegerReceiver, config, sink, set)
 	require.NoError(t, err)
 
@@ -238,7 +238,7 @@ func TestGRPCReceptionWithTLS(t *testing.T) {
 	assert.NotNil(t, resp, "response should not have been nil")
 
 	gotTraces := sink.AllTraces()
-	assert.Equal(t, 1, len(gotTraces))
+	assert.Len(t, gotTraces, 1)
 	want := expectedTraceData(now, nowPlus10min, nowPlus10min2sec)
 
 	assert.Len(t, req.Batch.Spans, want.SpanCount(), "got a conflicting amount of spans")
@@ -344,7 +344,7 @@ func TestSampling(t *testing.T) {
 	}
 	sink := new(consumertest.TracesSink)
 
-	set := receivertest.NewNopCreateSettings()
+	set := receivertest.NewNopSettings()
 	jr, err := newJaegerReceiver(jaegerReceiver, config, sink, set)
 	require.NoError(t, err)
 
