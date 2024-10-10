@@ -5,18 +5,22 @@ import (
 	"fmt"
 	"strings"
 
-	"go.opencensus.io/stats"
-	"go.opencensus.io/tag"
+	internalmetadata "github.com/hypertrace/collector/processors/tenantidprocessor/internal/metadata"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/pdata/ptrace"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/metadata"
 )
+
+const tagTenantID string = "tenant-id"
 
 type tenantIdProcessor struct {
 	tenantIDHeaderName   string
 	tenantIDAttributeKey string
 	logger               *zap.Logger
+	telemetryBuilder     *internalmetadata.TelemetryBuilder
 }
 
 // ProcessMetrics implements processorhelper.ProcessMetricsFunc
@@ -36,9 +40,11 @@ func (p *tenantIdProcessor) ProcessMetrics(ctx context.Context, metrics pmetric.
 	tenantID := tenantIDHeaders[0]
 	p.addTenantIdToMetrics(metrics, tenantID)
 
-	ctx, _ = tag.New(ctx,
-		tag.Insert(tagTenantID, tenantID))
-	stats.Record(ctx, statMetricPerTenant.M(int64(metrics.MetricCount())))
+	tenantAttr := metric.WithAttributes(attribute.KeyValue{
+		Key:   attribute.Key(tagTenantID),
+		Value: attribute.StringValue(tenantID),
+	})
+	p.telemetryBuilder.ProcessorMetricsPerTenant.Add(ctx, int64(metrics.MetricCount()), tenantAttr)
 
 	return metrics, nil
 
@@ -61,9 +67,11 @@ func (p *tenantIdProcessor) ProcessTraces(ctx context.Context, traces ptrace.Tra
 	tenantID := tenantIDHeaders[0]
 	p.addTenantIdToSpans(traces, tenantID)
 
-	ctx, _ = tag.New(ctx,
-		tag.Insert(tagTenantID, tenantID))
-	stats.Record(ctx, statSpanPerTenant.M(int64(traces.SpanCount())))
+	tenantAttr := metric.WithAttributes(attribute.KeyValue{
+		Key:   attribute.Key(tagTenantID),
+		Value: attribute.StringValue(tenantID),
+	})
+	p.telemetryBuilder.ProcessorSpansPerTenant.Add(ctx, int64(traces.SpanCount()), tenantAttr)
 
 	return traces, nil
 }
