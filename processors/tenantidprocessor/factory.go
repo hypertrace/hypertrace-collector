@@ -3,10 +3,12 @@ package tenantidprocessor
 import (
 	"context"
 
+	"github.com/hypertrace/collector/processors/tenantidprocessor/internal/metadata"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/processor/processorhelper"
+	"go.uber.org/zap"
 )
 
 const (
@@ -42,10 +44,17 @@ func createTraceProcessor(
 	nextConsumer consumer.Traces,
 ) (processor.Traces, error) {
 	pCfg := cfg.(*Config)
+	// TelemetryBuilder will be used to setup metrics
+	telemetryBuilder, err := metadata.NewTelemetryBuilder(params.TelemetrySettings)
+	if err != nil {
+		params.Logger.Error("error creating telemetry for the tenantidprocessor processor", zap.Error(err))
+		return nil, err
+	}
 	tenantProcessor := &tenantIdProcessor{
 		tenantIDAttributeKey: pCfg.TenantIDAttributeKey,
 		tenantIDHeaderName:   pCfg.TenantIDHeaderName,
 		logger:               params.Logger,
+		telemetryBuilder:     telemetryBuilder,
 	}
 	return processorhelper.NewTracesProcessor(
 		ctx,
@@ -62,10 +71,17 @@ func createMetricsProcessor(
 	nextConsumer consumer.Metrics,
 ) (processor.Metrics, error) {
 	pCfg := cfg.(*Config)
+	// TelemetryBuilder will be used to setup metrics
+	telemetryBuilder, err := metadata.NewTelemetryBuilder(params.TelemetrySettings)
+	if err != nil {
+		params.Logger.Error("error creating telemetry for the tenantidprocessor processor", zap.Error(err))
+		return nil, err
+	}
 	tenantProcessor := &tenantIdProcessor{
 		tenantIDAttributeKey: pCfg.TenantIDAttributeKey,
 		tenantIDHeaderName:   pCfg.TenantIDHeaderName,
 		logger:               params.Logger,
+		telemetryBuilder:     telemetryBuilder,
 	}
 	return processorhelper.NewMetricsProcessor(
 		ctx,

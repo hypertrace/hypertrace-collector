@@ -7,8 +7,10 @@ import (
 	"testing"
 
 	pb "github.com/envoyproxy/go-control-plane/envoy/service/ratelimit/v3"
+	internalmetadata "github.com/hypertrace/collector/processors/ratelimiter/internal/metadata"
 	"github.com/hypertrace/collector/processors/testutil"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/processor"
@@ -66,6 +68,8 @@ func (m *MockProcessorConsumer) ConsumeTraces(ctx context.Context, ld ptrace.Tra
 func TestRateLimitingWhenEmptyTenantHeader(t *testing.T) {
 	mockRateLimitServiceClientObj := new(MockRateLimitServiceClient)
 	mockProcessorConsumerObj := new(MockProcessorConsumer)
+	telemetryBuilder, err := internalmetadata.NewTelemetryBuilder(componenttest.NewNopTelemetrySettings())
+	require.NoError(t, err)
 	p := &rateLimiterProcessor{
 		logger:                     zap.NewNop(),
 		tenantIDHeaderName:         defaultHeaderName,
@@ -74,6 +78,7 @@ func TestRateLimitingWhenEmptyTenantHeader(t *testing.T) {
 		rateLimitServiceClientConn: &grpc.ClientConn{},
 		cancelFunc:                 t.SkipNow,
 		nextConsumer:               mockProcessorConsumerObj,
+		telemetryBuilder:           telemetryBuilder,
 	}
 	mockRateLimitServiceClientObj.On("ShouldRateLimit", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("rate limit called failed"))
 	mockProcessorConsumerObj.On("ConsumeTraces", mock.Anything, mock.Anything).Return(nil)
@@ -85,7 +90,7 @@ func TestRateLimitingWhenEmptyTenantHeader(t *testing.T) {
 		context.Background(),
 		md,
 	)
-	err := p.ConsumeTraces(ctx, traces)
+	err = p.ConsumeTraces(ctx, traces)
 	require.NoError(t, err)
 	mockRateLimitServiceClientObj.AssertNumberOfCalls(t, "ShouldRateLimit", 0)
 	mockProcessorConsumerObj.AssertNumberOfCalls(t, "ConsumeTraces", 1)
@@ -94,6 +99,8 @@ func TestRateLimitingWhenEmptyTenantHeader(t *testing.T) {
 func TestWhenRateLimitServiceCallFailed(t *testing.T) {
 	mockRateLimitServiceClientObj := new(MockRateLimitServiceClient)
 	mockProcessorConsumerObj := new(MockProcessorConsumer)
+	telemetryBuilder, err := internalmetadata.NewTelemetryBuilder(componenttest.NewNopTelemetrySettings())
+	require.NoError(t, err)
 	p := &rateLimiterProcessor{
 		logger:                     zap.NewNop(),
 		tenantIDHeaderName:         defaultHeaderName,
@@ -102,6 +109,7 @@ func TestWhenRateLimitServiceCallFailed(t *testing.T) {
 		rateLimitServiceClientConn: &grpc.ClientConn{},
 		cancelFunc:                 t.SkipNow,
 		nextConsumer:               mockProcessorConsumerObj,
+		telemetryBuilder:           telemetryBuilder,
 	}
 	mockRateLimitServiceClientObj.On("ShouldRateLimit", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("rate limit called failed"))
 	mockProcessorConsumerObj.On("ConsumeTraces", mock.Anything, mock.Anything).Return(nil)
@@ -113,7 +121,7 @@ func TestWhenRateLimitServiceCallFailed(t *testing.T) {
 		context.Background(),
 		md,
 	)
-	err := p.ConsumeTraces(ctx, traces)
+	err = p.ConsumeTraces(ctx, traces)
 	require.NoError(t, err)
 	mockRateLimitServiceClientObj.AssertNumberOfCalls(t, "ShouldRateLimit", 1)
 	mockProcessorConsumerObj.AssertNumberOfCalls(t, "ConsumeTraces", 1)
@@ -122,6 +130,8 @@ func TestWhenRateLimitServiceCallFailed(t *testing.T) {
 func TestRateLimitingWhenTenantLimitReached(t *testing.T) {
 	mockRateLimitServiceClientObj := new(MockRateLimitServiceClient)
 	mockProcessorConsumerObj := new(MockProcessorConsumer)
+	telemetryBuilder, err := internalmetadata.NewTelemetryBuilder(componenttest.NewNopTelemetrySettings())
+	require.NoError(t, err)
 	p := &rateLimiterProcessor{
 		logger:                     zap.NewNop(),
 		tenantIDHeaderName:         defaultHeaderName,
@@ -130,6 +140,7 @@ func TestRateLimitingWhenTenantLimitReached(t *testing.T) {
 		rateLimitServiceClientConn: &grpc.ClientConn{},
 		cancelFunc:                 t.SkipNow,
 		nextConsumer:               mockProcessorConsumerObj,
+		telemetryBuilder:           telemetryBuilder,
 	}
 	rateLimitResponse := &pb.RateLimitResponse{
 		OverallCode: pb.RateLimitResponse_OK,
@@ -149,7 +160,7 @@ func TestRateLimitingWhenTenantLimitReached(t *testing.T) {
 		context.Background(),
 		md,
 	)
-	err := p.ConsumeTraces(ctx, traces)
+	err = p.ConsumeTraces(ctx, traces)
 	require.NoError(t, err)
 	mockRateLimitServiceClientObj.AssertNumberOfCalls(t, "ShouldRateLimit", 1)
 	mockProcessorConsumerObj.AssertNumberOfCalls(t, "ConsumeTraces", 0)

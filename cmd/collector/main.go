@@ -15,7 +15,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/opencensusreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/zipkinreceiver"
-	"go.opencensus.io/stats/view"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/confmap/provider/envprovider"
@@ -43,10 +42,6 @@ import (
 )
 
 func main() {
-	if err := registerMetricViews(); err != nil {
-		log.Fatal(err)
-	}
-
 	info := component.BuildInfo{
 		Command:     "collector",
 		Description: "Hypertrace Collector",
@@ -138,13 +133,6 @@ func run(settings otelcol.CollectorSettings) error {
 	}
 
 	return nil
-}
-
-func registerMetricViews() error {
-	views := tenantidprocessor.MetricViews()
-	views = append(views, spancounter.MetricViews()...)
-	views = append(views, ratelimiter.MetricViews()...)
-	return view.Register(views...)
 }
 
 // defaultComponents() is defined here since service/defaultcomponents pkg was
