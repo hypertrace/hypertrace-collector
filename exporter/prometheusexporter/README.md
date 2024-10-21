@@ -1,4 +1,4 @@
-**IMPORTANT:** This component is copied from https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.110.0/exporter/prometheusexporter and
+**IMPORTANT:** This component is copied from https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.111.0/exporter/prometheusexporter and
 adapted to avoid logging prometheus metrics errors that were not previously logged.
 # Prometheus Exporter
 
