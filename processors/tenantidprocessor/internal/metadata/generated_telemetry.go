@@ -58,7 +58,6 @@ func NewTelemetryBuilder(settings component.TelemetrySettings, options ...Teleme
 	var err, errs error
 
 	builder.ProcessorSpansPerTenant, err = builder.meters[configtelemetry.LevelBasic].Int64Counter(
-		// TODO: Do I need the _count suffix or will otel append it automatically?
 		"otelcol_tenant_id_span_count",
 		metric.WithDescription("Number of spans received from a tenant"),
 		metric.WithUnit("{spans}"),
