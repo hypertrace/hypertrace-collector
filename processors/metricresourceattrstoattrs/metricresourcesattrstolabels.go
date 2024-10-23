@@ -64,9 +64,9 @@ func (p *metricResourceAttrsProcessor) ProcessMetrics(ctx context.Context, metri
 				// and if already present they will be duplicated and will cause an error while processing metrics.
 				// Also remove the OpenCensus "service_name" attribute if "service.name" resource attribute exists since when sanitized by prometheus the resource
 				// attribute will be a duplicate and will cause an error to be thrown. "service.name" becomes "service_name" when sanitized by prometheus.
-				// Also recently there have been metric attributes that have "service.instance.id"(conventions.AttributeServiceInstanceID) and "service_instance_id"(ocServiceInstanceIdAttrKey)
-				// with different values which as in previous cases cause issues during prometheus sanitization. We will remove "service.instance.id" since its value is the prometheus
-				// endpoint that captured the metric.
+				// Also recently there have been metric attributes that have "service.instance.id"(conventions.AttributeServiceInstanceID) and
+				// "service_instance_id"(ocServiceInstanceIdAttrKey) with different values which as in previous cases cause issues during prometheus sanitization.
+				// We will remove "service.instance.id" since its value is the prometheus endpoint that captured the metric.
 				if hasResourceServiceNameAttr || hasResourceServiceInstanceIDAttr {
 					applyToMetricAttributes(metric, func(am pcommon.Map) {
 						if hasResourceServiceNameAttr {
