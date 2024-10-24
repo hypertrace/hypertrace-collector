@@ -3,14 +3,18 @@ package spancounter
 import (
 	"context"
 
-	"go.opencensus.io/stats"
-	"go.opencensus.io/tag"
+	"github.com/hypertrace/collector/processors/spancounter/internal/metadata"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	conventions "go.opentelemetry.io/collector/semconv/v1.6.1"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.uber.org/zap"
 )
 
-const defaultTenantIDAttributeKey string = "tenant-id"
+const (
+	defaultTenantIDAttributeKey string = "tenant-id"
+	tagSpanCriteriaLabel        string = "span-criteria-label"
+)
 
 type spanCounterProcessor struct {
 	logger *zap.Logger
@@ -18,9 +22,10 @@ type spanCounterProcessor struct {
 	// to maps of service names to span configs
 	tenantIDAttributeKey string
 	tenantsMap           map[string]map[string][]SpanConfig
+	telemetryBuilder     *metadata.TelemetryBuilder
 }
 
-func newProcessor(logger *zap.Logger, cfg *Config) *spanCounterProcessor {
+func newProcessor(logger *zap.Logger, cfg *Config, telemetryBuilder *metadata.TelemetryBuilder) *spanCounterProcessor {
 	tm := createTenantsMap(cfg)
 	tenantIDAttributeKey := defaultTenantIDAttributeKey
 	if len(cfg.TenantIDAttributeKey) != 0 {
@@ -30,6 +35,7 @@ func newProcessor(logger *zap.Logger, cfg *Config) *spanCounterProcessor {
 		logger:               logger,
 		tenantIDAttributeKey: tenantIDAttributeKey,
 		tenantsMap:           tm,
+		telemetryBuilder:     telemetryBuilder,
 	}
 }
 
@@ -95,9 +101,10 @@ func (p *spanCounterProcessor) ProcessTraces(ctx context.Context, traces ptrace.
 			}
 
 			if spanCount > 0 {
-				ctx, _ = tag.New(ctx,
-					tag.Insert(tagSpanCriteriaLabel, sc.Label))
-				stats.Record(ctx, statCriteriaBasedSpanCount.M(int64(spanCount)))
+				p.telemetryBuilder.ProcessorCriteriaBasedSpanCount.Add(ctx, int64(spanCount), metric.WithAttributes(attribute.KeyValue{
+					Key:   attribute.Key(tagSpanCriteriaLabel),
+					Value: attribute.StringValue(sc.Label),
+				}))
 			}
 		}
 	}

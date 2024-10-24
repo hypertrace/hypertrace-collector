@@ -7,6 +7,7 @@ import (
 	"time"
 
 	pb "github.com/envoyproxy/go-control-plane/envoy/service/ratelimit/v3"
+	"github.com/hypertrace/collector/processors/ratelimiter/internal/metadata"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/processor"
@@ -48,7 +49,7 @@ func createDefaultConfig() component.Config {
 
 func createTraceProcessor(
 	ctx context.Context,
-	params processor.CreateSettings,
+	params processor.Settings,
 	cfg component.Config,
 	nextConsumer consumer.Traces,
 ) (processor.Traces, error) {
@@ -56,6 +57,12 @@ func createTraceProcessor(
 	rateLimitServiceClient, rateLimitServiceClientConn, cancelFunc, err := getRateLimitServiceClient(ctx, pCfg.ServiceHost, pCfg.ServicePort, pCfg.TimeoutMillis, params)
 	if err != nil {
 		params.Logger.Error("failed to connect to rate limit service ", zap.Error(err))
+		return nil, err
+	}
+	// TelemetryBuilder will be used to setup metrics
+	telemetryBuilder, err := metadata.NewTelemetryBuilder(params.TelemetrySettings)
+	if err != nil {
+		params.Logger.Error("error creating telemetry for the ratelimiter processor", zap.Error(err))
 		return nil, err
 	}
 	rateLimiter := &rateLimiterProcessor{
@@ -66,12 +73,13 @@ func createTraceProcessor(
 		nextConsumer:               nextConsumer,
 		rateLimitServiceClientConn: rateLimitServiceClientConn,
 		cancelFunc:                 cancelFunc,
+		telemetryBuilder:           telemetryBuilder,
 	}
 	return rateLimiter, nil
 }
 
 func getRateLimitServiceClient(ctx context.Context, serviceHost string, servicePort uint16,
-	timeoutMillis uint32, params processor.CreateSettings) (pb.RateLimitServiceClient, *grpc.ClientConn, context.CancelFunc, error) {
+	timeoutMillis uint32, params processor.Settings) (pb.RateLimitServiceClient, *grpc.ClientConn, context.CancelFunc, error) {
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, time.Millisecond*time.Duration(timeoutMillis))
 	var err error
 	var conn *grpc.ClientConn

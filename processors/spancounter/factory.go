@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/hypertrace/collector/processors/spancounter/internal/metadata"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/processor"
@@ -32,14 +33,20 @@ func createDefaultConfig() component.Config {
 
 func createTracesProcessor(
 	ctx context.Context,
-	params processor.CreateSettings,
+	params processor.Settings,
 	cfg component.Config,
 	nextConsumer consumer.Traces,
 ) (processor.Traces, error) {
 	pCfg := cfg.(*Config)
 	addUniqueLabelsToSpanConfigs(pCfg)
 	params.Logger.Info("Criteria based span counter processor config", zap.Any("config", pCfg))
-	processor := newProcessor(params.Logger, pCfg)
+	// TelemetryBuilder will be used to setup metrics
+	telemetryBuilder, err := metadata.NewTelemetryBuilder(params.TelemetrySettings)
+	if err != nil {
+		params.Logger.Error("error creating telemetry for the spancounter processor", zap.Error(err))
+		return nil, err
+	}
+	processor := newProcessor(params.Logger, pCfg, telemetryBuilder)
 	return processorhelper.NewTracesProcessor(
 		ctx,
 		params,

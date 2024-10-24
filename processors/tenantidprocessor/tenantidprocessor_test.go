@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
+	internalmetadata "github.com/hypertrace/collector/processors/tenantidprocessor/internal/metadata"
 	"github.com/jaegertracing/jaeger/model"
 	jaegerconvert "github.com/jaegertracing/jaeger/model/converter/thrift/jaeger"
 	jaegerthrift "github.com/jaegertracing/jaeger/thrift-gen/jaeger"
@@ -49,6 +50,7 @@ func TestMissingMetadataInContext(t *testing.T) {
 		logger:               zap.NewNop(),
 		tenantIDHeaderName:   defaultHeaderName,
 		tenantIDAttributeKey: defaultHeaderName,
+		telemetryBuilder:     createTelemetryBuilder(t),
 	}
 	_, err := p.ProcessTraces(context.Background(), ptrace.NewTraces())
 	require.Error(t, err)
@@ -64,6 +66,7 @@ func TestMissingTenantHeader(t *testing.T) {
 		logger:               zap.NewNop(),
 		tenantIDHeaderName:   defaultHeaderName,
 		tenantIDAttributeKey: defaultHeaderName,
+		telemetryBuilder:     createTelemetryBuilder(t),
 	}
 
 	md := metadata.New(map[string]string{})
@@ -85,6 +88,7 @@ func TestMultipleTenantHeaders(t *testing.T) {
 		logger:               zap.NewNop(),
 		tenantIDHeaderName:   defaultHeaderName,
 		tenantIDAttributeKey: defaultHeaderName,
+		telemetryBuilder:     createTelemetryBuilder(t),
 	}
 
 	md := metadata.New(map[string]string{p.tenantIDHeaderName: testTenantID})
@@ -107,6 +111,7 @@ func TestEmptyTraces(t *testing.T) {
 		logger:               zap.NewNop(),
 		tenantIDHeaderName:   defaultHeaderName,
 		tenantIDAttributeKey: defaultHeaderName,
+		telemetryBuilder:     createTelemetryBuilder(t),
 	}
 	traces := ptrace.NewTraces()
 	md := metadata.New(map[string]string{p.tenantIDHeaderName: testTenantID})
@@ -124,6 +129,7 @@ func TestEmptyMetrics(t *testing.T) {
 		logger:               zap.NewNop(),
 		tenantIDHeaderName:   defaultHeaderName,
 		tenantIDAttributeKey: defaultHeaderName,
+		telemetryBuilder:     createTelemetryBuilder(t),
 	}
 	metrics := pmetric.NewMetrics()
 	md := metadata.New(map[string]string{p.tenantIDHeaderName: testTenantID})
@@ -155,7 +161,7 @@ func createOTLPTracesReceiver(t *testing.T, nextConsumer consumer.Traces) (strin
 	cfg := factory.CreateDefaultConfig().(*otlpreceiver.Config)
 	cfg.GRPC.NetAddr.Endpoint = addr
 	cfg.HTTP = nil
-	params := receivertest.NewNopCreateSettings()
+	params := receivertest.NewNopSettings()
 	otlpTracesRec, err := factory.CreateTracesReceiver(context.Background(), params, cfg, nextConsumer)
 	require.NoError(t, err)
 
@@ -172,6 +178,7 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 		logger:               zap.NewNop(),
 		tenantIDHeaderName:   defaultHeaderName,
 		tenantIDAttributeKey: defaultAttributeKey,
+		telemetryBuilder:     createTelemetryBuilder(t),
 	}
 
 	tracesConsumer := tracesMultiConsumer{
@@ -188,11 +195,12 @@ func TestReceiveOTLPGRPC_Traces(t *testing.T) {
 	otlpExpFac := otlpexporter.NewFactory()
 	tracesExporter, err := otlpExpFac.CreateTracesExporter(
 		context.Background(),
-		exporter.CreateSettings{
+		exporter.Settings{
 			TelemetrySettings: component.TelemetrySettings{
-				Logger:         zap.NewNop(),
-				TracerProvider: tracenoop.NewTracerProvider(),
-				MeterProvider:  noop.NewMeterProvider(),
+				Logger:               zap.NewNop(),
+				TracerProvider:       tracenoop.NewTracerProvider(),
+				MeterProvider:        noop.NewMeterProvider(),
+				LeveledMeterProvider: componenttest.NewNopTelemetrySettings().LeveledMeterProvider,
 			},
 		},
 		&otlpexporter.Config{
@@ -232,7 +240,7 @@ func createOTLPMetricsReceiver(t *testing.T, nextConsumer consumer.Metrics) (str
 	cfg := factory.CreateDefaultConfig().(*otlpreceiver.Config)
 	cfg.GRPC.NetAddr.Endpoint = addr
 	cfg.HTTP = nil
-	params := receivertest.NewNopCreateSettings()
+	params := receivertest.NewNopSettings()
 
 	otlpMetricsRec, err := factory.CreateMetricsReceiver(
 		context.Background(),
@@ -265,6 +273,7 @@ func TestReceiveOTLPGRPC_Metrics(t *testing.T) {
 		logger:               zap.NewNop(),
 		tenantIDHeaderName:   defaultHeaderName,
 		tenantIDAttributeKey: defaultAttributeKey,
+		telemetryBuilder:     createTelemetryBuilder(t),
 	}
 
 	metricsSink := new(consumertest.MetricsSink)
@@ -281,11 +290,12 @@ func TestReceiveOTLPGRPC_Metrics(t *testing.T) {
 
 	metricsExporter, err := otlpexporter.NewFactory().CreateMetricsExporter(
 		context.Background(),
-		exporter.CreateSettings{
+		exporter.Settings{
 			TelemetrySettings: component.TelemetrySettings{
-				Logger:         zap.NewNop(),
-				TracerProvider: tracenoop.NewTracerProvider(),
-				MeterProvider:  noop.NewMeterProvider(),
+				Logger:               zap.NewNop(),
+				TracerProvider:       tracenoop.NewTracerProvider(),
+				MeterProvider:        noop.NewMeterProvider(),
+				LeveledMeterProvider: componenttest.NewNopTelemetrySettings().LeveledMeterProvider,
 			},
 		},
 		&otlpexporter.Config{
@@ -325,6 +335,7 @@ func TestReceiveJaegerThriftHTTP_Traces(t *testing.T) {
 		logger:               zap.NewNop(),
 		tenantIDHeaderName:   defaultHeaderName,
 		tenantIDAttributeKey: defaultAttributeKey,
+		telemetryBuilder:     createTelemetryBuilder(t),
 	}
 
 	addr := getAvailableLocalAddress(t)
@@ -335,11 +346,12 @@ func TestReceiveJaegerThriftHTTP_Traces(t *testing.T) {
 			},
 		},
 	}
-	params := receiver.CreateSettings{
+	params := receiver.Settings{
 		TelemetrySettings: component.TelemetrySettings{
-			Logger:         zap.NewNop(),
-			TracerProvider: tracenoop.NewTracerProvider(),
-			MeterProvider:  noop.NewMeterProvider(),
+			Logger:               zap.NewNop(),
+			TracerProvider:       tracenoop.NewTracerProvider(),
+			MeterProvider:        noop.NewMeterProvider(),
+			LeveledMeterProvider: componenttest.NewNopTelemetrySettings().LeveledMeterProvider,
 		},
 	}
 	jrf := jaegerreceiver.NewFactory()
@@ -574,4 +586,10 @@ func sendToJaegerHTTPThrift(endpoint string, headers map[string]string, batch *j
 		return fmt.Errorf("failed to upload traces; HTTP status code: %d", resp.StatusCode)
 	}
 	return nil
+}
+
+func createTelemetryBuilder(t *testing.T) *internalmetadata.TelemetryBuilder {
+	telemetryBuilder, err := internalmetadata.NewTelemetryBuilder(componenttest.NewNopTelemetrySettings())
+	require.NoError(t, err)
+	return telemetryBuilder
 }

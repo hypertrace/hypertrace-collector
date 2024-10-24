@@ -4,7 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hypertrace/collector/processors/spancounter/internal/metadata"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	conventions "go.opentelemetry.io/collector/semconv/v1.6.1"
 	"go.uber.org/zap"
@@ -40,12 +43,14 @@ func TestNewProcessor(t *testing.T) {
 			},
 		},
 	}
+	telemetryBuilder, err := metadata.NewTelemetryBuilder(componenttest.NewNopTelemetrySettings())
+	require.NoError(t, err)
 
-	p := newProcessor(logger, c)
+	p := newProcessor(logger, c, telemetryBuilder)
 	assert.Equal(t, defaultTenantIDAttributeKey, p.tenantIDAttributeKey)
 
 	c.TenantIDAttributeKey = "custom-tenant-id"
-	p = newProcessor(logger, c)
+	p = newProcessor(logger, c, telemetryBuilder)
 	assert.Equal(t, "custom-tenant-id", p.tenantIDAttributeKey)
 }
 
@@ -272,8 +277,10 @@ func TestProcessTraces(t *testing.T) {
 			},
 		},
 	}
+	telemetryBuilder, err := metadata.NewTelemetryBuilder(componenttest.NewNopTelemetrySettings())
+	require.NoError(t, err)
 
-	p := newProcessor(logger, c)
+	p := newProcessor(logger, c, telemetryBuilder)
 
 	// We cannot verify metrics :( We will verify no errors and no change in traces
 	processedTd, err := p.ProcessTraces(context.Background(), td)
@@ -282,7 +289,7 @@ func TestProcessTraces(t *testing.T) {
 
 	// Non matching tenant should also not throw an error
 	c.TenantConfigs[0].TenantId = "example-tenant-2"
-	p = newProcessor(logger, c)
+	p = newProcessor(logger, c, telemetryBuilder)
 
 	processedTd, err = p.ProcessTraces(context.Background(), td)
 	assert.NoError(t, err)
@@ -290,7 +297,7 @@ func TestProcessTraces(t *testing.T) {
 
 	// Empty config
 	c = &Config{}
-	p = newProcessor(logger, c)
+	p = newProcessor(logger, c, telemetryBuilder)
 
 	processedTd, err = p.ProcessTraces(context.Background(), td)
 	assert.NoError(t, err)

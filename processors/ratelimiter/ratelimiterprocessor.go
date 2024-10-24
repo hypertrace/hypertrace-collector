@@ -7,16 +7,19 @@ import (
 
 	pb_struct "github.com/envoyproxy/go-control-plane/envoy/extensions/common/ratelimit/v3"
 	pb "github.com/envoyproxy/go-control-plane/envoy/service/ratelimit/v3"
-	"go.opencensus.io/stats"
-	"go.opencensus.io/tag"
+	internalmetadata "github.com/hypertrace/collector/processors/ratelimiter/internal/metadata"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/processor"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
+
+const tagTenantID string = "tenant-id"
 
 var _ processor.Traces = (*rateLimiterProcessor)(nil)
 
@@ -45,6 +48,7 @@ type rateLimiterProcessor struct {
 	nextConsumer               consumer.Traces
 	rateLimitServiceClientConn *grpc.ClientConn
 	cancelFunc                 context.CancelFunc
+	telemetryBuilder           *internalmetadata.TelemetryBuilder
 }
 
 const (
@@ -69,12 +73,14 @@ func (p *rateLimiterProcessor) ConsumeTraces(ctx context.Context, traces ptrace.
 			},
 		},
 	}
-	ctx, _ = tag.New(ctx,
-		tag.Insert(tagTenantID, tenantId))
 	// G115 (CWE-190): integer overflow conversion int -> uint32 (Confidence: MEDIUM, Severity: HIGH)
 	// This is a false positive we can ignore.
 	spanCount := uint32(traces.SpanCount()) // #nosec G115
-	stats.Record(ctx, rateLimitServiceCallsCount.M(int64(1)))
+	tenantAttr := metric.WithAttributes(attribute.KeyValue{
+		Key:   attribute.Key(tagTenantID),
+		Value: attribute.StringValue(tenantId),
+	})
+	p.telemetryBuilder.ProcessorRateLimitServiceCallsCount.Add(ctx, int64(1), tenantAttr)
 	response, err := p.rateLimitServiceClient.ShouldRateLimit(
 		ctx,
 		&pb.RateLimitRequest{
@@ -92,7 +98,7 @@ func (p *rateLimiterProcessor) ConsumeTraces(ctx context.Context, traces ptrace.
 		if descriptorStatuses[0].GetCode() == pb.RateLimitResponse_OVER_LIMIT {
 			// If tenant rate limit exceeded drop request.
 			p.logger.Warn(fmt.Sprintf("dropping spans for tenant %s as rate limit exceeded, of spancount: %d", tenantId, spanCount))
-			stats.Record(ctx, droppedSpanCount.M(int64(spanCount)))
+			p.telemetryBuilder.ProcessorDroppedSpanCount.Add(ctx, int64(spanCount), tenantAttr)
 			return nil
 		}
 	} else {
