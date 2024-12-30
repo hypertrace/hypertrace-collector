@@ -38,3 +38,10 @@ docker-push:
 lint:
 	@echo "Running linters..."
 	@golangci-lint run ./... && echo "Done."
+
+.PHONY: tidy
+tidy:
+	@find . -name "go.mod" \
+	| grep go.mod \
+	| xargs -I {} bash -c 'dirname {}' \
+	| xargs -I {} bash -c 'echo "=> {}"; cd {}; go mod tidy; '

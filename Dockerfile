@@ -1,4 +1,4 @@
-FROM golang:1.22-bullseye as build-stage
+FROM golang:1.22-bullseye AS build-stage
 
 RUN mkdir -p /go/src/github.com/hypertrace/collector
 WORKDIR /go/src/github.com/hypertrace/collector
