@@ -3,6 +3,8 @@ package ratelimiter
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	pb_struct "github.com/envoyproxy/go-control-plane/envoy/extensions/common/ratelimit/v3"
 	pb "github.com/envoyproxy/go-control-plane/envoy/service/ratelimit/v3"
 	internalmetadata "github.com/hypertrace/collector/processors/ratelimiter/internal/metadata"
@@ -17,7 +19,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"strings"
 )
 
 // RateLimitError represents an error when rate limiting is applied
