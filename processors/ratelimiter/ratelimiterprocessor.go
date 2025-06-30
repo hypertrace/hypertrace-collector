@@ -3,8 +3,6 @@ package ratelimiter
 import (
 	"context"
 	"fmt"
-	"strings"
-
 	pb_struct "github.com/envoyproxy/go-control-plane/envoy/extensions/common/ratelimit/v3"
 	pb "github.com/envoyproxy/go-control-plane/envoy/service/ratelimit/v3"
 	internalmetadata "github.com/hypertrace/collector/processors/ratelimiter/internal/metadata"
@@ -19,6 +17,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"strings"
 )
 
 // RateLimitError represents an error when rate limiting is applied
@@ -34,6 +33,8 @@ func (e *RateLimitError) Error() string {
 
 // GRPCStatus returns a gRPC status code for the rate limit error
 func (e *RateLimitError) GRPCStatus() *status.Status {
+	// Create a status with ResourceExhausted code and our error message
+	// This intentionally doesn't include any RetryInfo metadata
 	return status.New(codes.ResourceExhausted, e.Error())
 }
 
@@ -109,12 +110,9 @@ func (p *rateLimiterProcessor) ConsumeTraces(ctx context.Context, traces ptrace.
 	if err != nil {
 		// Rate limit service call fails, spans will be forwarded as it is.
 		p.logger.Error("rate limit service call failed", zap.Error(err))
-		return &RateLimitError{
-			TenantID:  tenantId,
-			SpanCount: spanCount,
-		}
-		// return p.nextConsumer.ConsumeTraces(ctx, traces)
+		return p.nextConsumer.ConsumeTraces(ctx, traces)
 	}
+
 	descriptorStatuses := response.Statuses
 	if len(descriptorStatuses) == 1 {
 		if descriptorStatuses[0].GetCode() == pb.RateLimitResponse_OVER_LIMIT {
@@ -130,10 +128,7 @@ func (p *rateLimiterProcessor) ConsumeTraces(ctx context.Context, traces ptrace.
 	} else {
 		p.logger.Error(fmt.Sprintf("unexpected descriptor status length from rate limit response: %s ", descriptorStatuses))
 	}
-	return &RateLimitError{
-		TenantID:  tenantId,
-		SpanCount: spanCount,
-	}
+	return p.nextConsumer.ConsumeTraces(ctx, traces)
 }
 
 func (p *rateLimiterProcessor) getTenantId(ctx context.Context) (string, error) {

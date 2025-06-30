@@ -19,7 +19,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -161,7 +163,69 @@ func TestRateLimitingWhenTenantLimitReached(t *testing.T) {
 		md,
 	)
 	err = p.ConsumeTraces(ctx, traces)
+	_, ok := err.(*RateLimitError)
+	require.True(t, ok, "Expected error to be of type *RateLimitError")
+	mockRateLimitServiceClientObj.AssertNumberOfCalls(t, "ShouldRateLimit", 1)
+	mockProcessorConsumerObj.AssertNumberOfCalls(t, "ConsumeTraces", 0)
+}
+
+func TestRateLimitingReturnsGRPCStatus(t *testing.T) {
+	mockRateLimitServiceClientObj := new(MockRateLimitServiceClient)
+	mockProcessorConsumerObj := new(MockProcessorConsumer)
+	telemetryBuilder, err := internalmetadata.NewTelemetryBuilder(componenttest.NewNopTelemetrySettings())
 	require.NoError(t, err)
+	p := &rateLimiterProcessor{
+		logger:                     zap.NewNop(),
+		tenantIDHeaderName:         defaultHeaderName,
+		domain:                     defaultDomain,
+		rateLimitServiceClient:     mockRateLimitServiceClientObj,
+		rateLimitServiceClientConn: &grpc.ClientConn{},
+		cancelFunc:                 t.SkipNow,
+		nextConsumer:               mockProcessorConsumerObj,
+		telemetryBuilder:           telemetryBuilder,
+	}
+
+	// Setup rate limit response to indicate OVER_LIMIT
+	rateLimitResponse := &pb.RateLimitResponse{
+		OverallCode: pb.RateLimitResponse_OK,
+		Statuses: []*pb.RateLimitResponse_DescriptorStatus{
+			{
+				Code: pb.RateLimitResponse_OVER_LIMIT,
+			},
+		},
+	}
+
+	mockRateLimitServiceClientObj.On("ShouldRateLimit", mock.Anything, mock.Anything).Return(rateLimitResponse, nil)
+
+	// Create test spans
+	tokenString := base64.StdEncoding.EncodeToString([]byte("testuser:passw123"))
+	span := testutil.NewTestSpan("http.request.header.authorization", fmt.Sprintf("%s%s", basicAuthPrefixStr, tokenString))
+	traces := testutil.NewTestTraces(span)
+
+	// Create context with tenant ID
+	md := metadata.New(map[string]string{p.tenantIDHeaderName: testTenantID})
+	ctx := metadata.NewIncomingContext(
+		context.Background(),
+		md,
+	)
+
+	// Call ConsumeTraces and verify the returned error
+	err = p.ConsumeTraces(ctx, traces)
+
+	// Verify that we got a RateLimitError
+	require.Error(t, err, "Expected an error to be returned when rate limited")
+
+	// Verify that the error is a RateLimitError
+	rateLimitErr, ok := err.(*RateLimitError)
+	require.True(t, ok, "Expected error to be of type *RateLimitError")
+	require.Equal(t, testTenantID, rateLimitErr.TenantID, "Expected tenant ID to match")
+
+	// Verify that the error provides the correct gRPC status
+	st, ok := status.FromError(err)
+	require.True(t, ok, "Expected error to be convertible to a gRPC status")
+	require.Equal(t, codes.ResourceExhausted, st.Code(), "Expected gRPC status code to be ResourceExhausted")
+
+	// Verify that the next consumer was not called
 	mockRateLimitServiceClientObj.AssertNumberOfCalls(t, "ShouldRateLimit", 1)
 	mockProcessorConsumerObj.AssertNumberOfCalls(t, "ConsumeTraces", 0)
 }
