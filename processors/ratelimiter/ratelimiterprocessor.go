@@ -16,8 +16,26 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
+
+// RateLimitError represents an error when rate limiting is applied
+type RateLimitError struct {
+	TenantID  string
+	SpanCount uint32
+}
+
+// Error implements the error interface
+func (e *RateLimitError) Error() string {
+	return fmt.Sprintf("rate limit exceeded for tenant %s with span count %d", e.TenantID, e.SpanCount)
+}
+
+// GRPCStatus returns a gRPC status code for the rate limit error
+func (e *RateLimitError) GRPCStatus() *status.Status {
+	return status.New(codes.ResourceExhausted, e.Error())
+}
 
 const tagTenantID string = "tenant-id"
 
@@ -91,7 +109,11 @@ func (p *rateLimiterProcessor) ConsumeTraces(ctx context.Context, traces ptrace.
 	if err != nil {
 		// Rate limit service call fails, spans will be forwarded as it is.
 		p.logger.Error("rate limit service call failed", zap.Error(err))
-		return p.nextConsumer.ConsumeTraces(ctx, traces)
+		return &RateLimitError{
+			TenantID:  tenantId,
+			SpanCount: spanCount,
+		}
+		// return p.nextConsumer.ConsumeTraces(ctx, traces)
 	}
 	descriptorStatuses := response.Statuses
 	if len(descriptorStatuses) == 1 {
@@ -99,12 +121,19 @@ func (p *rateLimiterProcessor) ConsumeTraces(ctx context.Context, traces ptrace.
 			// If tenant rate limit exceeded drop request.
 			p.logger.Warn(fmt.Sprintf("dropping spans for tenant %s as rate limit exceeded, of spancount: %d", tenantId, spanCount))
 			p.telemetryBuilder.ProcessorDroppedSpanCount.Add(ctx, int64(spanCount), tenantAttr)
-			return nil
+			// Return a RateLimitError instead of nil to propagate status code back to the receiver
+			return &RateLimitError{
+				TenantID:  tenantId,
+				SpanCount: spanCount,
+			}
 		}
 	} else {
 		p.logger.Error(fmt.Sprintf("unexpected descriptor status length from rate limit response: %s ", descriptorStatuses))
 	}
-	return p.nextConsumer.ConsumeTraces(ctx, traces)
+	return &RateLimitError{
+		TenantID:  tenantId,
+		SpanCount: spanCount,
+	}
 }
 
 func (p *rateLimiterProcessor) getTenantId(ctx context.Context) (string, error) {
