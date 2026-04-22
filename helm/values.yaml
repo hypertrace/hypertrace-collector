@@ -335,6 +335,15 @@ configMap:
               - ^mirror_stats_.*
               - traceableagent_heartbeat_bucket
               - otelcol_processor_batch_batch_send_size_bucket
+      # Keeps only log records whose resource service.name is coraza-waf or
+      # edge-decision-service. All other records are dropped, so only edge
+      # component logs reach the kafka/logs_edge exporter and land in the
+      # dedicated `raw-logs-edge` topic / view.
+      filter/edge_logs:
+        error_mode: ignore
+        logs:
+          log_record:
+            - 'not(resource.attributes["service.name"] == "edge-decision-service" or resource.attributes["service.name"] == "coraza-waf-service" or resource.attributes["service.name"] == "coraza-waf-service-v2")'
     exporters:
       kafka:
         protocol_version: 2.0.0
@@ -350,6 +359,24 @@ configMap:
           # Drop spans that cannot be cured and will eventually end up being dropped anyway
           # after multiple retries.
           drop_spans: true
+        producer:
+          compression: gzip
+      # Dedicated kafka exporter for edge component (coraza + EDS) logs.
+      # Uses otlp_json (not jaeger_proto, and not otlp_proto) so the payload
+      # is self-describing on the wire: the downstream kafka-connect Iceberg
+      # sink uses JsonConverter + auto-create-table to materialize the
+      # `raw_logs_edge` table without a Schema Registry entry. If we later
+      # introduce a normalizer that publishes an Avro `LogEvents`-style
+      # record, switch this to otlp_proto/Avro-normalized instead.
+      kafka/logs_edge:
+        protocol_version: 2.0.0
+        brokers:
+          - bootstrap:9092
+        topic: raw-logs-edge
+        encoding: otlp_json
+        compression:
+          codec: gzip
+          level: 5
         producer:
           compression: gzip
       prometheus:
@@ -376,3 +403,13 @@ configMap:
           receivers: [otlp]
           processors: [filter/metrics, hypertrace_metrics_remover, batch, hypertrace_metrics_resource_attrs_to_attrs]
           exporters: [prometheus]
+        # Dedicated logs pipeline for edge components (coraza + EDS). Logs
+        # arrive here via OTLP from the TPA collector. The filter/edge_logs
+        # processor drops everything except coraza/EDS records, and the
+        # kafka/logs_edge exporter writes them to the `raw-logs-edge` topic
+        # for a separate downstream view. Leaves any existing log flows
+        # (span-normalizer -> raw-logs) untouched.
+        logs/edge:
+          receivers: [otlp]
+          processors: [filter/edge_logs, batch]
+          exporters: [kafka/logs_edge]
